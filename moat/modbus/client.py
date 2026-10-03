@@ -59,7 +59,7 @@ class ModbusClient(CtxObj):
 
     _tg: TaskGroup | None = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.hosts = {}
 
     @asynccontextmanager
@@ -86,7 +86,7 @@ class ModbusClient(CtxObj):
         h = Host(self, addr, port, **kw)
         return h
 
-    async def _host(self, addr, port=None, *, task_status):
+    async def _host(self, addr, port=None, *, task_status) -> None:
         async with self.host(addr, port) as srv:
             task_status.started(srv)
             await anyio.sleep_forever()
@@ -106,7 +106,7 @@ class ModbusClient(CtxObj):
         h = SerialHost(self, port=port, **ser)
         return h
 
-    async def _serial(self, /, port, ser, *, task_status):
+    async def _serial(self, /, port, ser, *, task_status) -> None:
         async with self.serial(port, **ser) as srv:
             task_status.started(srv)
             await anyio.sleep_forever()
@@ -154,7 +154,7 @@ class ModbusError(RuntimeError):
     or, occasionally, another error object returned by the gateway.
     """
 
-    def __init__(self, result):
+    def __init__(self, result) -> None:
         super().__init__(_explain(result))
         self.result = result
 
@@ -267,7 +267,7 @@ class HostCommon:
 
     _trace: Callable[..., None] = staticmethod(lambda *_x: None)  # overridden per-host
 
-    def __init__(self, gate, timeout, cap):
+    def __init__(self, gate, timeout, cap) -> None:
         self.gate = gate
         self.units = {}
         self._wqueue = Queue(100)
@@ -290,7 +290,7 @@ class HostCommon:
         """
         return Unit(self, unit)
 
-    async def _unit(self, unit, *, task_status):
+    async def _unit(self, unit, *, task_status) -> None:
         async with self.unit(unit) as srv:
             task_status.started(srv)
             await anyio.sleep_forever()
@@ -326,7 +326,7 @@ class HostCommon:
             if self.gate.hosts.get(key, None) is self:
                 del self.gate.hosts[key]
 
-    async def send(self, msg):
+    async def send(self, msg) -> None:
         """
         Send a packet.
 
@@ -399,7 +399,7 @@ class Host(HostCommon, CtxObj):
         debug=False,
         max_rd_len=MAX_REQ_LEN,
         max_wr_len=MAX_REQ_LEN,
-    ):
+    ) -> None:
         self.addr = addr
         self.port = port
 
@@ -413,7 +413,7 @@ class Host(HostCommon, CtxObj):
 
         super().__init__(gate, timeout, cap)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ModbusHost:{self.addr}:{self.port}>"
 
     def _nextTID(self):
@@ -426,10 +426,10 @@ class Host(HostCommon, CtxObj):
 
     # reader task #
 
-    async def _reader(self, *, task_status):
+    async def _reader(self, *, task_status) -> None:
         # pylint: disable=protected-access
 
-        async def _send_trans():
+        async def _send_trans() -> None:
             tr = list(self._transactions.values())
             self._transactions = {}
             if tr:
@@ -558,7 +558,7 @@ class Host(HostCommon, CtxObj):
                     else:
                         request._response_value.set(reply)  # noqa: SLF001
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         """Stop talking."""
         if self.gate is None:
             return
@@ -601,7 +601,7 @@ class SerialHost(HostCommon, CtxObj):
         max_rd_len=MAX_REQ_LEN,
         max_wr_len=MAX_REQ_LEN,
         **ser,
-    ):
+    ) -> None:
         self.port = port
         self.ser = ser
         self.framer = FramerRTU(False)
@@ -614,10 +614,10 @@ class SerialHost(HostCommon, CtxObj):
 
         super().__init__(gate, timeout, 1)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ModbusHost:{self.port}:{self.ser.get('baudrate', 0)}>"
 
-    def _nextTID(self):
+    def _nextTID(self) -> int:
         return 0
 
     @property
@@ -626,7 +626,7 @@ class SerialHost(HostCommon, CtxObj):
 
     # reader task #
 
-    async def _reader(self, *, task_status):
+    async def _reader(self, *, task_status) -> None:
         # pylint: disable=protected-access
 
         if self._transactions:
@@ -722,7 +722,7 @@ class SerialHost(HostCommon, CtxObj):
                     req._response_value.set_error(exc)  # noqa: SLF001
                 raise
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         """Stop talking."""
         if self.gate is None:
             return
@@ -757,18 +757,18 @@ class Unit(CtxObj):
 
     _running = False
 
-    def __init__(self, host, unit):
+    def __init__(self, host, unit) -> None:
         self.host = host
         self.unit = unit
         self.slots = {}
 
-    def __str__(self):
+    def __str__(self) -> str:
         try:
             return f"{self.host.addr}:{self.host.port}:{self.unit}"
         except AttributeError:
             return f"{self.host.port}:{self.unit}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         try:
             return f"<Unit:{self.host.addr}:{self.host.port}:{self.unit}>"
         except AttributeError:
@@ -801,7 +801,7 @@ class Unit(CtxObj):
             self.slots[slot] = sl = Slot(self, slot, **kw)
             return sl
 
-    async def _slot(self, slot, kw, *, task_status):
+    async def _slot(self, slot, kw, *, task_status) -> None:
         async with self.slot(slot, **kw) as srv:
             task_status.started(srv)
             await anyio.sleep_forever()
@@ -811,7 +811,7 @@ class Unit(CtxObj):
         # return await scope.service(f"MS_{num2id(self)}:{slot}", self._slot, slot, **kw)
         return await self._tg.start(self._slot, slot, kw)
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         """Stop talking and delete yourself.
 
         This is a coroutine.
@@ -877,7 +877,7 @@ class Slot(CtxObj):
         write_delay: float | None = None,
         age: float | None = None,
         **kw,
-    ):
+    ) -> None:
         self.unit = unit
         self.slot = slot
 
@@ -898,10 +898,10 @@ class Slot(CtxObj):
         if kw:
             _logger.warning("%s:%s: extra arguments: %r", unit, slot, kw)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.unit}:{self.slot}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Unit:{self.unit}:{self.slot}>"
 
     @asynccontextmanager
@@ -924,13 +924,13 @@ class Slot(CtxObj):
             self._running = False
             del self.unit.slots[self.slot]
 
-    def start(self):
+    def start(self) -> None:
         """
         Start running this slot.
         """
         self.run_lock.set()
 
-    def trigger_send(self):
+    def trigger_send(self) -> None:
         """Start writing after at most `.write_delay` seconds."""
         self.write_trigger.set()
 
@@ -972,13 +972,13 @@ class Slot(CtxObj):
             return None
         return k.delete(offset)
 
-    async def _stop_run(self):
+    async def _stop_run(self) -> None:
         if self._get_scope is not None:
             self._get_scope.cancel()
         if self._set_scope is not None:
             self._set_scope.cancel()
 
-    def close(self):
+    def close(self) -> None:
         """
         Close this slot.
         """
@@ -997,7 +997,7 @@ class Slot(CtxObj):
         try:
             res = {}
 
-            async def _assign(getter, rr):
+            async def _assign(getter, rr) -> None:
                 r = await getter()
                 rr.update(r)
 
@@ -1019,7 +1019,7 @@ class Slot(CtxObj):
         finally:
             self._get_scope = None
 
-    async def setValues(self, changed=False):
+    async def setValues(self, changed=False) -> None:
         """
         Send a message writing the values in this block to the bus.
         """
@@ -1040,7 +1040,7 @@ class Slot(CtxObj):
         """Read this slot's data."""
         async with self.read_lock:
             self.t_read = anyio.current_time()
-            await self.getValues()
+            return await self.getValues()
 
     async def read_if_stale(self) -> bool:
         """Read this slot's data only if it's stale (older than age).
@@ -1072,7 +1072,7 @@ class Slot(CtxObj):
         await self.getValues()
         return True
 
-    async def read_task(self):
+    async def read_task(self) -> None:
         """A background task for reading Modbus register values.
         We read every .`read_delay` seconds.
 
@@ -1159,7 +1159,7 @@ class Slot(CtxObj):
                         reg.reg._changed = False  # noqa: SLF001
                         reg.mqtt_event.set()
 
-    async def write(self, changed: bool = True):
+    async def write(self, changed: bool = True) -> None:
         """Write this slot's data.
 
         If @changed is set, only write changed data.
@@ -1167,7 +1167,7 @@ class Slot(CtxObj):
         async with self.write_lock:
             await self.setValues(changed=changed)
 
-    async def write_task(self):
+    async def write_task(self) -> None:
         """A background task for updating changed Modbus register values"""
         await self.run_lock.wait()
         while True:
@@ -1192,7 +1192,7 @@ class ValueList(DataBlock):
 
     slot: Slot | None
 
-    def __init__(self, slot: Slot, kind: TypeCodec):
+    def __init__(self, slot: Slot, kind: TypeCodec) -> None:
         super().__init__(
             max_rd_len=slot.unit.host.max_rd_len,
             max_wr_len=slot.unit.host.max_wr_len,
@@ -1201,7 +1201,7 @@ class ValueList(DataBlock):
         self.kind = kind
         self.do_write = anyio.Event()
 
-    def trigger_send(self):
+    def trigger_send(self) -> None:
         assert self.slot is not None
         self.slot.trigger_send()
 
@@ -1218,7 +1218,7 @@ class ValueList(DataBlock):
                 tg.start_soon(partial(self.readBlock, start, length, res=res))
         return res
 
-    async def writeValues(self, changed=False):
+    async def writeValues(self, changed=False) -> None:
         """
         Send messages writing our values to the bus.
         """
@@ -1226,7 +1226,7 @@ class ValueList(DataBlock):
             for start, length in self.ranges(changed=changed, max_len=self.max_wr_len):
                 tg.start_soon(partial(self.writeBlock, start, length))
 
-    async def readBlock(self, start, length, *, res=None):
+    async def readBlock(self, start, length, *, res=None) -> None:
         """Send one message, decode the reply"""
         if res is None:
             res = {}
@@ -1252,7 +1252,7 @@ class ValueList(DataBlock):
             start += off
             r = r[off:]
 
-    async def writeBlock(self, start, length):
+    async def writeBlock(self, start, length) -> None:
         """encode one message and send it"""
         assert self.slot is not None
         u = self.slot.unit
@@ -1276,7 +1276,7 @@ class ValueList(DataBlock):
 
         self.markSent(start, length)
 
-    def close(self):
+    def close(self) -> None:
         """disable further accesses"""
         if self.slot is None:
             return

@@ -16,7 +16,7 @@ from moat.lib.run import load_subgroup
     invoke_without_command=True,
 )
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx) -> None:
     """Irrigation management.
 
     Manage irrigation sites, controllers, valves, feeds, sensors,

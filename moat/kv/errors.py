@@ -117,10 +117,10 @@ class ErrorSubEntry(AttrClientEntry):
         logger.warning("Unknown entry type at %r: %s", self._path, name)
         return ClientEntry
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"‹{self.__class__.__name__} {self._path[-3:]} {getattr(self, 'tock', -1)}›"
 
-    async def set_value(self, value):  # noqa:D102
+    async def set_value(self, value) -> None:  # noqa:D102
         await super().set_value(value)
         if value is NotGiven:
             p = self.parent
@@ -144,13 +144,13 @@ class ErrorEntry(AttrClientEntry):
     path = ()
     _real_entry = None
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:
         super().__init__(*a, **kw)
         self.node, self.tock = self.subpath[-2:]
         if isinstance(self.path, list):
             self.path = Path.build(self.path)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<{}: {} {}: {}>".format(
             self.__class__.__name__,
             "/".join(str(x) for x in self.subpath),
@@ -168,12 +168,12 @@ class ErrorEntry(AttrClientEntry):
             self = self._real_entry  # noqa:PLW0642
         return self
 
-    async def check_move(self):  # noqa:D102
+    async def check_move(self) -> None:  # noqa:D102
         dest = self.real_entry
         if dest is not self:
             await self.root.add_clean(self)
 
-    async def resolve(self):
+    async def resolve(self) -> None:
         """
         Record that this error has been resolved.
         """
@@ -242,7 +242,7 @@ class ErrorEntry(AttrClientEntry):
             r = await res.save()
         return r
 
-    async def add_comment(self, node, comment, data):
+    async def add_comment(self, node, comment, data) -> None:
         """
         Store this comment, typically used when something resumes working.
         One per node, so we don't need to avoid collisions.
@@ -269,7 +269,7 @@ class ErrorEntry(AttrClientEntry):
             if "is new" not in repr(exc):
                 raise
 
-    async def move_to_real(self):
+    async def move_to_real(self) -> None:
         """
         Move this entry, or rather the errors in it, to another.
 
@@ -298,7 +298,7 @@ class ErrorEntry(AttrClientEntry):
             await self.delete()
         # logger.warning("DEL 5 %r",self)
 
-    async def set_value(self, value):
+    async def set_value(self, value) -> None:
         """Overridden: set_value
 
         Stores a pointer to the error in the root and keeps the records unique
@@ -363,7 +363,7 @@ class ErrorRoot(ClientRoot):
 
     CFG = "errors"
 
-    def __init__(self, *a, name=None, **kw):
+    def __init__(self, *a, name=None, **kw) -> None:
         super().__init__(*a, **kw)
         self.name = name or self.client.client_name
         self._loaded = anyio.Event()
@@ -377,7 +377,7 @@ class ErrorRoot(ClientRoot):
     def child_type(cls, name):  # noqa:D102,ARG003
         return ErrorStep
 
-    async def add_clean(self, entry):  # noqa:D102
+    async def add_clean(self, entry) -> None:  # noqa:D102
         # self._to_clean.add(entry)
         entry  # noqa:B018
         pass
@@ -546,7 +546,7 @@ class ErrorRoot(ClientRoot):
         )
         return r
 
-    async def _pop(self, entry):
+    async def _pop(self, entry) -> None:
         """Override to deal with entry changes"""
         if entry.subsystem is None or entry.path is None:
             return
@@ -560,7 +560,7 @@ class ErrorRoot(ClientRoot):
         with contextlib.suppress(KeyError):
             del (self._done if entry.resolved else self._active)[entry.subsystem][path]
 
-    def _push(self, entry):
+    def _push(self, entry) -> None:
         if entry.subsystem is None or entry.path is None:
             return
 

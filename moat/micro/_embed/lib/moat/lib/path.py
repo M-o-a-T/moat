@@ -20,7 +20,7 @@ class Path(tuple):  # noqa:SLOT001
     half-assed string analysis, somewhat-broken output for non-basics
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         def _escol(x):
             x = x.replace(":", "::").replace(".", ":.").replace(" ", ":_")
             return x
@@ -61,7 +61,7 @@ class Path(tuple):  # noqa:SLOT001
         """
         return cls(arr)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"P({str(self)!r})"
 
     def __truediv__(self, x):

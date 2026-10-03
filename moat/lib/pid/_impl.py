@@ -65,7 +65,7 @@ class PID:
         Kd: float | None = None,
         Tf: float | None = None,
         t: float | None = None,
-    ):
+    ) -> None:
         """
         Args:
             Kp: proportional term
@@ -160,7 +160,7 @@ class PID:
 
     def set_gains(
         self, Kp: float | None, Ki: float | None, Kd: float | None, Tf: float | None = None
-    ):
+    ) -> None:
         """Set PID controller gains.
 
         Args:
@@ -203,7 +203,7 @@ class PID:
         self.Kd = new_Kd
         self.Tf = new_Tf
 
-    def set_output_limits(self, lower: float | None = None, upper: float | None = None):
+    def set_output_limits(self, lower: float | None = None, upper: float | None = None) -> None:
         """Set PID controller output limits, for anti-windup.
 
         Args:
@@ -226,7 +226,7 @@ class PID:
 
     def set_state(
         self,
-        t: float | None | EllipsisType = None,
+        t: float | EllipsisType | None = None,
         e: float | None = None,
         i: float | None = None,
     ) -> None:
@@ -342,7 +342,9 @@ class CPID(PID):
             state: foo
     """
 
-    def __init__(self, cfg: attrdict, state: attrdict | None = None, t: float | None = None):
+    def __init__(
+        self, cfg: attrdict, state: attrdict | None = None, t: float | None = None
+    ) -> None:
         """
         Args:
             cfg: our configuration. See above.
@@ -358,14 +360,14 @@ class CPID(PID):
         self.set_state(state.get("t", t or time()), state.get("e", 0), state.get("i", 0))
         state.setdefault("setpoint", None)
 
-    def cfg_updated(self):
+    def cfg_updated(self) -> None:
         "Config has been updated"
         cg = self.cfg.get
         super().set_gains(cg("p", None), cg("i", None), cg("d", None), cg("tf", None))
         self.set_output_limits(self.cfg.get("min", None), self.cfg.get("max", None))
         self.set_offset(self.cfg.get("fct", None), self.cfg.get("off", None))
 
-    def setpoint(self, setpoint: float):
+    def setpoint(self, setpoint: float) -> None:
         """
         Adjust the setpoint.
         """
@@ -384,7 +386,7 @@ class CPID(PID):
 
         self.i = i
 
-    def move_to(self, i: float, o: float, t=None):
+    def move_to(self, i: float, o: float, t=None) -> None:
         """
         Tell the controller that this input shall result in that output,
         by mangling its internal state as required.
@@ -437,7 +439,7 @@ class CPID(PID):
         self._update_state()
         return res
 
-    def _update_state(self):
+    def _update_state(self) -> None:
         _t, e, i = self.get_state()
         self.state.e = e
         self.state.i = i

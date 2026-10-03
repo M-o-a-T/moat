@@ -40,17 +40,19 @@ class ConnectVariableHeader(MQTTVariableHeader):  # noqa: D101
     CLEAN_SESSION_FLAG = 0x02
     RESERVED_FLAG = 0x01
 
-    def __init__(self, connect_flags=0x00, keep_alive=0, proto_name="MQTT", proto_level=0x04):
+    def __init__(
+        self, connect_flags=0x00, keep_alive=0, proto_name="MQTT", proto_level=0x04
+    ) -> None:
         super().__init__()
         self.proto_name = proto_name
         self.proto_level = proto_level
         self.flags = connect_flags
         self.keep_alive = keep_alive
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"ConnectVariableHeader(proto_name={self.proto_name}, proto_level={self.proto_level}, flags={hex(self.flags)}, keepalive={self.keep_alive})"
 
-    def _set_flag(self, val, mask):
+    def _set_flag(self, val, mask) -> None:
         if val:
             self.flags |= mask
         else:
@@ -64,7 +66,7 @@ class ConnectVariableHeader(MQTTVariableHeader):  # noqa: D101
         return self._get_flag(self.USERNAME_FLAG)
 
     @username_flag.setter
-    def username_flag(self, val: bool):
+    def username_flag(self, val: bool) -> None:
         self._set_flag(val, self.USERNAME_FLAG)
 
     @property
@@ -72,7 +74,7 @@ class ConnectVariableHeader(MQTTVariableHeader):  # noqa: D101
         return self._get_flag(self.PASSWORD_FLAG)
 
     @password_flag.setter
-    def password_flag(self, val: bool):
+    def password_flag(self, val: bool) -> None:
         self._set_flag(val, self.PASSWORD_FLAG)
 
     @property
@@ -80,7 +82,7 @@ class ConnectVariableHeader(MQTTVariableHeader):  # noqa: D101
         return self._get_flag(self.WILL_RETAIN_FLAG)
 
     @will_retain_flag.setter
-    def will_retain_flag(self, val: bool):
+    def will_retain_flag(self, val: bool) -> None:
         self._set_flag(val, self.WILL_RETAIN_FLAG)
 
     @property
@@ -88,7 +90,7 @@ class ConnectVariableHeader(MQTTVariableHeader):  # noqa: D101
         return self._get_flag(self.WILL_FLAG)
 
     @will_flag.setter
-    def will_flag(self, val: bool):
+    def will_flag(self, val: bool) -> None:
         self._set_flag(val, self.WILL_FLAG)
 
     @property
@@ -96,7 +98,7 @@ class ConnectVariableHeader(MQTTVariableHeader):  # noqa: D101
         return self._get_flag(self.CLEAN_SESSION_FLAG)
 
     @clean_session_flag.setter
-    def clean_session_flag(self, val: bool):
+    def clean_session_flag(self, val: bool) -> None:
         self._set_flag(val, self.CLEAN_SESSION_FLAG)
 
     @property
@@ -108,7 +110,7 @@ class ConnectVariableHeader(MQTTVariableHeader):  # noqa: D101
         return (self.flags & 0x18) >> 3
 
     @will_qos.setter
-    def will_qos(self, val: int):
+    def will_qos(self, val: int) -> None:
         self.flags &= 0xE7  # Reset QOS flags
         self.flags |= val << 3
 
@@ -163,7 +165,7 @@ class ConnectPayload(MQTTPayload):  # noqa: D101
         will_message=None,
         username=None,
         password=None,
-    ):
+    ) -> None:
         super().__init__()
         self.client_id_is_random = False
         self.client_id = client_id
@@ -172,7 +174,7 @@ class ConnectPayload(MQTTPayload):  # noqa: D101
         self.username = username
         self.password = password
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"ConnectVariableHeader(client_id={self.client_id}, will_topic={self.will_topic}, will_message={self.will_message}, username={self.username}, password={self.password})"
 
     @classmethod
@@ -246,7 +248,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.proto_name
 
     @proto_name.setter
-    def proto_name(self, name: str):
+    def proto_name(self, name: str) -> None:
         self.variable_header.proto_name = name
 
     @property
@@ -254,7 +256,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.proto_level
 
     @proto_level.setter
-    def proto_level(self, level):
+    def proto_level(self, level) -> None:
         self.variable_header.proto_level = level
 
     @property
@@ -262,7 +264,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.username_flag
 
     @username_flag.setter
-    def username_flag(self, flag):
+    def username_flag(self, flag) -> None:
         self.variable_header.username_flag = flag
 
     @property
@@ -270,7 +272,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.password_flag
 
     @password_flag.setter
-    def password_flag(self, flag):
+    def password_flag(self, flag) -> None:
         self.variable_header.password_flag = flag
 
     @property
@@ -278,7 +280,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.clean_session_flag
 
     @clean_session_flag.setter
-    def clean_session_flag(self, flag):
+    def clean_session_flag(self, flag) -> None:
         self.variable_header.clean_session_flag = flag
 
     @property
@@ -286,7 +288,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.will_retain_flag
 
     @will_retain_flag.setter
-    def will_retain_flag(self, flag):
+    def will_retain_flag(self, flag) -> None:
         self.variable_header.will_retain_flag = flag
 
     @property
@@ -294,7 +296,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.will_qos
 
     @will_qos.setter
-    def will_qos(self, flag):
+    def will_qos(self, flag) -> None:
         self.variable_header.will_qos = flag
 
     @property
@@ -302,7 +304,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.will_flag
 
     @will_flag.setter
-    def will_flag(self, flag):
+    def will_flag(self, flag) -> None:
         self.variable_header.will_flag = flag
 
     @property
@@ -310,7 +312,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.reserved_flag
 
     @reserved_flag.setter
-    def reserved_flag(self, flag):
+    def reserved_flag(self, flag) -> None:
         self.variable_header.reserved_flag = flag
 
     @property
@@ -318,7 +320,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.payload.client_id
 
     @client_id.setter
-    def client_id(self, client_id):
+    def client_id(self, client_id) -> None:
         self.payload.client_id = client_id
 
     @property
@@ -326,7 +328,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.payload.client_id_is_random
 
     @client_id_is_random.setter
-    def client_id_is_random(self, client_id_is_random: bool):
+    def client_id_is_random(self, client_id_is_random: bool) -> None:
         self.payload.client_id_is_random = client_id_is_random
 
     @property
@@ -334,7 +336,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.payload.will_topic
 
     @will_topic.setter
-    def will_topic(self, will_topic):
+    def will_topic(self, will_topic) -> None:
         self.payload.will_topic = will_topic
 
     @property
@@ -342,7 +344,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.payload.will_message
 
     @will_message.setter
-    def will_message(self, will_message):
+    def will_message(self, will_message) -> None:
         self.payload.will_message = will_message
 
     @property
@@ -350,7 +352,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.payload.username
 
     @username.setter
-    def username(self, username):
+    def username(self, username) -> None:
         self.payload.username = username
 
     @property
@@ -358,7 +360,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.payload.password
 
     @password.setter
-    def password(self, password):
+    def password(self, password) -> None:
         self.payload.password = password
 
     @property
@@ -366,7 +368,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.keep_alive
 
     @keep_alive.setter
-    def keep_alive(self, keep_alive):
+    def keep_alive(self, keep_alive) -> None:
         self.variable_header.keep_alive = keep_alive
 
     def __init__(
@@ -374,7 +376,7 @@ class ConnectPacket(MQTTPacket):  # noqa: D101
         fixed: MQTTFixedHeader = None,
         vh: ConnectVariableHeader = None,
         payload: ConnectPayload = None,
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(CONNECT, 0x00)
         else:

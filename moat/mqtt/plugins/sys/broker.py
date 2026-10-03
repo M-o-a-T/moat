@@ -23,13 +23,13 @@ STAT_CLIENTS_DISCONNECTED = "clients_disconnected"
 
 
 class BrokerSysPlugin:  # noqa: D101
-    def __init__(self, context):
+    def __init__(self, context) -> None:
         self.context = context
         # Broker statistics initialization
         self._stats = dict()
         self.sys_handle = None
 
-    def _clear_stats(self):
+    def _clear_stats(self) -> None:
         """
         Initializes broker statistics data structures
         """
@@ -49,10 +49,10 @@ class BrokerSysPlugin:  # noqa: D101
     async def _broadcast_sys_topic(self, topic_basename, data):
         return await self.context.broadcast_message(topic_basename, data)
 
-    async def on_broker_pre_start(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def on_broker_pre_start(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self._clear_stats()
 
-    async def on_broker_post_start(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def on_broker_post_start(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self._stats[STAT_START_TIME] = datetime.now(tz=datetime.UTC)
         from moat.mqtt.version import get_version  # noqa: PLC0415
 
@@ -84,12 +84,12 @@ class BrokerSysPlugin:  # noqa: D101
             pass
             # 'sys_internal' config parameter not found
 
-    async def on_broker_pre_stop(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def on_broker_pre_stop(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         # Stop $SYS topics broadcasting
         if self.sys_handle:
             await self.sys_handle.cancel()
 
-    async def broadcast_dollar_sys_topics_loop(self, interval, evt):  # noqa: D102
+    async def broadcast_dollar_sys_topics_loop(self, interval, evt) -> None:  # noqa: D102
         with anyio.CancelScope() as scope:
             self.sys_handle = scope
             await evt.set()
@@ -97,7 +97,7 @@ class BrokerSysPlugin:  # noqa: D101
                 await anyio.sleep(interval)
                 await self.broadcast_dollar_sys_topics()
 
-    async def broadcast_dollar_sys_topics(self):
+    async def broadcast_dollar_sys_topics(self) -> None:
         """
         Broadcast dynamic $SYS topics updates and reschedule next execution depending on 'sys_interval' config
         parameter.
@@ -183,7 +183,7 @@ class BrokerSysPlugin:  # noqa: D101
             int_to_bytes_str(subscriptions_count),
         )
 
-    async def on_mqtt_packet_received(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def on_mqtt_packet_received(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         packet = kwargs.get("packet")
         if packet:
             packet_size = packet.bytes_length
@@ -192,7 +192,7 @@ class BrokerSysPlugin:  # noqa: D101
             if packet.fixed_header.packet_type == PUBLISH:
                 self._stats[STAT_PUBLISH_RECEIVED] += 1
 
-    async def on_mqtt_packet_sent(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def on_mqtt_packet_sent(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         packet = kwargs.get("packet")
         if packet:
             packet_size = packet.bytes_length
@@ -201,13 +201,13 @@ class BrokerSysPlugin:  # noqa: D101
             if packet.fixed_header.packet_type == PUBLISH:
                 self._stats[STAT_PUBLISH_SENT] += 1
 
-    async def on_broker_client_connected(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def on_broker_client_connected(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self._stats[STAT_CLIENTS_CONNECTED] += 1
         self._stats[STAT_CLIENTS_MAXIMUM] = max(
             self._stats[STAT_CLIENTS_MAXIMUM],
             self._stats[STAT_CLIENTS_CONNECTED],
         )
 
-    async def on_broker_client_disconnected(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def on_broker_client_disconnected(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self._stats[STAT_CLIENTS_CONNECTED] -= 1
         self._stats[STAT_CLIENTS_DISCONNECTED] += 1

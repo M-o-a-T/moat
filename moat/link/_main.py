@@ -97,7 +97,7 @@ omit --local/-L (possibly using "-s SERVERNAME" instead).
     'Mirrors "local_only: yes" under "client:".',
 )
 @click.pass_context
-async def cli(ctx, link_name, force_local):
+async def cli(ctx, link_name, force_local) -> None:
     """
     MoaT's data link
 
@@ -133,12 +133,12 @@ async def cli(ctx, link_name, force_local):
 
 @cli.command("test")
 @click.pass_obj
-async def test(obj):
+async def test(obj) -> None:
     "Test"
 
     cfg = obj.cfg.link
 
-    async def check_root():
+    async def check_root() -> None:
         try:
             with anyio.fail_after(0.5):
                 async with back.monitor(cfg.root) as mon:
@@ -150,7 +150,7 @@ async def test(obj):
         except TimeoutError:
             print(f"## No retained root dataset on {cfg.root}.")
 
-    async def check_server():
+    async def check_server() -> None:
         try:
             with anyio.fail_after(0.5):
                 async with back.monitor(P(":R.run.service.main.conn")) as mon:

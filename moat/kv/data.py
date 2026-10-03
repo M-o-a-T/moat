@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from moat.lib.path import Path
 
 
-def add_dates(d):
+def add_dates(d) -> None:
     """
     Given a dict with int/float entries that might conceivably be dates,
     add ``_*`` with a textual representation.
@@ -30,7 +30,7 @@ def add_dates(d):
     start = t - 366 * 24 * 3600
     stop = t + 366 * 24 * 3600
 
-    def _add(d):
+    def _add(d) -> None:
         if isinstance(d, (list, tuple)):
             for dd in d:
                 _add(dd)

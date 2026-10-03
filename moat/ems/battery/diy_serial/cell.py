@@ -58,7 +58,7 @@ class Cell(BaseCell):
     load_maxtemp = None
     load_volt = None  # balance down up to here
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         if "pid" not in self.cfg:
             self.cfg.pid = attrdict()
@@ -79,13 +79,13 @@ class Cell(BaseCell):
             (val - self.cfg.u.offset) / self.v_per_ADC * self.n_samples / self.v_calibration,
         )
 
-    def m_temp(self, msg):  # noqa:D102
+    def m_temp(self, msg) -> None:  # noqa:D102
         assert self.b_coeff_ext is not None
         assert self.b_coeff_bal is not None
         self.batt_temp = thermistor2celsius(self.b_coeff_ext, msg.extRaw)
         self.load_temp = thermistor2celsius(self.b_coeff_bal, msg.intRaw)
 
-    def m_settings(self, msg):  # noqa:D102
+    def m_settings(self, msg) -> None:  # noqa:D102
         self.code_version = msg.gitVersion
         self.board_version = msg.boardVersion
         self.b_coeff_ext = msg.BCoeffInternal
@@ -109,7 +109,7 @@ class Cell(BaseCell):
             pid=self.cfg.pid,
         )
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         self.comm = self.root.sub_at(self.cfg["comm"], cmd=True)
         res = (await self.comm(p=RequestReadSettings(), s=self.cfg.pos))[0]
@@ -124,7 +124,7 @@ class Cell(BaseCell):
         res = (await self.comm(p=RequestVoltages(), s=self.cfg.pos))[0]
         return self._raw2volt(res.voltRaw & 0x1FFF)
 
-    def m_volt(self, msg):  # noqa:D102
+    def m_volt(self, msg) -> None:  # noqa:D102
         self.in_balance = bool(msg.voltRaw & 0x8000)
         self.balance_over_temp = bool(msg.voltRaw & 0x4000)
         vRaw = msg.voltRaw & 0x1FFF
@@ -146,7 +146,7 @@ class Cell(BaseCell):
         res.to_cell(self)
         return self.batt_temp
 
-    def m_pid(self, msg):  # noqa:D102
+    def m_pid(self, msg) -> None:  # noqa:D102
         self.cfg.pid.p = msg.kp
         self.cfg.pid.i = msg.ki
         self.cfg.pid.d = msg.kd
@@ -208,7 +208,7 @@ class Cell(BaseCell):
             self.m_bal_power(res)
         return dict(p=self.bal_power, thr=self.bal_level)
 
-    def m_bal_power(self, msg):  # noqa:D102
+    def m_bal_power(self, msg) -> None:  # noqa:D102
         self.bal_power = msg.pwm / 255
 
     doc_bd_sum = dict(_d="balance sum", _r="int:charge count")

@@ -132,14 +132,14 @@ class Box(Base):
 
 @event.listens_for(Box, "before_insert")
 @event.listens_for(Box, "before_update")
-def validate_box_coords(mapper, connection, model):
+def validate_box_coords(mapper, connection, model) -> None:
     "Validator for box position"
     mapper, connection  # noqa:B018
     par = model.container
     if par is not None:
         par = par.boxtyp
 
-    def chk(p):
+    def chk(p) -> None:
         pp = f"pos_{p}"
         ppos = getattr(par, pp, None)
 

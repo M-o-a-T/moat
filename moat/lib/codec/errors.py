@@ -28,7 +28,7 @@ class SilentRemoteError(RemoteError):  # ty:ignore[unsupported-base]  # RemoteEr
 class NoPathError(KeyError):
     """An error that marks a nonexisting path"""
 
-    def __str__(self):
+    def __str__(self) -> str:
         from moat.lib.path import Path  # noqa: PLC0415
 
         return (

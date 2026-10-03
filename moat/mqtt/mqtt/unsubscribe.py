@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 class UnubscribePayload(MQTTPayload):  # noqa: D101
     __slots__ = ("topics",)
 
-    def __init__(self, topics=()):
+    def __init__(self, topics=()) -> None:
         super().__init__()
         self.topics = topics
 
@@ -63,7 +63,7 @@ class UnsubscribePacket(MQTTPacket):  # noqa: D101
         fixed: MQTTFixedHeader = None,
         variable_header: PacketIdVariableHeader = None,
         payload=None,
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(UNSUBSCRIBE, 0x02)  # [MQTT-3.10.1-1]
         else:

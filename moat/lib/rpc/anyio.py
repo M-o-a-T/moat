@@ -37,7 +37,7 @@ class AioStream(HandlerStream):  # noqa: D101
         debug: str | None = None,
         codec: str | Codec | None = None,
         **kw,
-    ):
+    ) -> None:
         self.__s = stream
         self.__debug = debug
 
@@ -54,7 +54,7 @@ class AioStream(HandlerStream):  # noqa: D101
         self.__codec = codec
         super().__init__(cmd, **kw)
 
-    async def read_stream(self):  # noqa: D102
+    async def read_stream(self) -> None:  # noqa: D102
         conn = self.__s
         codec = self.__codec
         rd_ = conn.read if hasattr(conn, "read") else conn.receive
@@ -67,7 +67,7 @@ class AioStream(HandlerStream):  # noqa: D101
             for msg in codec:
                 await self.msg_in(msg)
 
-    async def write_stream(self):  # noqa: D102
+    async def write_stream(self) -> None:  # noqa: D102
         conn = self.__s
         codec = self.__codec
         wr = conn.write if hasattr(conn, "write") else conn.send

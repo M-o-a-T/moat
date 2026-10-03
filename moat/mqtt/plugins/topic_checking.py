@@ -2,7 +2,7 @@ from __future__ import annotations  # noqa: D100
 
 
 class BaseTopicPlugin:  # noqa: D101
-    def __init__(self, context):
+    def __init__(self, context) -> None:
         self.context = context
         try:
             self.topic_config = self.context.config["topic-check"]
@@ -10,7 +10,7 @@ class BaseTopicPlugin:  # noqa: D101
             self.context.logger.warning("'topic-check' section not found in context configuration")
             self.topic_config = None
 
-    async def topic_filtering(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def topic_filtering(self, *args, **kwargs) -> bool | None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         if not self.topic_config:
             # auth config section not found
             return None
@@ -18,7 +18,7 @@ class BaseTopicPlugin:  # noqa: D101
 
 
 class TopicTabooPlugin(BaseTopicPlugin):  # noqa: D101
-    def __init__(self, context):
+    def __init__(self, context) -> None:
         super().__init__(context)
         self._taboo = ["prohibited", "top-secret", "data/classified"]
 
@@ -57,7 +57,7 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):  # noqa: D101
                 break
         return ret
 
-    async def topic_filtering(self, *args, **kwargs):  # noqa: D102
+    async def topic_filtering(self, *args, **kwargs) -> bool | None:  # noqa: D102
         if not self.topic_config:
             # auth config section not found
             return None

@@ -32,10 +32,10 @@ class WsIter(TcpIter):
         path: str = "/",
         *,
         subprotocols: list[str] | None = None,
-    ):
+    ) -> None:
         super().__init__(host, port)
         self.path = path
         self.subprotocols = subprotocols
 
-    async def _handle(self, client):
+    async def _handle(self, client) -> None:
         await self.add_conn(SingleWsBlk(client, path=self.path, subprotocols=self.subprotocols))

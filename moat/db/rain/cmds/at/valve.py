@@ -33,7 +33,7 @@ from moat.lib.run import AliasedGroup, option_ng
 @click.option("--controller", "-c", type=str, default=None, help="Controller this valve is on")
 @click.option("--name", "-n", type=str, default=None, help="Valve name")
 @click.pass_obj
-async def cli(obj, controller, name):
+async def cli(obj, controller, name) -> None:
     """Manage irrigation valves."""
     obj.controller = controller
     obj.name = name
@@ -82,7 +82,7 @@ def _require(kw, key: str, label: str) -> None:
 
 @cli.command(name="show")
 @click.pass_obj
-async def show_(obj):
+async def show_(obj) -> None:
     """Show one valve, or list all valves in this site."""
     site = site_of(obj)
     if obj.name is None:
@@ -109,7 +109,7 @@ async def show_(obj):
 @click.option("--feed", "-F", type=str, help="Feed (water source) for this valve")
 @click.option("--envgroup", "-e", type=str, help="Env group governing this valve")
 @click.pass_obj
-async def add(obj, feed, envgroup, pri_set, pri_clr, **kw):
+async def add(obj, feed, envgroup, pri_set, pri_clr, **kw) -> None:
     """Add a valve to a controller in this site."""
     name = obj.name
     if name is None:
@@ -141,7 +141,7 @@ async def add(obj, feed, envgroup, pri_set, pri_clr, **kw):
 @cli.command(name="set")
 @opts
 @click.pass_obj
-async def set_(obj, pri_set, pri_clr, **kw):
+async def set_(obj, pri_set, pri_clr, **kw) -> None:
     """Modify a valve (parents are fixed; use delete + add to move it)."""
     name = obj.name
     if name is None:
@@ -155,7 +155,7 @@ async def set_(obj, pri_set, pri_clr, **kw):
 
 @cli.command(name="delete")
 @click.pass_obj
-async def delete_(obj):
+async def delete_(obj) -> None:
     """Remove a valve (and its schedules/levels/overrides/logs)."""
     name = obj.name
     if name is None:
@@ -180,14 +180,14 @@ def _valve_of(obj) -> Valve:
 @cli.group(name="override", cls=AliasedGroup, short_help="Manage this valve's overrides")
 @click.option("--start", "-s", type=str, default=None, help="Override start (ISO timestamp)")
 @click.pass_obj
-async def override_cli(obj, start):
+async def override_cli(obj, start) -> None:
     """Force a valve on or off for a time window."""
     obj.start = start
 
 
 @override_cli.command(name="show")
 @click.pass_obj
-async def override_show(obj):
+async def override_show(obj) -> None:
     """Show one override, or list all overrides of this valve."""
     v = _valve_of(obj)
     if obj.start is None:
@@ -206,7 +206,7 @@ async def override_show(obj):
 @click.option("--run", "run_set", is_flag=True, help="Force the valve running")
 @click.option("--no-run", "run_clr", is_flag=True, help="Force the valve stopped")
 @click.pass_obj
-async def override_add(obj, run_set, run_clr, **kw):
+async def override_add(obj, run_set, run_clr, **kw) -> None:
     """Add an override to this valve."""
     v = _valve_of(obj)
     if obj.start is None:
@@ -232,7 +232,7 @@ async def override_add(obj, run_set, run_clr, **kw):
 @click.option("--run", "run_set", is_flag=True, help="Force the valve running")
 @click.option("--no-run", "run_clr", is_flag=True, help="Force the valve stopped")
 @click.pass_obj
-async def override_set(obj, run_set, run_clr, **kw):
+async def override_set(obj, run_set, run_clr, **kw) -> None:
     """Modify an override of this valve."""
     v = _valve_of(obj)
     if obj.start is None:
@@ -246,7 +246,7 @@ async def override_set(obj, run_set, run_clr, **kw):
 
 @override_cli.command(name="delete")
 @click.pass_obj
-async def override_delete(obj):
+async def override_delete(obj) -> None:
     """Remove an override from this valve."""
     v = _valve_of(obj)
     if obj.start is None:
@@ -261,14 +261,14 @@ async def override_delete(obj):
 @cli.group(name="schedule", cls=AliasedGroup, short_help="Manage this valve's schedules")
 @click.option("--start", "-s", type=str, default=None, help="Run start (ISO timestamp)")
 @click.pass_obj
-async def schedule_cli(obj, start):
+async def schedule_cli(obj, start) -> None:
     """Manage planned runs of this valve."""
     obj.start = start
 
 
 @schedule_cli.command(name="show")
 @click.pass_obj
-async def schedule_show(obj):
+async def schedule_show(obj) -> None:
     """Show one schedule, or list all schedules of this valve."""
     v = _valve_of(obj)
     if obj.start is None:
@@ -290,7 +290,7 @@ async def schedule_show(obj):
 @click.pass_obj
 async def schedule_add(
     obj, seen_set, seen_clr, changed_set, changed_clr, forced_set, forced_clr, **kw
-):
+) -> None:
     """Add a schedule to this valve."""
     v = _valve_of(obj)
     if obj.start is None:
@@ -321,7 +321,7 @@ async def schedule_add(
 @click.pass_obj
 async def schedule_set(
     obj, seen_set, seen_clr, changed_set, changed_clr, forced_set, forced_clr, **kw
-):
+) -> None:
     """Modify a schedule of this valve."""
     v = _valve_of(obj)
     if obj.start is None:
@@ -337,7 +337,7 @@ async def schedule_set(
 
 @schedule_cli.command(name="delete")
 @click.pass_obj
-async def schedule_delete(obj):
+async def schedule_delete(obj) -> None:
     """Remove a schedule from this valve."""
     v = _valve_of(obj)
     if obj.start is None:
@@ -352,14 +352,14 @@ async def schedule_delete(obj):
 @cli.group(name="level", cls=AliasedGroup, short_help="Manage this valve's level samples")
 @click.option("--time", "-t", type=str, default=None, help="Sample time (ISO timestamp)")
 @click.pass_obj
-async def level_cli(obj, time):
+async def level_cli(obj, time) -> None:
     """Manage historic level samples of this valve."""
     obj.time = time
 
 
 @level_cli.command(name="show")
 @click.pass_obj
-async def level_show(obj):
+async def level_show(obj) -> None:
     """Show one sample, or list all samples of this valve."""
     v = _valve_of(obj)
     if obj.time is None:
@@ -376,7 +376,7 @@ async def level_show(obj):
 @click.option("--forced", "forced_set", is_flag=True, help="Mark as forced")
 @click.option("--no-forced", "forced_clr", is_flag=True, help="Mark as not forced")
 @click.pass_obj
-async def level_add(obj, forced_set, forced_clr, **kw):
+async def level_add(obj, forced_set, forced_clr, **kw) -> None:
     """Add a level sample to this valve."""
     v = _valve_of(obj)
     if obj.time is None:
@@ -401,7 +401,7 @@ async def level_add(obj, forced_set, forced_clr, **kw):
 @click.option("--forced", "forced_set", is_flag=True, help="Mark as forced")
 @click.option("--no-forced", "forced_clr", is_flag=True, help="Mark as not forced")
 @click.pass_obj
-async def level_set(obj, forced_set, forced_clr, **kw):
+async def level_set(obj, forced_set, forced_clr, **kw) -> None:
     """Modify a level sample of this valve."""
     v = _valve_of(obj)
     if obj.time is None:
@@ -416,7 +416,7 @@ async def level_set(obj, forced_set, forced_clr, **kw):
 
 @level_cli.command(name="delete")
 @click.pass_obj
-async def level_delete(obj):
+async def level_delete(obj) -> None:
     """Remove a level sample from this valve."""
     v = _valve_of(obj)
     if obj.time is None:

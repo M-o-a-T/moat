@@ -48,7 +48,7 @@ If 'phase' is set, only this phase will be used.
 """,
     )
 
-    async def run(self):
+    async def run(self) -> None:
         "do the work"
         intf = self.intf
         while True:

@@ -77,7 +77,7 @@ class InvMode_Remote(InvModeBase):
         return self.intf.op.get("mode", 3)
 
     @mode.setter
-    def mode(self, val):
+    def mode(self, val) -> None:
         self.intf.op["mode"] = val
 
     @property
@@ -165,7 +165,7 @@ Set to -1 to clear.
     _powers: dict | None = None
     _power: float | None = None
 
-    async def run(self):
+    async def run(self) -> None:
         "do the work"
         self._limits = {}
         self._powers = {}
@@ -189,7 +189,7 @@ Set to -1 to clear.
             if dkv:
                 await dkv.set(intf.distkv_prefix / "solar" / "online", False, idem=True)
 
-    async def _dkv_mon_l(self, evt):
+    async def _dkv_mon_l(self, evt) -> None:
         lims = self._limits
         if lims is None:
             lims = {}
@@ -218,7 +218,7 @@ Set to -1 to clear.
                         self._limit = min(lims.values(), default=1)
                         logger.info("LIM: %f", self._limit)
 
-    async def _dkv_mon_p(self, evt):
+    async def _dkv_mon_p(self, evt) -> None:
         pows = self._powers
         if pows is None:
             pows = {}
@@ -246,7 +246,7 @@ Set to -1 to clear.
                     self._power = min(pows.values(), default=0)
                     logger.info("POW: %f", self._power)
 
-    async def _run(self):
+    async def _run(self) -> None:
         intf = self.intf
         dkv = await intf.distkv
         state = attrdict(mode=0, limits=self._limits, powers=self._powers)

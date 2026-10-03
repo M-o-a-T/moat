@@ -845,7 +845,7 @@ def wrap_main(
     ext_pre: str | None = None,
     ext_post: str | None = None,
     ext_name: str | None = None,
-    cfg: CfgStore | attrdict | None | Literal[False] = None,
+    cfg: CfgStore | attrdict | Literal[False] | None = None,
     cfg_files: str | Sequence[str] = (),
     cfg_load_all: bool | None = True,
     args: Sequence[str] | None = None,

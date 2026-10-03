@@ -60,7 +60,7 @@ class BaseValue:
     block: DataBlock | None = None
     to_write: int | None = None
 
-    def __init__(self, value=None, *, offset=None, idem=True):
+    def __init__(self, value=None, *, offset=None, idem=True) -> None:
         self.changed = anyio.Event()
         self._value = value
         self._value_w = value
@@ -83,11 +83,11 @@ class BaseValue:
         return self._value
 
     @value.setter
-    def value(self, val: float | None):
+    def value(self, val: float | None) -> None:
         "sets the value that's read from the bus"
         self._value = self._constrain(val)
 
-    def set(self, val: float, idem: bool = False):
+    def set(self, val: float, idem: bool = False) -> None:
         """Set the value-to-be-written.
 
         Triggers a write unless @idem is set (default: it is not).
@@ -144,10 +144,10 @@ class BaseValue:
         """
         return self._encode(self._value_w if self._value_w is not None else self._value)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"‹{self.value}›"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         res = f"<{self.__class__.__name__}"
         if self.offset is not None:
             res += f" @{self.offset}"
@@ -206,7 +206,7 @@ class InaccessibleValue(BaseValue):  # duck-types but does NOT interit BaseValue
 
     # pylint: disable=abstract-method
 
-    def __init__(self, length):
+    def __init__(self, length) -> None:
         # pylint: disable=super-init-not-called
         self.len = length
 
@@ -277,7 +277,7 @@ class InvBitValue(BaseValue):
 
     len = 1
 
-    def _decode(self, regs):
+    def _decode(self, regs) -> bool:
         return not bool(regs[0])
 
     def _encode(self, value):
@@ -374,7 +374,7 @@ class ByteValue(BaseValue):
     endian = ">"
     len = -1
 
-    def __init__(self, length, *a, **kw):
+    def __init__(self, length, *a, **kw) -> None:
         self.len = (length + 1) // 2
         self.pack = f"{self.endian}{self.len}H"
 
@@ -429,7 +429,7 @@ class TypeCodec:
     encoder_m: Callable[..., PDU]
     decoder_m: Callable[..., PDU]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__class__.__name__
 
     def __eq__(self, typ):
@@ -508,28 +508,28 @@ class DataBlock:
     succeeds.
     """
 
-    def __init__(self, max_rd_len=MAX_REQ_LEN, max_wr_len=MAX_REQ_LEN):
+    def __init__(self, max_rd_len=MAX_REQ_LEN, max_wr_len=MAX_REQ_LEN) -> None:
         self.__data = dict()
         self.max_rd_len = max_rd_len
         self.max_wr_len = max_wr_len
         self.changed = anyio.Event()
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return True
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.__data)
 
     def __getitem__(self, k):
         return self.__data[k]
 
-    def __setitem__(self, k, v):
+    def __setitem__(self, k, v) -> None:
         self.__data[k] = v
 
-    def __delitem__(self, k):
+    def __delitem__(self, k) -> None:
         del self.__data[k]
 
-    def __contains__(self, k):
+    def __contains__(self, k) -> bool:
         return k in self.__data
 
     def pop(self, k, default=None):
@@ -548,21 +548,21 @@ class DataBlock:
         "mapping items"
         return self.__data.items()
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Clear all values in this block
         """
         for val in self.values():
             val.value = None
 
-    def trigger_send(self):
+    def trigger_send(self) -> None:
         """Called by a value when it's been changed.
 
         Currently a no-op in this class.
         """
         pass
 
-    def add(self, offset: int, val: BaseValue):
+    def add(self, offset: int, val: BaseValue) -> None:
         """Add a value to the block."""
         if offset in self:
             raise ValueError("Already known", offset)
@@ -635,7 +635,7 @@ class DataBlock:
             res = res[:count]
         return res
 
-    def markSent(self, address: int, count=1):
+    def markSent(self, address: int, count=1) -> None:
         """Mark this range as sent: remember gen counter"""
         while count > 0:
             try:
@@ -654,7 +654,7 @@ class DataBlock:
                 address += val.len
                 count -= val.len
 
-    def setValues(self, address: int, values: list[int]):
+    def setValues(self, address: int, values: list[int]) -> None:
         """Set the variables starting at @address to @values.
 
         Called with the reply of a Read request, OR when server receives write.
@@ -674,7 +674,7 @@ class DataBlock:
         self.changed.set()
         self.changed = anyio.Event()
 
-    def delete(self, address, count=1):
+    def delete(self, address, count=1) -> None:
         """
         Remove @count values at @address
         """
@@ -693,7 +693,7 @@ class ValueIterator:
     Posts a notification when values get skipped.
     """
 
-    def __init__(self, val):
+    def __init__(self, val) -> None:
         self.val = val
         self.gen = max(0, val.gen - 1)
 

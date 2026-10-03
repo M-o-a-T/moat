@@ -21,7 +21,7 @@ class _ADC(M.ADC):
         self = super().__new__(**kw)
         return self
 
-    def __init__(self, cfg, **kw):  # noqa:ARG002
+    def __init__(self, cfg, **kw) -> None:  # noqa:ARG002
         self.t = cfg.get("t", 1000)
         self.nn = cfg.get("nn", 1)
         self.dly = cfg.get("delay", 1)
@@ -32,7 +32,7 @@ class _ADC(M.ADC):
         self.evt = Event()
         self.delta = cfg.get("delta", 3)
 
-    async def scan(self):
+    async def scan(self) -> None:
         self.val = await self.read()
         self.evt.set()
         self.evt = Event()
@@ -95,7 +95,7 @@ class ADC(BaseCmd):
         _o="float:value",
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         kw = {}
         if "ts" in cfg:
@@ -104,14 +104,14 @@ class ADC(BaseCmd):
             kw["atten"] = cfg["atten"]
         self.adc = _ADC(cfg, **kw)
 
-    async def setup(self):
+    async def setup(self) -> None:
         "initialization, triggers change"
         await super().setup()
         if getattr(self, "tg", None) is None:
             self.tg = await AC_use(self, TaskGroup())
         await self.tg.spawn(self.pin.scan)
 
-    async def stream(self, msg: Msg):
+    async def stream(self, msg: Msg) -> None:
         "read. Wait for changes if @o (old value) is not None"
         o = msg.get("o", None)
         d = msg.get("d", 0)

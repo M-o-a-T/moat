@@ -34,7 +34,7 @@ from ._util import (
 @click.group(name="day", cls=AliasedGroup, short_help="Manage day definitions (global)")
 @click.option("--name", "-n", type=str, default=None, help="Day name")
 @click.pass_obj
-async def cli(obj, name):
+async def cli(obj, name) -> None:
     """Manage global day definitions and their time fragments."""
     obj.name = name
 
@@ -44,7 +44,7 @@ async def cli(obj, name):
 
 @cli.command(name="show")
 @click.pass_obj
-async def show_(obj):
+async def show_(obj) -> None:
     """Show one day, or list all days."""
     if obj.name is None:
         seen = False
@@ -60,7 +60,7 @@ async def show_(obj):
 
 @cli.command()
 @click.pass_obj
-async def add(obj):
+async def add(obj) -> None:
     """Add a day."""
     name = require_name(obj, "day")
     absent(obj, Day, "day", name=name)
@@ -73,7 +73,7 @@ async def add(obj):
 @cli.command(name="set")
 @option_ng("--name", "-n", type=str, help="Rename this day")
 @click.pass_obj
-async def set_(obj, **kw):
+async def set_(obj, **kw) -> None:
     """Rename a day."""
     name = require_name(obj, "day")
     d = get_one(obj, Day, "day", name=name)
@@ -84,7 +84,7 @@ async def set_(obj, **kw):
 
 @cli.command(name="delete")
 @click.pass_obj
-async def delete_(obj):
+async def delete_(obj) -> None:
     """Remove a day (and its time fragments)."""
     name = require_name(obj, "day")
     d = get_one(obj, Day, "day", name=name)
@@ -102,14 +102,14 @@ def _day_of(obj) -> Day:
 @cli.group(name="time", cls=AliasedGroup, short_help="Manage a day's time fragments")
 @click.option("--descr", "-d", type=str, default=None, help="Time-fragment description")
 @click.pass_obj
-async def time_cli(obj, descr):
+async def time_cli(obj, descr) -> None:
     """Manage the time fragments of the selected day."""
     obj.descr = descr
 
 
 @time_cli.command(name="show")
 @click.pass_obj
-async def time_show(obj):
+async def time_show(obj) -> None:
     """Show one time fragment, or list all fragments of this day."""
     day = _day_of(obj)
     if obj.descr is None:
@@ -126,7 +126,7 @@ async def time_show(obj):
 
 @time_cli.command(name="add")
 @click.pass_obj
-async def time_add(obj):
+async def time_add(obj) -> None:
     """Add a time fragment to this day."""
     day = _day_of(obj)
     descr = obj.descr
@@ -143,7 +143,7 @@ async def time_add(obj):
 @time_cli.command(name="set")
 @option_ng("--descr", "-d", type=str, help="Rename this time fragment")
 @click.pass_obj
-async def time_set(obj, **kw):
+async def time_set(obj, **kw) -> None:
     """Modify a time fragment's description."""
     day = _day_of(obj)
     descr = obj.descr
@@ -157,7 +157,7 @@ async def time_set(obj, **kw):
 
 @time_cli.command(name="delete")
 @click.pass_obj
-async def time_delete(obj):
+async def time_delete(obj) -> None:
     """Remove a time fragment from this day."""
     day = _day_of(obj)
     descr = obj.descr

@@ -17,7 +17,7 @@ class CBORMsgBuf(_CBORMsgBuf):
     message boundaries.
     """
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         self.codec = get_codec(self.cfg.get("codec", "std-cbor"))
 
@@ -30,6 +30,6 @@ class CBORMsgBlk(_CBORMsgBlk):
     (one bytestring-ized message per call).
     """
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         self.codec = get_codec(self.cfg.get("codec", "std-cbor"))

@@ -210,7 +210,7 @@ class API(CtxObj, metaclass=ABCMeta):
     _njobs: int = 0
     _ended: anyio.Event | None = None
 
-    def __init__(self, name: str, cfg: attrdict):
+    def __init__(self, name: str, cfg: attrdict) -> None:
         self.name = name
         self.cfg = cfg
         self.logger = logging.getLogger(f"moat.src.api.{name}")

@@ -42,7 +42,7 @@ class Cmd(BaseCmd):
         ),
     )
 
-    async def stream(self, msg: Msg):
+    async def stream(self, msg: Msg) -> None:
         """
         Keepalive/liveness monitor. Echoes incoming data.
         """
@@ -70,7 +70,7 @@ class Cmd(BaseCmd):
                 self.set_ready()
                 await self._do(sub)
 
-    async def _do(self, sender):
+    async def _do(self, sender) -> None:
         n = 0
         while True:
             res = await wait_for(self.cfg.get("t", 3), sender, n)

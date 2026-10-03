@@ -35,7 +35,7 @@ def _gen(i):
         self._len(ii)
         return self[i]
 
-    def set_(self, val):
+    def set_(self, val) -> None:
         self._len(ii)
         self[i] = val
 
@@ -78,7 +78,7 @@ class MsgMeta:
         def __attrs_init__(self) -> None:
             """Initialize attrs-managed fields."""
 
-    def __init__(self, /, name: str | EllipsisType | None = None, **kwargs):  # pyright: ignore
+    def __init__(self, /, name: str | EllipsisType | None = None, **kwargs) -> None:  # pyright: ignore
         vals = {}
         for k in dir(self):
             v = getattr(type(self), k, None)
@@ -90,7 +90,7 @@ class MsgMeta:
             setattr(self, k, v)
         self._clean(name)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         res = f"‹{self.__class__.__name__} {self.a!r}"
         if self.kw:
             res += "," + repr(self.kw)
@@ -146,7 +146,7 @@ class MsgMeta:
     def __setstate__(self, akw):
         self.a, self.kw, *_ = akw
 
-    def __setitem__(self, k, v):
+    def __setitem__(self, k, v) -> None:
         if isinstance(k, slice):
             raise ValueError("Only use positive indices")  # noqa:TRY004
         if isinstance(k, int):
@@ -159,13 +159,13 @@ class MsgMeta:
         else:
             self.kw[k] = v
 
-    def __delitem__(self, k):
+    def __delitem__(self, k) -> None:
         if isinstance(k, int):
             self.a[k] = None
         else:
             del self.kw[k]
 
-    def _clean(self, name: str | EllipsisType | None):
+    def _clean(self, name: str | EllipsisType | None) -> None:
         if name is NotGiven:
             return
         if name is None:
@@ -179,7 +179,7 @@ class MsgMeta:
         if not self.timestamp:
             self.timestamp = mtime.time()
 
-    def _len(self, n):
+    def _len(self, n) -> None:
         while len(self.a) < n:
             self.a.append(None)
 
@@ -190,7 +190,7 @@ class MsgMeta:
         push_kw(res, self.kw)
         return res
 
-    def _unmap(self, data: list[Any]):
+    def _unmap(self, data: list[Any]) -> None:
         self.kw = pop_kw(data)
         self.a = data
         dit = iter(data)

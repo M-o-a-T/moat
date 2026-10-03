@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class MqttMessage:  # noqa:D101
-    def __init__(self, topic, payload):
+    def __init__(self, topic, payload) -> None:
         self.topic = topic
         self.payload = payload
 

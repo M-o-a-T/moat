@@ -35,7 +35,7 @@ class _AuthBridge:
         is_server: bool,
         require_remote_auth: bool,
         debug: str | None = None,
-    ):
+    ) -> None:
         self.cfg = cfg
         self.msg = msg
         self.is_server = is_server
@@ -56,11 +56,11 @@ class _AuthBridge:
         self._stream = None
         self._ready = Event()
 
-    async def run(self, root: MsgSender):
+    async def run(self, root: MsgSender) -> None:
         """Run auth and nested command forwarding."""
         await self._auth.process(root)
 
-    async def process(self, root: MsgHandler):
+    async def process(self, root: MsgHandler) -> None:
         """Run the nested RPC stream."""
         try:
             async with CmdStream(root, self.msg, debug=self.debug) as stream:
@@ -70,7 +70,7 @@ class _AuthBridge:
         finally:
             self._stream = None
 
-    async def check_rdy(self, msg: Msg, rcmd: list[PathElem]):
+    async def check_rdy(self, msg: Msg, rcmd: list[PathElem]) -> None:
         "Auth helper hook."
         msg  # noqa: B018
         rcmd  # noqa: B018
@@ -99,7 +99,7 @@ class _AuthBridge:
         if self.require_remote_auth:
             raise AuthDenied("Auth required")
 
-    async def wait_ready(self, wait=True):
+    async def wait_ready(self, wait=True) -> bool | None:
         """Auth helper hook used by :class:`moat.lib.rpc.auth._base._WithAuth`."""
         if self._stream is None:
             if wait:
@@ -141,7 +141,7 @@ class Cmd(BaseSuperCmd):
     _target_path: Path | None = None
     _app: BaseCmd | None = None
 
-    async def setup(self):
+    async def setup(self) -> None:
         """Validate configuration before startup."""
         await super().setup()
         if "auth" not in self.cfg:
@@ -161,11 +161,11 @@ class Cmd(BaseSuperCmd):
                 raise ValueError(f"{self.path}: protected app is disabled")
             self._app.attached(self, None)
 
-    def find_sub(self, scmd):  # noqa: D102
+    def find_sub(self, scmd) -> None:  # noqa: D102
         scmd  # noqa: B018
         return None
 
-    async def task(self):
+    async def task(self) -> None:
         """Start the protected app (if local), then idle."""
         if self._app is not None:
             await self.start_app(self._app)
@@ -187,7 +187,7 @@ class Cmd(BaseSuperCmd):
                 return None
             return w or aw
 
-    async def stream(self, msg: Msg):
+    async def stream(self, msg: Msg) -> None:
         """Open the authenticated nested command stream."""
         if L:
             await self.wait_ready()

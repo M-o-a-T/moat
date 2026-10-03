@@ -70,13 +70,13 @@ class CmdStream(HandlerStream):
         msg: Msg,
         debug: str | None = None,
         **kw,
-    ):
+    ) -> None:
         self.__msg = msg
         self.__debug = debug
 
         super().__init__(cmd, **kw)
 
-    async def read_stream(self):  # noqa: D102
+    async def read_stream(self) -> None:  # noqa: D102
         msg = self.__msg
 
         try:
@@ -92,7 +92,7 @@ class CmdStream(HandlerStream):
             # mirroring the EOFError handling in ``write_stream`` below.
             return
 
-    async def write_stream(self):  # noqa: D102
+    async def write_stream(self) -> None:  # noqa: D102
         msg = self.__msg
         while True:
             try:
@@ -121,7 +121,7 @@ class _AuthAdapter:
         cmd: BaseMsgHandler | None,
         *,
         is_server: bool = False,
-    ):
+    ) -> None:
         from moat.lib.rpc import Auth  # noqa: PLC0415
 
         self.cfg = cfg
@@ -182,7 +182,7 @@ class _AuthAdapter:
         self._stream = stream
 
         # Start the auth handshake in the CmdStream's task group.
-        async def run_auth():
+        async def run_auth() -> None:
             async with a_in:
                 await a_in.task()
                 await anyio.sleep_forever()
@@ -278,7 +278,7 @@ class rpc_on_rpc:
         is_server: bool = False,
         debug: bool = False,
         logger=None,
-    ):
+    ) -> None:
         """
         Args:
             cmd: handler for incoming messages. May be `None`.

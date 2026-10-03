@@ -18,7 +18,7 @@ class AIOBuf(BaseBuf):
 
     s = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     async def stream(self):  # noqa:D102
@@ -47,7 +47,7 @@ class SingleAIOBuf(AIOBuf):
     once.
     """
 
-    def __init__(self, stream):
+    def __init__(self, stream) -> None:
         self._s = stream
 
     async def stream(self):  # noqa:D102
@@ -57,7 +57,7 @@ class SingleAIOBuf(AIOBuf):
         await AC_use(self, self._destr)
         return s
 
-    def _destr(self):
+    def _destr(self) -> None:
         if hasattr(self.s, "deinit"):
             self.s.deinit()
         elif hasattr(self.s, "close"):

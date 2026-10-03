@@ -22,7 +22,7 @@ from moat.lib.run import AliasedGroup, option_ng
 @click.group(name="env", cls=AliasedGroup, short_help="Manage environment groups")
 @click.option("--name", "-n", type=str, default=None, help="Env-group name")
 @click.pass_obj
-async def cli(obj, name):
+async def cli(obj, name) -> None:
     """Manage irrigation environment groups."""
     obj.name = name
 
@@ -39,7 +39,7 @@ def opts(c):
 
 @cli.command(name="show")
 @click.pass_obj
-async def show_(obj):
+async def show_(obj) -> None:
     """Show one env group, or list all env groups in this site."""
     if obj.name is None:
         seen = False
@@ -56,7 +56,7 @@ async def show_(obj):
 @cli.command()
 @opts
 @click.pass_obj
-async def add(obj, rain_set, rain_clr, **kw):
+async def add(obj, rain_set, rain_clr, **kw) -> None:
     """Add an env group to this site."""
     name = require_name(obj, "env group")
     absent(obj, EnvGroup, "env group", site=site_of(obj), name=name)
@@ -71,7 +71,7 @@ async def add(obj, rain_set, rain_clr, **kw):
 @cli.command(name="set")
 @opts
 @click.pass_obj
-async def set_(obj, rain_set, rain_clr, **kw):
+async def set_(obj, rain_set, rain_clr, **kw) -> None:
     """Modify an env group."""
     name = require_name(obj, "env group")
     g = get_one(obj, EnvGroup, "env group", site=site_of(obj), name=name)
@@ -83,7 +83,7 @@ async def set_(obj, rain_set, rain_clr, **kw):
 
 @cli.command(name="delete")
 @click.pass_obj
-async def delete_(obj):
+async def delete_(obj) -> None:
     """Remove an env group (valves referencing it are deleted too)."""
     name = require_name(obj, "env group")
     g = get_one(obj, EnvGroup, "env group", site=site_of(obj), name=name)

@@ -16,6 +16,6 @@ log = logging.getLogger()
 
 @load_subgroup(sub_pre="moat.ems")
 @click.pass_obj
-async def cli(obj):
+async def cli(obj) -> None:
     """Energy Management System"""
     obj  # noqa:B018

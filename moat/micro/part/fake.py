@@ -57,7 +57,7 @@ class Pin(BaseCmd):
         await self.flag.wait()
         return self._value
 
-    async def cmd(self, val: bool | EllipsisType = NotGiven) -> None | bool:
+    async def cmd(self, val: bool | EllipsisType = NotGiven) -> bool | None:
         """Simple Data protocol."""
         if val is NotGiven:
             return self.value

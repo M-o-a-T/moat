@@ -180,7 +180,7 @@ class SubAuth(_SubAuth):
     _dh_key: bytes | None
     _dh_challenge: bytes | None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._done_evt = Event()
         self._dh_key = None

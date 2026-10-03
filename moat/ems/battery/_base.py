@@ -20,10 +20,12 @@ from moat.lib.rpc import ArrayCmd, BaseCmd
 from moat.lib.rpc.alert import Alert
 from moat.micro.rtc import RTC
 
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.rpc import SubMsgSender
+
+    from typing import Never
 
 
 class BatteryAlert(Alert):
@@ -355,12 +357,12 @@ class BaseCells(ArrayCmd):
     n_warn_ud = 0
     n_save = 98
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self._reloaded = Event()
         self.clear_work()
 
-    async def _setup(self):
+    async def _setup(self) -> None:
         cfg = self.cfg
         self.al = self.root.sub_at(cfg["alarm"]) if "alarm" in cfg else None
         self.rly = self.root.sub_at(cfg["rly"]) if "relay" in cfg else None
@@ -377,7 +379,7 @@ class BaseCells(ArrayCmd):
         n = self.cfg["n"]
         self.u_mid = (c["min"] + c["max"]) * n / 2
 
-    async def setup(self):
+    async def setup(self) -> None:
         await super().setup()
         await self._setup()
         try:
@@ -443,12 +445,12 @@ class BaseCells(ArrayCmd):
                 await self.rly.w(v=False)
             raise
 
-    async def reload(self):
+    async def reload(self) -> None:
         await super().reload()
         self._reloaded.set()
         self._reloaded = Event()
 
-    async def monitor_ud(self):
+    async def monitor_ud(self) -> None:
         while True:
             try:
                 await sleep_ms(self.cfg["t"]["ud"])
@@ -466,7 +468,7 @@ class BaseCells(ArrayCmd):
                 if self.al is not None:
                     await self.al.w(a=VoltageDelta, p=self.path)
 
-    async def get_energy(self):
+    async def get_energy(self) -> None:
         """
         loop to calculate battery energy
 
@@ -496,7 +498,7 @@ class BaseCells(ArrayCmd):
             self.clear_work(w)
         return wx
 
-    def clear_work(self, w=None):
+    def clear_work(self, w=None) -> bool:
         if w is None:
             pass
         elif w < 0 or (self.w_max is not None and w > self.w_max):
@@ -510,7 +512,7 @@ class BaseCells(ArrayCmd):
         self.work.xdis = 0
         return True
 
-    async def _add_w(self, w, t, hi):
+    async def _add_w(self, w, t, hi) -> None:
         hi  # noqa:B018
         self.work.t += t
         w *= t
@@ -565,11 +567,11 @@ class BaseCells(ArrayCmd):
             self.clear_work()
         return res
 
-    async def start_tasks(self, tg):
+    async def start_tasks(self, tg) -> None:
         await tg.spawn(self.get_energy)
         await tg.spawn(self.monitor_ud)
 
-    async def task(self):
+    async def task(self) -> None:
         async with TaskGroup() as tg:
             await self.start_tasks(tg)
             await super().task()
@@ -585,7 +587,7 @@ class BaseBattery(BaseCells):
     #       """fetch battery voltage"""
     #       raise RuntimeError
 
-    async def cmd_i(self):
+    async def cmd_i(self) -> Never:
         """fetch battery current"""
         raise RuntimeError
 
@@ -625,16 +627,16 @@ class BaseBalancer(BaseCmd):
     dis_max: float | None = None
     dis_min: float | None = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self._reloaded = Event()
         self._run = Event()
 
-    async def reload(self):
+    async def reload(self) -> None:
         await super().reload()
         await self._setup()
 
-    async def _setup(self):
+    async def _setup(self) -> None:
         self.n = self.cfg.get("n", 9999)
         self.bat = self.root.sub_at(self.cfg["bat"]) if "bat" in self.cfg else None
         if self.bat is not None:
@@ -661,21 +663,21 @@ class BaseBalancer(BaseCmd):
             self._reloaded.set()
             self._reloaded = Event()
 
-    async def setup(self):
+    async def setup(self) -> None:
         await super().setup()
         await self._setup()
 
-    async def start_tasks(self, tg):
+    async def start_tasks(self, tg) -> None:
         await tg.spawn(self.run_bms)
 
-    async def task(self):
+    async def task(self) -> None:
         async with TaskGroup() as tg:
             await self.start_tasks(tg)
             await super().task()
 
     doc_u = dict(_d="V limits", h="float:max", l="float:min")
 
-    async def cmd_u(self, h: float | None = None, l: float | None = None):  # noqa:E741
+    async def cmd_u(self, h: float | None = None, l: float | None = None) -> None:  # noqa:E741
         "set desired voltage levels"
         if h is not None:
             assert self.dis_max is not None
@@ -687,7 +689,7 @@ class BaseBalancer(BaseCmd):
             self.ul = min(self.chg_max, max(self.chg_min, l))
         self._run.set()
 
-    async def run_bms(self):
+    async def run_bms(self) -> None:
         res = False
         while True:
             try:

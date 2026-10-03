@@ -244,7 +244,7 @@ class NullData:
             raise RuntimeError("I expect empty data")
         return self
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytes:
         "return serialized data"
         return b""
 
@@ -258,7 +258,7 @@ class _Request(NullData):
         cell  # noqa:B018
         return cls()
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytes:
         "return serialized data"
         return b""
 
@@ -280,7 +280,7 @@ class _Reply(NullData):
             raise RuntimeError("I expect empty data")
         return self
 
-    def to_cell(self, cell):
+    def to_cell(self, cell) -> bool:
         "build cell data"
         cell  # noqa:B018
         return False
@@ -358,8 +358,9 @@ class ReplyVoltages(_Reply):  # noqa:D101
         self.voltRaw, self.bypassRaw = self.S.unpack(data)
         return self
 
-    def to_cell(self, cell):  # noqa:D102
+    def to_cell(self, cell) -> bool:  # noqa:D102
         cell.m_volt(self)
+        return False
 
     def __setstate__(self, data):
         self.voltRaw = data["vr"]
@@ -397,8 +398,9 @@ class ReplyTemperature(_Reply):  # noqa:D101
         self.extRaw = (b2 >> 4) | (b3 << 4)
         return self
 
-    def to_cell(self, cell):  # noqa:D102
+    def to_cell(self, cell) -> bool:  # noqa:D102
         cell.m_temp(self)
+        return False
 
     def __setstate__(self, data):
         self.intRaw = data.get("ir", None)
@@ -427,9 +429,10 @@ class ReplyCounters(_Reply):  # noqa:D101
         self.received, self.bad = self.S.unpack(data)
         return self
 
-    def to_cell(self, cell):  # noqa:D102
+    def to_cell(self, cell) -> bool:  # noqa:D102
         cell.packets_in = self.received
         cell.packets_bad = self.bad
+        return False
 
     def __setstate__(self, data):
         self.received = data.get("nr", 0)
@@ -546,8 +549,9 @@ class ReplyBalanceCurrentCounter(_Reply):  # noqa:D101
         (self.counter,) = self.S.unpack(data)
         return self
 
-    def to_cell(self, cell):  # noqa:D102
+    def to_cell(self, cell) -> bool:  # noqa:D102
         cell.balance_current_count = self.counter
+        return False
 
     def __setstate__(self, data):
         self.counter = data["c"]
@@ -571,8 +575,9 @@ class ReplyReadPIDconfig(_Reply):  # noqa:D101
         self.kp, self.ki, self.kd = self.S.unpack(data)
         return self
 
-    def to_cell(self, cell):  # noqa:D102
+    def to_cell(self, cell) -> bool:  # noqa:D102
         cell.m_pid(self)
+        return False
 
     def __setstate__(self, data):
         self.kp = data["p"]
@@ -590,7 +595,7 @@ class RequestBalanceLevel:  # noqa:D101
     S: ClassVar = Struct("<H")
     T: ClassVar = PacketType.WriteBalanceLevel
 
-    async def from_cell(self, cell):  # noqa:D102
+    async def from_cell(self, cell) -> None:  # noqa:D102
         await cell.bal()
         await cell.v2raw()
 

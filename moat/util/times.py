@@ -410,19 +410,19 @@ def time_until(args, t_now=None, invert=False, back=False):
     # a day/hour/whatever, presumably they mean "as soon as that month
     # arrives" and not "that month, same day/hour/minute/second as now".
 
-    def lim12():
+    def lim12() -> int:
         return 12
 
     def lim30():
         return monthrange(p.res.year, p.res.month)[1]
 
-    def lim24():
+    def lim24() -> int:
         return 23
 
-    def lim60():
+    def lim60() -> int:
         return 59
 
-    def check_year(force=False):
+    def check_year(force=False) -> None:
         clear_fields = (
             {"second": 59, "minute": 59, "hour": 23, "day": 31, "month": 12}
             if back
@@ -440,7 +440,7 @@ def time_until(args, t_now=None, invert=False, back=False):
         if back:
             clear_fields = cf2
 
-        def next_whatever(force=False):
+        def next_whatever(force=False) -> None:
             goal = getattr(p, sn)
             real = getattr(p.res, ln)
             if goal is None:
@@ -588,7 +588,7 @@ def time_until(args, t_now=None, invert=False, back=False):
     # p.wk : week of the year (1…53)
     # p.dow : day of the week (Thursday)
     # p.nth : which day in the week (i.e. 1st Monday)
-    def upd(delta):
+    def upd(delta) -> None:
         if not delta:
             return
         p.res = p.res + dt.timedelta(s_one * delta)

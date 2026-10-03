@@ -62,7 +62,7 @@ class InputTranslator(ABC):  # noqa: D101
 
 
 class KeymapTranslator(InputTranslator):  # noqa: D101
-    def __init__(self, keymap, verbose=False, invalid_cls=None, character_cls=None):
+    def __init__(self, keymap, verbose=False, invalid_cls=None, character_cls=None) -> None:
         self.verbose = verbose
         from .keymap import compile_keymap, parse_keys  # noqa: PLC0415
 
@@ -79,7 +79,7 @@ class KeymapTranslator(InputTranslator):  # noqa: D101
         self.results = deque()
         self.stack = []
 
-    def push(self, evt):  # noqa: D102
+    def push(self, evt) -> None:  # noqa: D102
         if self.verbose:
             print("pushed", evt.data, end="")
         key = evt.data

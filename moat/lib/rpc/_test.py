@@ -87,25 +87,25 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
     _link: Event | Loopback | None = None
     _buf: MutBuffer
 
-    def __init__(self, qlen=0, loss=0):
+    def __init__(self, qlen=0, loss=0) -> None:
         super().__init__({})
         assert 0 <= loss < 1
         self.q_wr, self.q_rd = anyio.create_memory_object_stream(qlen)
         self.loss = loss
 
-    async def setup(self):
+    async def setup(self) -> None:
         if self._link is None:
             raise RuntimeError("You must link before setup!")
         elif isinstance(self._link, anyio.Event):
             await self._link.wait()
 
-    def link(self, other: Loopback | anyio.Event):
+    def link(self, other: Loopback | anyio.Event) -> None:
         """Tell this loopback to read from some other loopback."""
         evt, self._link = self._link, other
         if isinstance(evt, anyio.Event):
             evt.set()
 
-    async def send(self, m, _loss=True):  # pylint:disable=arguments-differ
+    async def send(self, m, _loss=True) -> None:  # pylint:disable=arguments-differ
         """Send data."""
         if self._link is None:
             raise anyio.BrokenResourceError(self)
@@ -172,7 +172,7 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
         await self.send(b, _loss=False)
         return n
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         await self.q_wr.aclose()
         link = self._link
         if isinstance(link, Loopback) and link is not self:
@@ -194,7 +194,7 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
 
     _link: _LoopLinkProto
 
-    async def setup(self):
+    async def setup(self) -> None:
         p = self.cfg["path"]
         if isinstance(p, str):
             raise TypeError(f"Need a path, not {p!r}")
@@ -243,5 +243,5 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
 class Root(RootCmd):
     "an empty root for testing"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__({})

@@ -60,10 +60,12 @@ from .model import Node, NodeEvent, NodeSet, UpdateEvent, Watcher
 from .types import ACLFinder, ACLStepper, ConvNull, NullACL, RootEntry
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import io
+
+    from typing import Any, Never
 
 Stream = anyio.abc.ByteStream
 
@@ -96,15 +98,15 @@ class HelloProc:
     A hacked-up command processor for receiving the first client message.
     """
 
-    def __init__(self, client):
+    def __init__(self, client) -> None:
         self.client = client
 
-    async def received(self, msg):  # noqa: D102
+    async def received(self, msg) -> None:  # noqa: D102
         qlen = msg.get("qlen", 0)
         self.client.qlen = min(qlen, self.client.server.cfg.server.buffer)
         del self.client.in_stream[0]
 
-    async def aclose(self):  # noqa: D102
+    async def aclose(self) -> None:  # noqa: D102
         self.client.in_stream.pop(0, None)
 
 
@@ -136,7 +138,7 @@ class StreamCommand:
         else:
             return object.__new__(cls)
 
-    def __init__(self, client, msg):
+    def __init__(self, client, msg) -> None:
         self.client = client
         self.msg = msg
         self.seq = msg.seq
@@ -152,10 +154,10 @@ class StreamCommand:
     def _get_seq(msg):
         return msg.get("wseq", 0)
 
-    async def _send_ack(self, seq):
+    async def _send_ack(self, seq) -> None:
         await self.client.send(seq=self.seq, state="ack", ack=seq)
 
-    async def received(self, msg):
+    async def received(self, msg) -> None:
         """Receive another message from the client"""
 
         s = msg.get("state", "")
@@ -173,7 +175,7 @@ class StreamCommand:
         elif not err:
             await self.qr.put(msg)
 
-    async def aclose(self):  # noqa: D102
+    async def aclose(self) -> None:  # noqa: D102
         self.client.in_stream.pop(self.seq, None)
         self.qr.close_sender()
 
@@ -184,7 +186,7 @@ class StreamCommand:
             raise ClientError(msg.error)
         return msg
 
-    async def send(self, **msg):
+    async def send(self, **msg) -> None:
         """Send a message to the client."""
         msg["seq"] = self.seq
         if not self.multiline:
@@ -242,7 +244,7 @@ class StreamCommand:
             res["seq"] = self.seq
             await self.send(**res)
 
-    async def run(self):  # noqa: D102
+    async def run(self) -> Never:  # noqa: D102
         raise RuntimeError("Do implement me!")
 
 
@@ -275,7 +277,7 @@ class SCmd_auth(StreamCommand):
     multiline = True
     noAuth = True
 
-    async def run(self):  # noqa: D102
+    async def run(self) -> None:  # noqa: D102
         from .auth import loader  # noqa: PLC0415
 
         msg = self.msg
@@ -322,7 +324,7 @@ class SCmd_auth_list(StreamCommand):
 
     multiline = True
 
-    async def send_one(self, data, nchain=-1):  # noqa: D102
+    async def send_one(self, data, nchain=-1) -> None:  # noqa: D102
         from .auth import loader  # noqa: PLC0415
 
         typ, kind, ident = data.path[-3:]
@@ -337,7 +339,7 @@ class SCmd_auth_list(StreamCommand):
 
         await self.send(**res)
 
-    async def run(self):  # noqa: D102
+    async def run(self) -> None:  # noqa: D102
         msg = self.msg
         client = self.client
         if not client.user.can_auth_read:
@@ -462,7 +464,7 @@ class SCmd_get_tree(StreamCommand):
 
     multiline = True
 
-    async def run(self, root=None):  # noqa: D102
+    async def run(self, root=None) -> None:  # noqa: D102
         msg = self.msg
         client = self.client
 
@@ -493,7 +495,7 @@ class SCmd_get_tree(StreamCommand):
             kw["min_depth"] = min_depth
         kw["full"] = True  # empty -- always include `None` keys
 
-        async def send_sub(entry, acl):
+        async def send_sub(entry, acl) -> None:
             if entry.data is NotGiven and not empty:
                 return
             res = entry.serialize(chop_path=client._chop_path, nchain=nchain, conv=conv)  # noqa: SLF001
@@ -532,7 +534,7 @@ class SCmd_watch(StreamCommand):
 
     multiline = True
 
-    async def run(self):  # noqa: D102
+    async def run(self) -> None:  # noqa: D102
         msg = self.msg
         client = self.client
         conv = client.conv
@@ -556,10 +558,10 @@ class SCmd_watch(StreamCommand):
             shorter = PathShortener(entry.path)
             if msg.get("fetch", False):
 
-                async def orig_state():
+                async def orig_state() -> None:
                     kv = {"max_depth": max_depth, "min_depth": min_depth}
 
-                    async def worker(entry, acl):
+                    async def worker(entry, acl) -> None:
                         if entry.data is NotGiven and not empty:
                             return
                         if entry.tock < tock:
@@ -617,7 +619,7 @@ class SCmd_msg_monitor(StreamCommand):
 
     multiline = True
 
-    async def run(self):  # noqa: D102
+    async def run(self) -> None:  # noqa: D102
         codec = get_codec("std-msgpack")
         msg = self.msg
         raw = msg.get("raw", False)
@@ -665,7 +667,7 @@ class ServerClient:
     tg = None
     qlen = 0
 
-    def __init__(self, server: Server, stream: Stream):
+    def __init__(self, server: Server, stream: Stream) -> None:
         self.server = server
         self.root = server.root
         self.metaroot = self.root.follow(Path.build((None,)), create=True, nulls_ok=True)
@@ -681,7 +683,7 @@ class ServerClient:
         self.logger = server.logger
 
     @property
-    def nulls_ok(self):  # noqa: D102
+    def nulls_ok(self) -> int:  # noqa: D102
         if self.is_chroot:
             return False
         if None not in self.root:
@@ -691,7 +693,7 @@ class ServerClient:
         # TODO test for superuser-ness, if so return True
         return False
 
-    async def _process(self, fn, msg):
+    async def _process(self, fn, msg) -> None:
         res = await fn(msg)
         if res is None:
             res = {}
@@ -700,7 +702,7 @@ class ServerClient:
         res["seq"] = msg.seq
         await self.send(res)
 
-    async def process(self, msg, evt=None):
+    async def process(self, msg, evt=None) -> None:
         """
         Process an incoming message.
         """
@@ -741,7 +743,7 @@ class ServerClient:
             finally:
                 del self.tasks[seq]
 
-    def _chroot(self, root):
+    def _chroot(self, root) -> None:
         if not root:
             return
         entry, _acl = self.root.follow_acl(root, acl=self.acl, nulls_ok=False)
@@ -775,13 +777,13 @@ class ServerClient:
             raise RuntimeError("The client has not executed DH key exchange")
         return self._dh_key
 
-    async def cmd_fake_info(self, msg):  # noqa: D102
+    async def cmd_fake_info(self, msg) -> None:  # noqa: D102
         msg["node"] = ""
         msg["tick"] = 0
         self.logger.warning("Fake Info LOCAL %s", pformat(msg))
         await self.server.user_info(msg)
 
-    async def cmd_fake_info_send(self, msg):  # noqa: D102
+    async def cmd_fake_info_send(self, msg) -> None:  # noqa: D102
         msg["node"] = ""
         msg["tick"] = 0
         msg.pop("tock", None)
@@ -905,7 +907,7 @@ class ServerClient:
         res = list(node.enumerate(n=n, current=cur))
         return {"result": res}
 
-    async def cmd_kill_node(self, msg):  # noqa: D102
+    async def cmd_kill_node(self, msg) -> Never:  # noqa: D102
         node = msg["node"]
         node = Node(msg["node"], None, cache=self.server.node_cache, create=False)
         for k in node.enumerate(current=True):
@@ -1044,7 +1046,7 @@ class ServerClient:
         else:
             return res.serialize(chop_path=self._chop_path, conv=self.conv)
 
-    async def cmd_check_deleted(self, msg):  # noqa: D102
+    async def cmd_check_deleted(self, msg) -> None:  # noqa: D102
         nodes = msg.nodes
         deleted = NodeSet()
         for n, v in nodes.items():
@@ -1062,7 +1064,7 @@ class ServerClient:
         """Return some info about this node's internal state"""
         return await self.server.get_state(**msg)
 
-    async def cmd_msg_send(self, msg):  # noqa: D102
+    async def cmd_msg_send(self, msg) -> None:  # noqa: D102
         topic = msg.topic
         if isinstance(topic, str):
             topic = (topic,)
@@ -1127,17 +1129,17 @@ class ServerClient:
         else:
             return {"changed": res}
 
-    async def cmd_log(self, msg):  # noqa: D102
+    async def cmd_log(self, msg) -> bool:  # noqa: D102
         await self.server.run_saver(path=msg.path, save_state=msg.get("fetch", False))
         return True
 
-    async def cmd_save(self, msg):  # noqa: D102
+    async def cmd_save(self, msg) -> bool:  # noqa: D102
         full = msg.get("full", False)
         await self.server.save(path=msg.path, full=full)
 
         return True
 
-    async def cmd_stop(self, msg):  # noqa: D102
+    async def cmd_stop(self, msg) -> bool:  # noqa: D102
         try:
             t = self.tasks[msg.task]
         except KeyError:
@@ -1164,7 +1166,7 @@ class ServerClient:
         msg.path = (None, "auth")
         return await self.cmd_set_value(msg, _nulls_ok=True)
 
-    async def send(self, msg):  # noqa: D102
+    async def send(self, msg) -> None:  # noqa: D102
         self.logger.debug("OUT%d %s", self._client_nr, msg)
         if self._send_lock is None:
             return
@@ -1182,7 +1184,7 @@ class ServerClient:
                 self._send_lock = None
                 raise
 
-    async def send_result(self, seq, res):  # noqa: D102
+    async def send_result(self, seq, res) -> None:  # noqa: D102
         res["seq"] = seq
         if "tock" in res:
             await self.server.tock_seen(res["tock"])
@@ -1190,7 +1192,7 @@ class ServerClient:
             res["tock"] = self.server.tock
         await self.send(res)
 
-    async def run(self):
+    async def run(self) -> None:
         """Main loop for this client connection."""
         self.codec = get_codec("std-msgpack")  # pylint: disable=redefined-outer-name
 
@@ -1305,7 +1307,7 @@ class _RecoverControl:
         prio,
         local_history,
         sources,  # pylint:disable=redefined-outer-name
-    ):
+    ) -> None:
         self.server = server
         self.scope = scope
         self.prio = prio
@@ -1320,7 +1322,7 @@ class _RecoverControl:
 
         self._waiters = {}
 
-    async def _start(self):
+    async def _start(self) -> None:
         chk = set()
         rt = self.server._recover_tasks  # noqa: SLF001
         for node in self.local_history:
@@ -1331,7 +1333,7 @@ class _RecoverControl:
         for t in chk:
             await t._check()  # noqa: SLF001
 
-    async def _check(self):
+    async def _check(self) -> None:
         lh = []
         rt = self.server._recover_tasks  # noqa: SLF001
         for n in self.local_history:
@@ -1344,7 +1346,7 @@ class _RecoverControl:
     def __hash__(self):
         return id(self)
 
-    def cancel(self):
+    def cancel(self) -> None:
         self.scope.cancel()
         rt = self.server._recover_tasks  # noqa: SLF001
         for node in self.local_history:
@@ -1354,14 +1356,14 @@ class _RecoverControl:
         for evt in list(self._waiters.values()):
             evt.set()
 
-    def set(self, n):
+    def set(self, n) -> None:
         evt = self._waiters.get(n, None)
         if evt is None:
             evt = anyio.Event()
             self._waiters[n] = evt
         evt.set()
 
-    async def wait(self, n):
+    async def wait(self, n) -> None:
         evt = self._waiters.get(n, None)
         if evt is None:
             evt = anyio.Event()
@@ -1400,7 +1402,7 @@ class Server:
     ports = None
     _tock = 0
 
-    def __init__(self, name: str, cfg: dict | None = None, init: Any = NotGiven):
+    def __init__(self, name: str, cfg: dict | None = None, init: Any = NotGiven) -> None:
         self.codec = get_codec("std-msgpack")
         self.root = RootEntry(self, tock=self.tock)
         from moat.lib.config import CFG  # noqa: PLC0415
@@ -1444,23 +1446,23 @@ class Server:
         """
 
         class Cache:
-            def __len__(slf):  # pylint: disable=no-self-argument
+            def __len__(slf) -> int:  # pylint: disable=no-self-argument
                 return len(self._nodes)
 
-            def __bool__(slf):  # pylint: disable=no-self-argument
+            def __bool__(slf) -> bool:  # pylint: disable=no-self-argument
                 return len(self._nodes) > 0
 
-            def __contains__(slf, k):  # pylint: disable=no-self-argument
+            def __contains__(slf, k) -> bool:  # pylint: disable=no-self-argument
                 return k in self._nodes
 
             def __getitem__(slf, k):  # pylint: disable=no-self-argument
                 return self._nodes[k]
 
-            def __setitem__(slf, k, v):  # pylint: disable=no-self-argument
+            def __setitem__(slf, k, v) -> None:  # pylint: disable=no-self-argument
                 self._nodes[k] = v
                 self.node_drop.discard(k)
 
-            def __delitem__(slf, k):  # pylint: disable=no-self-argument
+            def __delitem__(slf, k) -> None:  # pylint: disable=no-self-argument
                 del self._nodes[k]
                 self.node_drop.add(k)
 
@@ -1518,7 +1520,7 @@ class Server:
         self._tock += 1
         return self._tock
 
-    async def tock_seen(self, value):
+    async def tock_seen(self, value) -> None:
         """
         Updates the current tock value so that it is at least ``value``.
 
@@ -1531,11 +1533,11 @@ class Server:
             self._tock = value
             await self._set_tock()
 
-    async def _set_tock(self):
+    async def _set_tock(self) -> None:
         if self._actor is not None and self._ready.is_set():
             await self._actor.set_value([self._tock, self.node.tick])
 
-    async def del_check(self, value):
+    async def del_check(self, value) -> None:
         """
         Called when ``(None,"actor","del")`` is set.
         """
@@ -1549,7 +1551,7 @@ class Server:
         else:
             await self._del_actor.disable(len(nodes))
 
-    def drop_old_event(self, evt, old_evt=NotGiven):
+    def drop_old_event(self, evt, old_evt=NotGiven) -> None:
         """
         Drop either one event, or any event that is in ``old_evt`` but not
         in ``evt``.
@@ -1570,7 +1572,7 @@ class Server:
                 old_evt.node.supersede(old_evt.tick)
             old_evt = old_evt.prev
 
-    async def _send_event(self, action: str, msg: dict):
+    async def _send_event(self, action: str, msg: dict) -> None:
         """
         Helper to send an event to the backend's ``action`` endpoint.
 
@@ -1589,7 +1591,7 @@ class Server:
         self.logger.debug("Send %s: %r", action, msg)
         await self.backend.send(*self.cfg.server.root, action, payload=msg)
 
-    async def watcher(self):
+    async def watcher(self) -> None:
         """
         The background task that watches a (sub)tree for changes.
         """
@@ -1603,7 +1605,7 @@ class Server:
                 p = msg.serialize(nchain=self.cfg.server.change["length"])
                 await self._send_event("update", p)
 
-    async def resync_deleted(self, nodelist):
+    async def resync_deleted(self, nodelist) -> None:
         """
         Owch. We need to re-sync.
 
@@ -1614,7 +1616,7 @@ class Server:
         nodes: NodeSet = NodeSet()
         n_nodes: int = None
 
-        async def send_nodes():
+        async def send_nodes() -> None:
             nonlocal nodes, n_nodes
             await client._request(  # noqa: SLF001
                 "check_deleted",
@@ -1644,7 +1646,7 @@ class Server:
                     # TODO auth this client
                     n_nodes = 0
 
-                    async def add(event):
+                    async def add(event) -> None:
                         nonlocal nodes, n_nodes
                         c = event.chain
                         if c is None:
@@ -1665,13 +1667,13 @@ class Server:
                 # whatever it doesn't have, so we're done here.
                 return
 
-    def mark_deleted(self, node, tick):
+    def mark_deleted(self, node, tick) -> None:
         """
         This tick has been marked as deleted.
         """
         self._delete_also_nodes[node.name].add(tick)
 
-    def purge_deleted(self, deleted):
+    def purge_deleted(self, deleted) -> None:
         """
         These deleted entry is no longer required.
         """
@@ -1756,14 +1758,14 @@ class Server:
         res["tock"] = self.tock
         return res
 
-    async def user_update(self, msg):
+    async def user_update(self, msg) -> None:
         """
         Process an update message: deserialize it and apply the result.
         """
         msg = UpdateEvent.deserialize(self.root, msg, cache=self.node_cache, nulls_ok=True)
         await msg.entry.apply(msg, server=self, root=self.paranoid_root)
 
-    async def user_info(self, msg):
+    async def user_info(self, msg) -> None:
         """
         Process info broadcasts.
         """
@@ -1839,7 +1841,7 @@ class Server:
         for nn in msg.get("node_drop", ()):
             self._dropped_node(nn)
 
-    async def _delete_also(self):
+    async def _delete_also(self) -> None:
         """
         Add deletion records to the delete actor.
         """
@@ -1881,7 +1883,7 @@ class Server:
             del msg[f"_p{i}"]
         return msg
 
-    async def monitor(self, action: str, delay: anyio.abc.Event = None):
+    async def monitor(self, action: str, delay: anyio.abc.Event = None) -> None:
         """
         The task that hooks to the backend's event stream for receiving messages.
 
@@ -1925,13 +1927,13 @@ class Server:
         else:
             self.logger.info("Stream ended %s", action)
 
-    async def _run_del(self, evt):
+    async def _run_del(self, evt) -> None:
         try:
             await self._del_actor.run(evt=evt)
         finally:
             self._del_actor = None
 
-    async def _pinger(self, delay: anyio.abc.Event):
+    async def _pinger(self, delay: anyio.abc.Event) -> None:
         """
         This task
         * sends PING messages
@@ -2038,7 +2040,7 @@ class Server:
             host += "." + domain
         return (host, port)
 
-    async def do_send_missing(self):
+    async def do_send_missing(self) -> None:
         """Task to periodically send "missing …" messages"""
         self.logger.debug("send-missing started")
         clock = self.cfg.server.ping.gap
@@ -2079,7 +2081,7 @@ class Server:
             await self._check_ticked()
         self.fetch_running = None
 
-    async def fetch_data(self, nodes, authoritative=False):
+    async def fetch_data(self, nodes, authoritative=False) -> None:
         """
         We are newly started and don't have any data.
 
@@ -2184,7 +2186,7 @@ class Server:
 
         self.fetch_running = None
 
-    async def _process_info(self, msg):
+    async def _process_info(self, msg) -> None:
         """
         Process "info" messages.
         """
@@ -2222,11 +2224,11 @@ class Server:
         for nn in msg.get("node_drop", ()):
             self._dropped_node(nn)
 
-    async def drop_node(self, name):  # noqa: D102
+    async def drop_node(self, name) -> None:  # noqa: D102
         self._dropped_node(name)
         await self._send_event("info", attrdict(node_drop=[name]))
 
-    def _dropped_node(self, name):
+    def _dropped_node(self, name) -> None:
         try:
             nn = Node(name, cache=self.node_cache, create=False)
         except KeyError:
@@ -2236,7 +2238,7 @@ class Server:
         else:  # no item found
             nn.kill_this_node(self.node_cache)
 
-    async def _check_ticked(self):
+    async def _check_ticked(self) -> None:
         if self._ready is None:
             return
         if self.node.tick is not None:
@@ -2247,7 +2249,7 @@ class Server:
             # self.logger.debug("Not yet ready.")
             pass
 
-    async def recover_split(self, prio, replace, local_history, sources):
+    async def recover_split(self, prio, replace, local_history, sources) -> None:
         """
         Recover from a network split.
         """
@@ -2308,7 +2310,7 @@ class Server:
                 self.seen_missing = {}
                 t.cancel()
 
-    async def _send_missing(self, force=False):
+    async def _send_missing(self, force=False) -> None:
         msg = dict()
         for n in list(self._nodes.values()):
             if not n.tick:
@@ -2331,7 +2333,7 @@ class Server:
                 msg.node_drop = list(self.node_drop)
             await self._send_event("info", msg)
 
-    async def _run_send_missing(self, prio):
+    async def _run_send_missing(self, prio) -> None:
         """Start :meth:`_send_missing_data` if it's not running"""
 
         if self.sending_missing is None:
@@ -2340,7 +2342,7 @@ class Server:
         elif not self.sending_missing:
             self.sending_missing = True
 
-    async def _send_missing_data(self, prio):
+    async def _send_missing_data(self, prio) -> None:
         """Step 3 of the re-join protocol.
         For each node, collect events that somebody has reported as missing,
         and re-broadcast them. If the event is unavailable, send a "known"
@@ -2404,7 +2406,7 @@ class Server:
         stream: io.IOBase | None = None,
         local: bool = False,
         authoritative: bool = False,
-    ):
+    ) -> None:
         """Load data from this stream
 
         Args:
@@ -2444,7 +2446,7 @@ class Server:
 
         self.logger.debug("Loading finished.")
 
-    def _discard_all_missing(self):
+    def _discard_all_missing(self) -> None:
         for n in self._nodes.values():
             if not n.tick:
                 continue
@@ -2453,10 +2455,10 @@ class Server:
             if len(lk):
                 n.report_superseded(lk, local=True)
 
-    async def _save(self, writer, shorter, nchain=-1, full=False):
+    async def _save(self, writer, shorter, nchain=-1, full=False) -> None:
         """Save the current state."""
 
-        async def saver(entry):
+        async def saver(entry) -> None:
             if entry.data is NotGiven:
                 return
             res = entry.serialize(nchain=nchain)
@@ -2468,7 +2470,7 @@ class Server:
         await writer(msg)  # XXX legacy
         await self.root.walk(saver, full=full)
 
-    async def save(self, path: str | None = None, stream=None, full=True):
+    async def save(self, path: str | None = None, stream=None, full=True) -> None:
         """Save the current state to ``path`` or ``stream``."""
         shorter = PathShortener([])
         async with MsgWriter(path=path, stream=stream, codec="std-msgpack") as mw:
@@ -2481,7 +2483,7 @@ class Server:
         save_state: bool = False,
         done: ValueEvent = None,
         done_val=None,
-    ):
+    ) -> None:
         """Save the current state to ``path`` or ``stream``.
         Continue writing updates until cancelled.
 
@@ -2557,7 +2559,7 @@ class Server:
         stream=None,
         done: ValueEvent = None,
         save_state=False,
-    ):
+    ) -> None:
         with anyio.CancelScope() as s:
             sd = anyio.Event()
             state = (s, sd)
@@ -2579,7 +2581,7 @@ class Server:
 
     async def run_saver(
         self, path: str | None = None, stream=None, save_state=False, wait: bool = True
-    ):
+    ) -> None:
         """
         Start a task that continually saves to disk.
 
@@ -2617,7 +2619,7 @@ class Server:
             s.cancel()
             await sd.wait()
 
-    async def _sigterm(self):
+    async def _sigterm(self) -> None:
         with anyio.open_signal_receiver(signal.SIGTERM) as r:
             async for _s in r:
                 for sc, sd in self._savers:
@@ -2627,29 +2629,29 @@ class Server:
         os.kill(os.getpid(), signal.SIGTERM)
 
     @property
-    async def is_ready(self):
+    async def is_ready(self) -> None:
         """Await this to determine if/when the server is operational."""
         await self._ready.wait()
 
     @property
-    async def is_serving(self):
+    async def is_serving(self) -> None:
         """Await this to determine if/when the server is serving clients."""
         await self._ready2.wait()
 
-    async def _scoped_serve(self, *a, **kw):
+    async def _scoped_serve(self, *a, **kw) -> None:
         """Like `serve`, but can be run via `scope.spawn_service`."""
         t = await scope.spawn(self.serve, *a, **kw)
         scope.register(self)
         await scope.wait_no_users()
         t.cancel()
 
-    async def spawn(self, p, *a, **k):
+    async def spawn(self, p, *a, **k) -> None:
         """
         Start a task. We recycle the backend's taskgroup for convenience.
         """
         self.backend._tg.start_soon(p, *a, **k)  # noqa: SLF001
 
-    async def serve(self, log_path=None, log_inc=False, force=False, ready_evt=None):
+    async def serve(self, log_path=None, log_inc=False, force=False, ready_evt=None) -> None:
         """Task that opens a backend connection and actually runs the server.
 
         Args:
@@ -2759,11 +2761,11 @@ class Server:
             pass  # end of server
         pass  # end of backend client
 
-    async def _accept_clients(self, tg, cfg, n, evt):
+    async def _accept_clients(self, tg, cfg, n, evt) -> None:
         ssl_ctx = gen_ssl(cfg["ssl"], server=True)
         cfg = combine_dict({"ssl": ssl_ctx}, cfg, cls=attrdict)
 
-        def rdy(n, server):
+        def rdy(n, server) -> None:
             if n == 0:
                 port = server.extra(SocketAttribute.local_address)
             self.ports = [port]
@@ -2771,7 +2773,7 @@ class Server:
 
         await run_tcp_server(self._connect, tg=tg, _rdy=partial(rdy, n), **cfg)
 
-    async def _connect(self, stream):
+    async def _connect(self, stream) -> None:
         c = None
         try:
             c = ServerClient(server=self, stream=stream)

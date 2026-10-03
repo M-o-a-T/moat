@@ -16,11 +16,11 @@ e = logger.error
 
 
 class Tracer(trio.abc.Instrument):  # noqa:D101
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.etasks = set()
 
-    def _print_with_task(self, msg, task, err=None):
+    def _print_with_task(self, msg, task, err=None) -> None:
         # repr(task) is perhaps more useful than task.name in general,
         # but in context of a tutorial the extra noise is unhelpful.
         if err is not None:
@@ -29,26 +29,26 @@ class Tracer(trio.abc.Instrument):  # noqa:D101
         else:
             e("%s: %s", msg, task.name)
 
-    def nursery_end(self, task, exception):  # noqa:D102
+    def nursery_end(self, task, exception) -> None:  # noqa:D102
         if isinstance(exception, Exception):
             self.etasks.add(task)
             self._print_with_task("*** task excepted", task, exception)
 
-    def before_task_step(self, task):  # noqa:D102
+    def before_task_step(self, task) -> None:  # noqa:D102
         if isinstance(task._next_send, Error) and isinstance(task._next_send.error, Exception):  # noqa:SLF001
             self._print_with_task("*** step resume ERROR", task, task._next_send.error)  # noqa:SLF001
             self.etasks.add(task)
         elif moat.kill:  # pylint: disable=c-extension-no-member  # OH COME ON
             self._print_with_task("*** step resume", task)
 
-    def task_scheduled(self, task):  # noqa:D102
+    def task_scheduled(self, task) -> None:  # noqa:D102
         e("SCHED %r", task)
 
-    def task_exited(self, task):  # noqa:D102
+    def task_exited(self, task) -> None:  # noqa:D102
         self._print_with_task("*** task exited", task)
         self.etasks.discard(task)
 
-    def before_io_wait(self, timeout):  # noqa:D102
+    def before_io_wait(self, timeout) -> None:  # noqa:D102
         if timeout > 10000 and self.etasks:
             e("\n\n\n\n\n\n\n\n\n\n")
             e("*** ERROR: lock-out, killing off error tasks")

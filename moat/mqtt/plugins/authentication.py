@@ -7,14 +7,14 @@ from passlib.apps import custom_app_context as pwd_context
 
 
 class BaseAuthPlugin:  # noqa: D101
-    def __init__(self, context):
+    def __init__(self, context) -> None:
         self.context = context
         try:
             self.auth_config = self.context.config["auth"]
         except KeyError:
             self.context.logger.warning("'auth' section not found in context configuration")
 
-    async def authenticate(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def authenticate(self, *args, **kwargs) -> bool:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         if not self.auth_config:
             # auth config section not found
             self.context.logger.warning("'auth' section not found in context configuration")
@@ -54,12 +54,12 @@ class AnonymousAuthPlugin(BaseAuthPlugin):  # noqa: D101
 
 
 class FileAuthPlugin(BaseAuthPlugin):  # noqa: D101
-    def __init__(self, context):
+    def __init__(self, context) -> None:
         super().__init__(context)
         self._users = dict()
         self._read_password_file()
 
-    def _read_password_file(self):
+    def _read_password_file(self) -> None:
         password_file = self.auth_config.get("password-file", None)
         if password_file:
             with open(password_file) as f:  # pylint: disable=unspecified-encoding

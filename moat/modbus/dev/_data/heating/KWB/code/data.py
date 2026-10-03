@@ -18,7 +18,7 @@ import click
 @click.option("-i", "--info")
 @click.argument("fn")
 @click.argument("fo")
-def main(info, fn, fo):  # noqa: D103
+def main(info, fn, fo) -> None:  # noqa: D103
     d = attrdict()
     if not info:
         d.include = [

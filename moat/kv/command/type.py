@@ -12,7 +12,7 @@ from moat.lib.run import AliasedGroup
 
 
 @click.group(cls=AliasedGroup)  # pylint: disable=undefined-variable
-async def cli():
+async def cli() -> None:
     """Manage types and type matches. Usage: … type …"""
     pass
 
@@ -23,7 +23,7 @@ async def cli():
 @click.option("-y", "--yaml", "yaml_", is_flag=True, help="Write schema as YAML. Default: JSON.")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def get(obj, path, script, schema, yaml_):
+async def get(obj, path, script, schema, yaml_) -> None:
     """Read type checker information"""
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
@@ -59,7 +59,7 @@ async def get(obj, path, script, schema, yaml_):
 @click.option("-y", "--yaml", "yaml_", is_flag=True, help="load the schema as YAML. Default: JSON")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def set_(obj, path, good, bad, script, schema, yaml_, data):
+async def set_(obj, path, good, bad, script, schema, yaml_, data) -> None:
     """Write type checker information."""
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
@@ -120,7 +120,7 @@ async def set_(obj, path, good, bad, script, schema, yaml_, data):
 @click.option("-d", "--delete", help="Use to delete this mapping.")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-builtin
+async def match(obj, path, type_, delete, raw) -> None:  # pylint: disable=redefined-builtin
     """Match a type to a path (read, if no type given; list if empty path)"""
     if not len(path):
         if raw or type_ or delete:
@@ -180,7 +180,7 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
 @cli.command()
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def list_(obj, path):  # pylint: disable=redefined-builtin
+async def list_(obj, path) -> None:  # pylint: disable=redefined-builtin
     """Dump type data"""
 
     y = {}

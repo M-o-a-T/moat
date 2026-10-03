@@ -22,7 +22,7 @@ TAGS = 4
 class DeleteActor:  # noqa:D101
     _enabled = None
 
-    def __init__(self, server):
+    def __init__(self, server) -> None:
         self._server = weakref.ref(server)
         self.deleted = deque()
         self.tags = []
@@ -37,7 +37,7 @@ class DeleteActor:  # noqa:D101
     def server(self):  # noqa:D102
         return self._server()
 
-    async def tock_me(self):
+    async def tock_me(self) -> None:
         """
         Add the current tock to our buffer.
 
@@ -47,7 +47,7 @@ class DeleteActor:  # noqa:D101
         self.tags = self.tags[-TAGS:]
         await self.actor.set_value((self.tags[0], self.tags[-1]))
 
-    def add_deleted(self, nodes: NodeSet):  # noqa: F821
+    def add_deleted(self, nodes: NodeSet) -> None:  # noqa: F821
         """
         These nodes are deleted. Remember them for some time.
         """
@@ -55,7 +55,7 @@ class DeleteActor:  # noqa:D101
             return
         self.deleted.append((self.server.tock, nodes))
 
-    def purge_to(self, tock):
+    def purge_to(self, tock) -> None:
         """
         Sufficient time has passed since this tock was seen, while all
         Delete actor nodes were active. Finally flush the entries that have
@@ -65,7 +65,7 @@ class DeleteActor:  # noqa:D101
             d = self.deleted.popleft()
             self.server.purge_deleted(d[1])
 
-    async def enable(self, n):
+    async def enable(self, n) -> None:
         """
         Enable this actor, as a group of N.
         """
@@ -77,7 +77,7 @@ class DeleteActor:  # noqa:D101
         self.n_pings = 0
         self.n_nodes = n
 
-    async def disable(self, n: int = 0):
+    async def disable(self, n: int = 0) -> None:
         """
         Disable this actor. It will still listen, and require N Delete
         actor members in order to flush its deletion entries.
@@ -92,7 +92,7 @@ class DeleteActor:  # noqa:D101
         self.n_pings = 0
         self.n_nodes = n
 
-    async def run(self, evt: anyio.abc.Event = None):
+    async def run(self, evt: anyio.abc.Event = None) -> None:
         """
         The task that monitors the Delete actor.
         """

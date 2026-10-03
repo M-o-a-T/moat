@@ -18,7 +18,7 @@ from .model import AkumuliRoot
 logger = logging.getLogger(__name__)
 
 
-async def _prepare_cli(obj):
+async def _prepare_cli(obj) -> None:
     obj.data = await AkumuliRoot.as_handler(obj.client)
 
 
@@ -41,7 +41,7 @@ cli = std_command(
 @cli.command("dump")
 @click.option("-l", "--one-line", is_flag=True, help="single line per entry")
 @click.pass_obj
-async def dump_(obj, one_line):
+async def dump_(obj, one_line) -> None:
     """Emit a server's (sub)state as a list / YAML file."""
     if not one_line:
         await data_get(obj.client, obj.server._path, recursive=True, out=obj.stdout)  # noqa:SLF001
@@ -57,7 +57,7 @@ async def dump_(obj, one_line):
 )
 @click.argument("path", nargs=1, type=P)
 @click.pass_context
-async def at_cli(ctx, path):
+async def at_cli(ctx, path) -> None:
     obj = ctx.obj
     if obj.server is None:
         raise click.UsageError("Create the server before assigning measurements to it!")
@@ -70,7 +70,7 @@ async def at_cli(ctx, path):
 @at_cli.command("dump")
 @click.pass_obj
 @click.option("-l", "--one-line", is_flag=True, help="single line per entry")
-async def dump_at(obj, one_line):
+async def dump_at(obj, one_line) -> None:
     """Emit a subtree as a list / YAML file."""
     if one_line:
         await data_get(obj.client, obj.server._path + obj.subpath, recursive=True, out=obj.stdout)  # noqa:SLF001
@@ -93,7 +93,7 @@ async def dump_at(obj, one_line):
 @click.argument("series", nargs=1)
 @click.argument("tags", nargs=-1)
 @click.pass_obj
-async def add_(obj, source, mode, attr, series, tags, force):
+async def add_(obj, source, mode, attr, series, tags, force) -> None:
     """Add a series to Akumuli.
     \b
     path: the name of this copy command. Unique path, non-empty.
@@ -140,7 +140,7 @@ async def add_(obj, source, mode, attr, series, tags, force):
 
 @at_cli.command("delete")
 @click.pass_obj
-async def delete_(obj):
+async def delete_(obj) -> None:
     """Remove a series from Akumuli's copying.
 
     \b
@@ -159,7 +159,7 @@ async def delete_(obj):
 @at_cli.command("set")
 @attr_args
 @click.pass_obj
-async def attr_(obj, **kw):
+async def attr_(obj, **kw) -> None:
     """Modify a given akumuli series."""
     if all(x not in kw for x in "vars_ eval_ path_".split()):
         return
@@ -172,7 +172,7 @@ async def attr_(obj, **kw):
 @cli.command()
 @click.pass_obj
 @click.argument("paths", nargs=-1, type=P)
-async def monitor(obj, paths):
+async def monitor(obj, paths) -> None:
     """Stand-alone task to monitor a single Akumuli tree"""
     from .model import AkumuliRoot  # noqa: PLC0415
     from .task import task  # noqa: PLC0415

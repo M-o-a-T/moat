@@ -12,7 +12,7 @@ class PingRespPacket(MQTTPacket):  # noqa: D101
     VARIABLE_HEADER = None
     PAYLOAD = None
 
-    def __init__(self, fixed: MQTTFixedHeader = None):
+    def __init__(self, fixed: MQTTFixedHeader = None) -> None:
         if fixed is None:
             header = MQTTFixedHeader(PINGRESP, 0x00)
         else:

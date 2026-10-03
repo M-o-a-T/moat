@@ -50,7 +50,7 @@ class ClientUserMaker(BaseClientAuthMaker):  # noqa:D101
     mod_schema = {"type": "object", "additionalProperties": False}
 
     @property
-    def ident(self):  # noqa:D102
+    def ident(self) -> str:  # noqa:D102
         return "*"
 
 

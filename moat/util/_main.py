@@ -29,7 +29,7 @@ log = logging.getLogger()
 
 
 @load_subgroup(prefix="moat.util")
-async def cli():
+async def cli() -> None:
     """Various utilities"""
     # pylint:disable=unnecessary-pass
 
@@ -44,7 +44,7 @@ async def cli():
     "--Human", "-H", "segments", type=int, default=None, help="Parts to print in 'human' mode"
 )
 @click.argument("args", nargs=-1)
-async def to_(args, sleep, human, now, inv, back, segments):
+async def to_(args, sleep, human, now, inv, back, segments) -> None:
     """\
 Calculate the time until the start of the next given partial time
 specification.
@@ -135,7 +135,7 @@ y, yr   Year (2023–)
 @click.option("-E", "--eval", "f_eval", is_flag=True, help="Input line is a Python expr.")
 @click.option("-D", "--dump", "f_dump", is_flag=True, help="Output line is a Python repr.")
 @attr_args(with_var=False, with_eval="eval_", with_path=False)  # ty:ignore[call-arg]  # with_eval accepts str to specify target param
-def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
+def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw) -> None:
     """File conversion / mangling utility.
 
     Supported file formats: json yaml cbor msgpack python std-cbor std-msgpack
@@ -155,7 +155,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
         long = PathShortener()
 
     class IT:
-        def __init__(self, codec):
+        def __init__(self, codec) -> None:
             self.codec = codec
 
         def __call__(self, buf):
@@ -165,7 +165,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             return iter(self.codec)
 
     class EV:
-        def __init__(self, codec):
+        def __init__(self, codec) -> None:
             self.codec = codec
 
         def __call__(self, buf):
@@ -206,7 +206,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
             y.default_flow_style = True
             from moat.util import yload  # noqa: PLC0415
 
-            def ypr(d, s):
+            def ypr(d, s) -> None:
                 if f_dump:
                     buf = io.StringIO()
                     yprint(d, buf)
@@ -350,7 +350,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw):
 @click.option("-s", "--slash", is_flag=True, help="convert a path to its slashed repr")
 @click.option("-S", "--unslash", is_flag=True, help="input is slashed repr")
 @click.argument("path", nargs=-1)
-async def path_(encode, decode, slash, unslash, path: list[str]):
+async def path_(encode, decode, slash, unslash, path: list[str]) -> None:
     """Explain/test MoaT paths"""
     if not encode and not decode and not slash:
         raise click.UsageError("Need -e / -d / -s option.")
@@ -382,7 +382,7 @@ async def path_(encode, decode, slash, unslash, path: list[str]):
 @click.option("-y", "--yaml", is_flag=True, help="print as YAML")
 @click.option("-e", "--empty", is_flag=True, help="empty string if the key doesn't exist")
 @click.argument("path", nargs=-1, type=P)
-async def cfg_(obj, path, yaml, empty):
+async def cfg_(obj, path, yaml, empty) -> None:
     """Emit the current configuration as a YAML file.
 
     You can limit the output by path elements.

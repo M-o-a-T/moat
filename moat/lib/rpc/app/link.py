@@ -66,7 +66,7 @@ class Cmd(BaseCmd):
     rlink: MsgSender | None = None
     ann: FakeReady | None = None
 
-    async def setup(self):
+    async def setup(self) -> None:
         "set up the link"
         await super().setup()
         self.link = link = await AC_use(self, Link(CFG.moat.link, common=True))
@@ -93,7 +93,7 @@ class Cmd(BaseCmd):
             )
         # rlink will be set up lazily
 
-    async def task(self):
+    async def task(self) -> None:
         "just start announcing"
         if self.ann is not None:
             self.ann.set()

@@ -28,7 +28,7 @@ from moat.db.rain.monitor import run_monitor
 )
 @click.option("--debug", "-d", is_flag=True, default=False, help="Verbose logging")
 @click.pass_obj
-async def cli(obj, tick_sec, debug):
+async def cli(obj, tick_sec, debug) -> None:
     """Run the irrigation monitor daemon for this site.
 
     Subscribes to weather sensors, generates schedules, dispatches valve

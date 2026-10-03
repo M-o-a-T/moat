@@ -38,7 +38,7 @@ than you specify.
 """,
     )
 
-    async def run(self):
+    async def run(self) -> None:
         "do the work"
         intf = self.intf
         while True:

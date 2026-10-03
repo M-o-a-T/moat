@@ -100,7 +100,7 @@ negative when 'use_gid' is on, but positive when off.
 """,
     )
 
-    async def run(self):
+    async def run(self) -> None:
         """Run the manager"""
         intf = self.intf
 
@@ -206,7 +206,7 @@ negative when 'use_gid' is on, but positive when off.
                 {"power": 0, "excess": self.excess},
             )
 
-    async def balance(self):
+    async def balance(self) -> None:
         """Run the balancing step"""
         intf = self.intf
         intf.top_off = True
@@ -256,7 +256,7 @@ negative when 'use_gid' is on, but positive when off.
         finally:
             intf.top_off = True
 
-    async def to_below_top(self):
+    async def to_below_top(self) -> None:
         """
         Send power until the top cell is below umin.
 
@@ -298,7 +298,7 @@ negative when 'use_gid' is on, but positive when off.
             e.dis_now = self.e_dis
         return e
 
-    async def to_bottom(self):
+    async def to_bottom(self) -> None:
         """
         Send power until the bottom cell is sufficiently below u.lim.min.
         """
@@ -334,7 +334,7 @@ negative when 'use_gid' is on, but positive when off.
                 break
             await self.set_p(power)
 
-    async def to_top(self, again=False):
+    async def to_top(self, again=False) -> None:
         """
         Take power until the bottom cell is somewhat below u.lim.max.
         """
@@ -370,7 +370,7 @@ negative when 'use_gid' is on, but positive when off.
                 break
             await self.set_p(power)
 
-    async def set_p(self, p):
+    async def set_p(self, p) -> None:
         """Set power to use"""
         if self.use_grid:
             ps = self.intf.calc_grid_p(p, excess=self.excess)

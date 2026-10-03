@@ -42,36 +42,36 @@ class Cmd(BaseCmd):
 
     _bus: SMBus
 
-    def __init__(self, cfg: dict):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
         self._lock = Lock()
 
-    async def setup(self):
+    async def setup(self) -> None:
         """
         Open a bus.
         """
         await super().setup()
         self._setup()
 
-    async def reload(self):
+    async def reload(self) -> None:
         "reconfigured"
         self._teardown()
         self._setup()
         await super().reload()
 
-    def _setup(self):
+    def _setup(self) -> None:
         cfg = self.cfg
         # f = cfg.get("f", 100000)
         t = cfg.get("t", 1000) * 1000
         self._bus = b = SMBus(cfg.id)
         b.set_timeout(int(t * 100))
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         "shutdown"
         self._teardown()
         await super().teardown()
 
-    def _teardown(self):
+    def _teardown(self) -> None:
         try:
             b = self._bus
         except AttributeError:

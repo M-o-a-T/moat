@@ -48,18 +48,18 @@ class MsgStream(HandlerStream):
 
     """
 
-    def __init__(self, handler: BaseMsgHandler, stream: BaseMsg):
+    def __init__(self, handler: BaseMsgHandler, stream: BaseMsg) -> None:
         self.__stream = stream
         super().__init__(handler)
 
-    async def read_stream(self):
+    async def read_stream(self) -> None:
         "Background stream reader. Started from the HandlerStream context manager."
         str = self.__stream  # noqa: A001
         while True:
             msg = await str.recv()
             await self.msg_in(msg)
 
-    async def write_stream(self):
+    async def write_stream(self) -> None:
         "Background stream writer. Started from the HandlerStream context manager."
         str = self.__stream  # noqa: A001
         while True:
@@ -103,7 +103,7 @@ class BaseCmdMsg(BaseCmd):
 
     auth_name: str | None = None
 
-    def __init__(self, cfg, *, is_server: bool = False, **kw):
+    def __init__(self, cfg, *, is_server: bool = False, **kw) -> None:
         self.is_server = is_server
         super().__init__(cfg, **kw)
         if "auth" in cfg:
@@ -177,7 +177,7 @@ class BaseCmdMsg(BaseCmd):
         """
         pass
 
-    async def wait_for_auth(self):
+    async def wait_for_auth(self) -> None:
         "wait for auth to complete"
         if self._auth is not None:
             await self._auth.wait_done()
@@ -190,7 +190,7 @@ class BaseCmdMsg(BaseCmd):
         """
         return getattr(self, "stream_owner_obj_", self)
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         "also cancel auth and shared iterators"
         self.auth_stop()
         # Close any active shared-iterator broadcasters.
@@ -212,7 +212,7 @@ class BaseCmdMsg(BaseCmd):
         """
         raise NotImplementedError("Create the stream: ", self.__class__.__name__)
 
-    async def setup(self):
+    async def setup(self) -> None:
         "Sets ``__rprefix`` and creates the shared-iterator task group."
         await super().setup()
 
@@ -225,7 +225,7 @@ class BaseCmdMsg(BaseCmd):
         # Create a task group for shared-iterator reader tasks.
         self.tg = await AC_use(self, TaskGroup())
 
-    async def task(self):
+    async def task(self) -> None:
         """
         Start the MsgStream.
         """
@@ -242,7 +242,7 @@ class BaseCmdMsg(BaseCmd):
         else:
             await self.process(root)
 
-    async def process(self, root: BaseMsgHandler):
+    async def process(self, root: BaseMsgHandler) -> None:
         """
         Low-level handler to run the message processor.
 
@@ -323,7 +323,7 @@ class BaseCmdMsg(BaseCmd):
 
     doc_cwr = dict(_d="write console", _0="bytes:data")
 
-    async def cmd_cwr(self, b: Buffer):
+    async def cmd_cwr(self, b: Buffer) -> None:
         """write some console data"""
         if self.s is None:
             raise EOFError
@@ -333,13 +333,13 @@ class BaseCmdMsg(BaseCmd):
         _d="r/w console stream", _0="int:rdbuflen (64)", _i="bytes:to send", _o="bytes:received"
     )
 
-    async def stream_c(self, msg):
+    async def stream_c(self, msg) -> None:
         "read/write console stream"
         n = msg.get(0, 64)
         async with msg.stream() as st, TaskGroup() as tg:
 
             @tg.start_soon
-            async def crd():
+            async def crd() -> None:
                 while True:
                     await st.send(await self.cmd_crd(n))
 
@@ -353,7 +353,7 @@ class BaseCmdMsg(BaseCmd):
         _o="data from the remote iterator",
     )
 
-    async def stream_mon_(self, msg: Msg):
+    async def stream_mon_(self, msg: Msg) -> None:
         """Stream data from a shared remote iterator.
 
         The first caller for a given path opens the remote stream;
@@ -447,7 +447,7 @@ class CmdMsg(BaseCmdMsg):
     A baseCmdMsg with a ready-made link that it opens.
     """
 
-    def __init__(self, cfg: dict, link: BaseMsg):
+    def __init__(self, cfg: dict, link: BaseMsg) -> None:
         super().__init__(cfg)
         self.link = link
 
@@ -465,7 +465,7 @@ class SingleCmdMsg(BaseCmdMsg):
     # pylint:disable=abstract-method
     # `stream` needs to be implemented by a subclass
 
-    async def run(self):  # noqa:D102
+    async def run(self) -> None:  # noqa:D102
         # this would be far easier with "except*"
         # but µPy doesn't have that.
         try:
@@ -498,7 +498,7 @@ class ExtCmdMsg(SingleCmdMsg):
     and then closing the stream!
     """
 
-    def __init__(self, cfg: dict[str, Any], stream: BaseMsg, *, is_server: bool = False):
+    def __init__(self, cfg: dict[str, Any], stream: BaseMsg, *, is_server: bool = False) -> None:
         if cfg is None:
             cfg = {}
         super().__init__(cfg, is_server=is_server)

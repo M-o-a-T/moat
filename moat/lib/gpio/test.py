@@ -40,7 +40,7 @@ class _GpioPin:
 
     fd: int | None = None
 
-    def __init__(self, watcher: GpioWatcher, chip: str, pin: int):
+    def __init__(self, watcher: GpioWatcher, chip: str, pin: int) -> None:
         self.watcher = watcher
         self.chip = chip
         self.pin = pin
@@ -110,7 +110,7 @@ class GpioWatcher:
         interval: float = 0.2,
         debugfs_path: str = "/sys/kernel/debug",
         sysfs_path: str = "/sys",
-    ):
+    ) -> None:
         self.interval = interval
         self.gpio = open(  # noqa:SIM115
             os.path.join(debugfs_path, "gpio"),

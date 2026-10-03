@@ -23,14 +23,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # noqa:D103
+async def task(client, cfg, server: AkumuliServer, paths=(), evt=None) -> None:  # noqa:D103
     cfg = combine_dict(
         server.value_or({}, Mapping).get("server", {}),
         server.parent.value_or({}, Mapping).get("server", {}),
         cfg["server_default"],
     )
 
-    async def process_raw(*, task_status=anyio.TASK_STATUS_IGNORED):
+    async def process_raw(*, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         async with client.msg_monitor(server.topic) as mon:
             task_status.started()
             async for msg in mon:

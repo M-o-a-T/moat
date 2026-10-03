@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class Codec(_Codec):
     "basic JSON codec"
 
-    def __init__(self, ext=None):
+    def __init__(self, ext=None) -> None:
         if ext is not None:
             raise ValueError("You can't extend the JSON codec")
         super().__init__()

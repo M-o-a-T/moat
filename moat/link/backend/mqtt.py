@@ -35,7 +35,7 @@ class MqttMessage:
     Encapsulates (our view of) a message from MQTT.
     """
 
-    def __init__(self, topic, payload, orig, **kw):
+    def __init__(self, topic, payload, orig, **kw) -> None:
         self.topic = topic
         self.payload = payload
         self.orig = orig
@@ -282,7 +282,7 @@ class Backend(_Backend):
 
 
 class _SubGet:
-    def __init__(self, back, sub, codec, raw):
+    def __init__(self, back, sub, codec, raw) -> None:
         self.back = back
         self.sub = sub
         self.codec = codec

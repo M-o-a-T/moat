@@ -56,6 +56,9 @@ from .node import Node
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
+if TYPE_CHECKING:
+    from typing import Never
+
 try:
     from .schema import schema_path, validate_instance
 except ImportError:
@@ -147,10 +150,10 @@ def get_link() -> Link | None:
 class TS:
     "A wrapper to TaskStatus that swallows successive calls"
 
-    def __init__(self, ts):
+    def __init__(self, ts) -> None:
         self.ts = ts
 
-    def started(self, data=None):
+    def started(self, data=None) -> None:
         "call .started once"
         self.ts.started(data)
         self.ts = anyio.TASK_STATUS_IGNORED
@@ -164,13 +167,13 @@ class BasicCmd:
     not repeated (the client terminates, see `~moat.link.exceptions.ServerLinkLost`).
     """
 
-    def __init__(self, a, kw):
+    def __init__(self, a, kw) -> None:
         self.a = a
         self.kw = kw
         self._result = None
         self._evt = anyio.Event()
 
-    async def run(self, link):
+    async def run(self, link) -> None:
         "run the command"
         try:
             res = await link.cmd(*self.a, **self.kw)
@@ -211,7 +214,7 @@ class LinkCommon(CmdCommon):
     tg: Any
     current_server: MsgSender | None
 
-    def __init__(self, cfg, name: str | None = None):
+    def __init__(self, cfg, name: str | None = None) -> None:
         super().__init__(cfg)
         CFG.maybe_redo()
         set_root(CFG.moat.link)
@@ -252,14 +255,14 @@ class LinkCommon(CmdCommon):
     def id(self):  # noqa:D102
         return self._id
 
-    async def _connected_port(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _connected_port(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         if self._port is None:
             raise RuntimeError("No configured port")
         async with self._connect_one(self._port) as hdl:
             task_status.started(hdl)
             await anyio.sleep_forever()
 
-    def _state_changed(self):
+    def _state_changed(self) -> None:
         pass
 
     async def get_link(self) -> MsgSender:
@@ -333,7 +336,7 @@ class ClientCaller(Caller):
     Don't instantiate this class yourself.
     """
 
-    def __init__(self, sender, *a, **kw):
+    def __init__(self, sender, *a, **kw) -> None:
         self._link = sender._link  # noqa:SLF001
         super().__init__(sender, *a, **kw)
 
@@ -375,7 +378,7 @@ class CodeCaller:
     sender: LinkSender
     path: Path
 
-    def __init__(self, sender: LinkSender, path: Path):
+    def __init__(self, sender: LinkSender, path: Path) -> None:
         self.sender = sender
         self.path = _code_path(path)
 
@@ -478,7 +481,7 @@ class LinkSender(MsgSender, MsgRoot):
     i: MsgSender
     cl: MsgSender
 
-    def __init__(self, link: LinkCommon):
+    def __init__(self, link: LinkCommon) -> None:
         self._link = link
         self.announced = self._link.announced
         self._code_watch = {}
@@ -709,7 +712,7 @@ class LinkSender(MsgSender, MsgRoot):
             async for msg in mon:
                 yield msg[0]
 
-    async def stream_watch(self, msg: Msg):
+    async def stream_watch(self, msg: Msg) -> None:
         """
         A hook for reading data. Used mainly by `moat.lib.rpc.app.link.Cmd`.
         """
@@ -868,7 +871,7 @@ class LinkSender(MsgSender, MsgRoot):
             Watcher(self, path, False, True, None, None, True, Node, None, None) as mon,
         ):
 
-            async def _run(task_status):
+            async def _run(task_status) -> None:
                 nonlocal evt
 
                 async for pd in mon:
@@ -895,7 +898,7 @@ class LinkSender(MsgSender, MsgRoot):
             yield res
             tg.cancel_scope.cancel()
 
-    async def e_exc(self, path: Path, exc: Exception, **kw):
+    async def e_exc(self, path: Path, exc: Exception, **kw) -> None:
         """
         Report an exception, with backtrace.
         """
@@ -906,13 +909,13 @@ class LinkSender(MsgSender, MsgRoot):
 
         await self.e.exc(path, repr(exc), **kw)
 
-    async def e_info(self, path: Path, txt: str, **kw):
+    async def e_info(self, path: Path, txt: str, **kw) -> None:
         """
         Report a problem that's not an exception.
         """
         await self.e.info(path, txt, **kw)
 
-    async def e_ack(self, path: Path, **kw):
+    async def e_ack(self, path: Path, **kw) -> None:
         """
         Report that $USER has been notified of a problem.
 
@@ -922,7 +925,7 @@ class LinkSender(MsgSender, MsgRoot):
         """
         await self.e.ack(path, **kw)
 
-    async def e_ok(self, path: Path, **kw):
+    async def e_ok(self, path: Path, **kw) -> None:
         """
         Report that something is working.
         """
@@ -989,7 +992,7 @@ class LinkSender(MsgSender, MsgRoot):
         """
         return self._link.backend.send(path, *a, **kw)
 
-    async def i_sync(self):
+    async def i_sync(self) -> None:
         """
         This call tries to ensure that the server has processed all
         incoming MQTT messages.
@@ -1017,7 +1020,7 @@ class LinkSender(MsgSender, MsgRoot):
         (st,) = await self.cmd(P("i.checkid"), id)
         return st
 
-    async def _get_tree(self, path, *, task_status, **kw):
+    async def _get_tree(self, path, *, task_status, **kw) -> None:
         """
         Helper task to monitor a (sub)tree
         """
@@ -1093,7 +1096,7 @@ class LinkSender(MsgSender, MsgRoot):
 
     async def _watch_code(
         self, path: Path, code: Code, done: anyio.Event, *, task_status=anyio.TASK_STATUS_IGNORED
-    ):
+    ) -> None:
         "Background updater for one code path."
         with anyio.CancelScope() as scope:
             task_status.started(scope)
@@ -1142,7 +1145,7 @@ class ServiceSender(MsgSender):
     _watch_scope: anyio.CancelScope | None
     _ready: anyio.Event
 
-    def __init__(self, sender: LinkSender, srv: Path):
+    def __init__(self, sender: LinkSender, srv: Path) -> None:
         """Args:
         sender: the LinkSender that owns this service reference.
         srv: the service path (relative to ``run.host``).
@@ -1154,7 +1157,7 @@ class ServiceSender(MsgSender):
         self._watch_scope = None
         self._ready = anyio.Event()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         inner = self._inner
         if inner is not None:
             return f"<ServiceSender:{inner._path}>"  # noqa:SLF001
@@ -1204,7 +1207,7 @@ class ServiceSender(MsgSender):
         srv = P("run.host") + self._srv
         sender = self._sender
 
-        async def _monitor(*, task_status=anyio.TASK_STATUS_IGNORED):
+        async def _monitor(*, task_status=anyio.TASK_STATUS_IGNORED) -> None:
             """Background watcher for service announcement changes."""
             with anyio.CancelScope() as scope:
                 task_status.started(scope)
@@ -1361,7 +1364,7 @@ class Link(LinkCommon, CtxObj):
 
     def __init__(
         self, cfg, name: str | None = None, common: bool = False, only: str | None = None
-    ):
+    ) -> None:
         if _the_link.get(NotGiven) is self:
             return
         super().__init__(cfg, name=name)
@@ -1380,7 +1383,7 @@ class Link(LinkCommon, CtxObj):
             with suppress(AttributeError):
                 self._only = str(self.cfg.client.name)
 
-    async def setup(self):
+    async def setup(self) -> None:
         """Attach sub-handlers, unless this shared link is already active."""
         # Re-entering a common Link (cached in ``_the_link``, e.g. via
         # ``as_service`` while ``obj.conn`` already holds it) must not
@@ -1390,7 +1393,7 @@ class Link(LinkCommon, CtxObj):
         await super().setup()
         self._setup_done = True
 
-    async def set_state(self, state: str):
+    async def set_state(self, state: str) -> None:
         """
         Set the state string for our ping message
         """
@@ -1398,7 +1401,7 @@ class Link(LinkCommon, CtxObj):
             self._state = state
             self._state_changed()
 
-    def _state_changed(self):
+    def _state_changed(self) -> None:
         self._state_change.set()
 
     async def get_link(self):
@@ -1417,7 +1420,7 @@ class Link(LinkCommon, CtxObj):
     def _id_path(self):
         return P("run.id") / self.id
 
-    async def _send_id(self):
+    async def _send_id(self) -> None:
         data = dict(
             host=platform.node(),
             pid=os.getpid(),
@@ -1431,7 +1434,7 @@ class Link(LinkCommon, CtxObj):
             retain=True,
         )
 
-    async def _send_ping(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _send_ping(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Periodially (or when our state changes) send a Ping.
 
@@ -1469,7 +1472,7 @@ class Link(LinkCommon, CtxObj):
                 await self._state_change.wait()
                 self._state_change = anyio.Event()
 
-    async def _monitor_ping(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _monitor_ping(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         path = Root.get() + self._ping_path
         async with self.backend.monitor(path) as mon:
             task_status.started()
@@ -1575,11 +1578,11 @@ class Link(LinkCommon, CtxObj):
         finally:
             done.set()
 
-    def cancel(self):
+    def cancel(self) -> None:
         "Stop me"
         self._outer.cancel_scope.cancel()
 
-    async def _run_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _run_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         This is the manager task for the server link channel.
         It starts a server connection; losing it later ends the client
@@ -1730,7 +1733,7 @@ class Link(LinkCommon, CtxObj):
                     f"{self.cfg.client.init_timeout}s. Is it running?"
                 ) from None
 
-    async def _read_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _read_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         # Background process that monitors the server link channel
 
         self._last_link_seen = anyio.Event()
@@ -1752,7 +1755,7 @@ class Link(LinkCommon, CtxObj):
                     task_status.started(msg)
                     task_status = None
 
-    async def _connect_run(self, rem, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _connect_run(self, rem, *, task_status=anyio.TASK_STATUS_IGNORED) -> Never:
         """
         Run the connection to a server.
 
@@ -1769,7 +1772,7 @@ class Link(LinkCommon, CtxObj):
             raise ServerLinkLost(rem) from exc
         raise ServerLinkLost(rem)
 
-    async def _connect_run_(self, rem, *, task_status):
+    async def _connect_run_(self, rem, *, task_status) -> None:
         # Check backend compatibility when connecting to a named server
         if self._only is not None:
             try:
@@ -1786,10 +1789,10 @@ class Link(LinkCommon, CtxObj):
             except Exception as exc:
                 self.logger.warning("Could not query backend from %s: %r", self._only, exc)
 
-        async def run_(cmd):
+        async def run_(cmd) -> None:
             await cmd.run(rem)
 
-        async def watch_conn():
+        async def watch_conn() -> None:
             # The RPC layer doesn't end the connection's context when the
             # server goes away, it just stops reading.
             if (conn := getattr(self, "_server_conn", None)) is not None:
@@ -1821,7 +1824,9 @@ class Link(LinkCommon, CtxObj):
         except _Requeue:
             raise EOFError from None
 
-    async def _connect_server(self, srv: Message, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _connect_server(
+        self, srv: Message, *, task_status=anyio.TASK_STATUS_IGNORED
+    ) -> None:
         task_status = TS(task_status)
 
         # Backend connection
@@ -1868,7 +1873,7 @@ class BasicLink(LinkCommon, CtxObj):
     Simple direct link to a MQTT server.
     """
 
-    def __init__(self, cfg, name: str | None, data: dict, **kw):
+    def __init__(self, cfg, name: str | None, data: dict, **kw) -> None:
         super().__init__(cfg, name=name, **kw)
         self.data = data
 
@@ -1938,7 +1943,7 @@ class Watcher(CtxObj, Generic[_NodeType]):
         if self.age is not None:
             self.age = mtime.time() - self.age
 
-    def _chk(self, p, m):
+    def _chk(self, p, m) -> bool:
         if self.age and m.timestamp < self.age:
             return False
         if self.min_length is not None and len(p) < self.min_length:
@@ -1947,7 +1952,7 @@ class Watcher(CtxObj, Generic[_NodeType]):
             return False
         return True
 
-    async def _current(self, qw, *, task_status):
+    async def _current(self, qw, *, task_status) -> None:
         "get the current state from the server"
         if self.subtree:
             pl = PathLongener(())
@@ -1982,7 +1987,7 @@ class Watcher(CtxObj, Generic[_NodeType]):
             raise RuntimeError("Missing done event")
         self._current_done.set()
 
-    async def _updates(self, qw, *, task_status):
+    async def _updates(self, qw, *, task_status) -> None:
         "get updates from MQTT"
         plen = len(self.path)  # ignores the root prefix
         async with self.link.monitor(
@@ -2049,7 +2054,7 @@ class Watcher(CtxObj, Generic[_NodeType]):
         await self._current_done.wait()
         return self.nodes
 
-    async def _iter(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _iter(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         task_status.started()
         qr, self._qr = self._qr, None
 
@@ -2088,7 +2093,7 @@ class Walker:
     tree in memory.
     """
 
-    def __init__(self, mon, meta=False):
+    def __init__(self, mon, meta=False) -> None:
         self.mon = mon
         self.pl = PathLongener()
         self.meta = meta

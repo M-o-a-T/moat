@@ -57,14 +57,14 @@ class Cell(BalBaseCell):
               max: 3.4
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self._c = cfg["c"]
         self._t = cfg["t"]
         self._tb = 25
         self.t_env = 25
 
-    async def set_dis(self):
+    async def set_dis(self) -> None:
         "set discharger. No-op since we can use .vdis directly."
         pass
 
@@ -121,7 +121,7 @@ class Cell(BalBaseCell):
 
     doc_add_p = dict(_d="add energy", p="float:watts", t="float:seconds")
 
-    async def cmd_add_p(self, p, t):
+    async def cmd_add_p(self, p, t) -> None:
         "add energy to the battery: @p watts for @t msec"
         # watt seconds
         self._c += p * t / self.cfg["cap"] / 1000
@@ -131,7 +131,7 @@ class Cell(BalBaseCell):
             1 if p > 0 else 0.5
         )
 
-    async def task(self):
+    async def task(self) -> None:
         self.set_ready()
 
         while True:
@@ -155,7 +155,7 @@ class Cell(BalBaseCell):
         th="float:bal temp threshold",
     )
 
-    async def cmd_bal_set(self, b=None, f=None, ot=None, pwm=None, th=None):
+    async def cmd_bal_set(self, b=None, f=None, ot=None, pwm=None, th=None) -> None:
         if pwm is not None:
             self.balance_pwm = pwm
         if ot is not None:

@@ -24,13 +24,13 @@ __all__ = ["DEVNULL", "PIPE", "STDOUT", "CalledProcessError", "run"]
 
 
 class DetailedCalledProcessError(CalledProcessError):
-    def __init__(self, retval, args, dir, out, err):  # noqa:A002
+    def __init__(self, retval, args, dir, out, err) -> None:  # noqa:A002
         super().__init__(retval, args)
         self.dir = dir
         self.out = out
         self.err = err
 
-    def __str__(self):
+    def __str__(self) -> str:
         def dec(s: bytes | str) -> bytes | str:
             if isinstance(s, bytes):
                 try:
@@ -99,7 +99,7 @@ async def run(
     capture: bool | Literal["raw"] = False,
     input=None,  # noqa: A002
     **kw,
-) -> None | str | bytes:
+) -> str | bytes | None:
     """Helper to run an external program, tagging stdout/stderr"""
 
     if name is None:
@@ -126,7 +126,7 @@ async def run(
     out = None
     err = None
 
-    async def report(prefix: str, stream: AsyncIterable[bytes], buf: BytesIO):
+    async def report(prefix: str, stream: AsyncIterable[bytes], buf: BytesIO) -> None:
         nonlocal frag
         utf = getincrementaldecoder("utf-8")()
         async for chunk in stream:

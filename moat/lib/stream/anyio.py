@@ -17,13 +17,15 @@ from moat.util import CtxObj
 from moat.lib.micro import AC_use
 from moat.lib.stream import BaseBuf
 
-from typing import TYPE_CHECKING, Any, cast  # isort:skip
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from types import TracebackType
 
     from moat.lib.rpc import SubMsgSender
     from moat.lib.stream.base import Buffer, MutBuffer
+
+    from typing import Any, Never
 
 
 class ProcessDeadError(RuntimeError):
@@ -76,7 +78,7 @@ class FilenoBuf(BaseBuf):
     wfl: int
     term: list[Any] | None
 
-    def __init__(self, cfg, fd: int, wfd: int | None = None):
+    def __init__(self, cfg, fd: int, wfd: int | None = None) -> None:
         super().__init__(cfg)
         self.rfd = fd
         self.wfd = fd if wfd is None else wfd
@@ -86,7 +88,7 @@ class FilenoBuf(BaseBuf):
         "Dummy here"
         raise NotImplementedError("Dummy")
 
-    async def setup(self):
+    async def setup(self) -> None:
         "Change to nonblocking and raw"
         self.rfl = fcntl.fcntl(self.rfd, fcntl.F_SETFL, 0)
         if self.rfd != self.wfd:
@@ -108,7 +110,7 @@ class FilenoBuf(BaseBuf):
             cc[termios.VTIME] = 0
             termios.tcsetattr(self.rfd, termios.TCSANOW, new)
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         "Return to blocking and cooked"
         fcntl.fcntl(self.rfd, fcntl.F_SETFL, self.rfl)
         if self.rfd != self.wfd:
@@ -144,7 +146,7 @@ class RemoteBufAnyio(ByteStream):
     TODO: use remote iteration for receiving
     """
 
-    def __init__(self, disp: SubMsgSender):
+    def __init__(self, disp: SubMsgSender) -> None:
         self.disp = disp
 
     async def receive(self, max_bytes=256):
@@ -155,7 +157,7 @@ class RemoteBufAnyio(ByteStream):
         "forward to ``.wr``"
         await self.disp.wr(b=item)
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         "no-op"
 
     async def send_eof(self):
@@ -170,7 +172,7 @@ class BufAnyio(ByteStream):
 
     par = None
 
-    def __init__(self, stream: BaseBuf):
+    def __init__(self, stream: BaseBuf) -> None:
         self.stream = stream
 
     async def __aenter__(self):
@@ -209,7 +211,7 @@ class SingleAnyioBuf(AnyioBuf):
     once.
     """
 
-    def __init__(self, stream):
+    def __init__(self, stream) -> None:
         self._s = stream
 
     async def stream(self):  # noqa:D102
@@ -235,7 +237,7 @@ class ProcessBuf(CtxObj, AnyioBuf):
     argv: list[str] | None = None
     env: dict[str, str] | None = None
 
-    def __init__(self, cfg, executable: str | None = None, **kw):
+    def __init__(self, cfg, executable: str | None = None, **kw) -> None:
         super().__init__(cfg)
         kw.setdefault("stderr", sys.stderr)
         self.kw: dict[str, Any] = dict(kw)
@@ -299,8 +301,8 @@ class ProcessBuf(CtxObj, AnyioBuf):
             if proc is not None and proc.returncode != 0 and proc.returncode != -9:
                 raise ProcessDeadError(f"{self} died with {proc.returncode}")
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         pass
 
-    async def stream(self):  # noqa:D102
+    async def stream(self) -> Never:  # noqa:D102
         raise RuntimeError("should not be called")

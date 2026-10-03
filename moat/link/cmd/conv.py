@@ -20,14 +20,14 @@ def _conv_prefix(obj):
     return obj.cfg["link"].get("conv", {}).get("prefix", P("conv"))
 
 
-async def _ensure_exists(conn, path, what):
+async def _ensure_exists(conn, path, what) -> None:
     try:
         await conn.d_get(path)
     except KeyError:
         raise click.UsageError(f"{what} {path!s} does not exist.") from None
 
 
-async def _ensure_absent(conn, path, what):
+async def _ensure_absent(conn, path, what) -> None:
     try:
         await conn.d_get(path)
     except KeyError:
@@ -35,12 +35,12 @@ async def _ensure_absent(conn, path, what):
     raise click.UsageError(f"{what} {path!s} already exists.")
 
 
-async def _do_get(obj):
+async def _do_get(obj) -> None:
     """Show the entry at ``obj.path``."""
     await data_get(obj.conn, obj.path, meta=obj.meta, recursive=False, out=obj.stdout)
 
 
-async def _do_set(obj, kw):
+async def _do_set(obj, kw) -> None:
     """Update the entry at ``obj.path`` via :func:`node_attr`.
 
     Requires the entry to exist; use ``add`` to create one.
@@ -52,7 +52,7 @@ async def _do_set(obj, kw):
         yprint(out, stream=obj.stdout)
 
 
-async def _do_add(obj, codec, *, require_parent):
+async def _do_add(obj, codec, *, require_parent) -> None:
     """Create the entry at ``obj.path`` with ``{codec: CODEC}``.
 
     Args:
@@ -67,7 +67,7 @@ async def _do_add(obj, codec, *, require_parent):
         yprint(res, stream=obj.stdout)
 
 
-async def _do_delete(obj, recursive):
+async def _do_delete(obj, recursive) -> None:
     """Delete ``obj.path``; optionally also its subtree."""
     args = {"rec": True} if recursive else {}
     res = await obj.conn.d.delete(obj.path, **args)
@@ -154,7 +154,7 @@ async def _do_list(obj) -> None:
 @click.option("-m", "--meta", is_flag=True, help="include metadata")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def cli(ctx, path, meta):
+async def cli(ctx, path, meta) -> None:
     """
     Manage codec/path mappings (the ``conv`` subtree).
 
@@ -176,7 +176,7 @@ async def cli(ctx, path, meta):
 
 @cli.command()
 @click.pass_obj
-async def get(obj):
+async def get(obj) -> None:
     """Read this conv entry."""
     await _do_get(obj)
 
@@ -184,7 +184,7 @@ async def get(obj):
 @cli.command("set", short_help="Update entry attributes")
 @attr_args
 @click.pass_obj
-async def set_(obj, **kw):
+async def set_(obj, **kw) -> None:
     """Update the attributes of this conv entry."""
     if not len(obj.parent_path):
         raise click.UsageError("PATH must not be empty.")
@@ -194,7 +194,7 @@ async def set_(obj, **kw):
 @cli.command()
 @click.argument("codec", type=P, nargs=1)
 @click.pass_obj
-async def add(obj, codec):
+async def add(obj, codec) -> None:
     """Create this conv entry with ``codec=CODEC`` as the default.
 
     Fails if the entry already exists.
@@ -204,7 +204,7 @@ async def add(obj, codec):
 
 @cli.command()
 @click.pass_obj
-async def delete(obj):
+async def delete(obj) -> None:
     """Delete this entry and its entire subtree."""
     if not len(obj.parent_path):
         raise click.UsageError("PATH must not be empty.")
@@ -213,7 +213,7 @@ async def delete(obj):
 
 @cli.command("list")
 @click.pass_obj
-async def list_(obj):
+async def list_(obj) -> None:
     """List all paths at and below this conv entry, with their codec."""
     await _do_list(obj)
 
@@ -225,7 +225,7 @@ async def list_(obj):
 )
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def at(ctx, path):
+async def at(ctx, path) -> None:
     """
     Operate on ``conv.A.B``.
 
@@ -242,7 +242,7 @@ async def at(ctx, path):
 
 @at.command("get")
 @click.pass_obj
-async def at_get(obj):
+async def at_get(obj) -> None:
     """Read this sub-entry."""
     await _do_get(obj)
 
@@ -250,7 +250,7 @@ async def at_get(obj):
 @at.command("set", short_help="Update sub-entry attributes")
 @attr_args
 @click.pass_obj
-async def at_set(obj, **kw):
+async def at_set(obj, **kw) -> None:
     """Update the attributes of this sub-entry."""
     if obj.path == obj.parent_path:
         raise click.UsageError("Sub-PATH must not be empty.")
@@ -260,7 +260,7 @@ async def at_set(obj, **kw):
 @at.command("add")
 @click.argument("codec", type=P, nargs=1)
 @click.pass_obj
-async def at_add(obj, codec):
+async def at_add(obj, codec) -> None:
     """Create this sub-entry with ``codec=CODEC``.
 
     Fails if the outer conv entry does not exist, or if this sub-entry
@@ -274,7 +274,7 @@ async def at_add(obj, codec):
 @at.command("delete")
 @click.option("-r", "--recursive", is_flag=True, help="Also remove children.")
 @click.pass_obj
-async def at_delete(obj, recursive):
+async def at_delete(obj, recursive) -> None:
     """Delete this sub-entry.
 
     By default, only the entry itself is removed; pass ``-r`` to drop
@@ -287,6 +287,6 @@ async def at_delete(obj, recursive):
 
 @at.command("list")
 @click.pass_obj
-async def at_list(obj):
+async def at_list(obj) -> None:
     """List all paths at and below this sub-entry, with their codec."""
     await _do_list(obj)

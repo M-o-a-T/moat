@@ -24,13 +24,13 @@ class _Pin:
     All other import arguments are taken from keywords.
     """
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:
         self._pin = M.Pin(*a, **kw)
         self.flag = asyncio.ThreadSafeFlag()
         self.evt = Event()
         self.val = self._pin.value()
 
-    def _irq(self, _x=None):
+    def _irq(self, _x=None) -> None:
         "sets the change flag"
         self.val = self._pin.value()
         self.flag.set()
@@ -43,7 +43,7 @@ class _Pin:
             self.val = self._pin.value()
             self.flag.set()
 
-    async def flag_watch(self):
+    async def flag_watch(self) -> None:
         "Flag reader task, since a ThreadSafeFlag only acepts one read task"
         try:
             self._pin.irq(self._irq, M.Pin.IRQ_FALLING | M.Pin.IRQ_RISING)
@@ -106,7 +106,7 @@ class Pin(BaseCmd):
         _s=True,
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         out = cfg.get("out", False)
         oce = cfg.get("open", None)  # open collector/emitter
@@ -122,20 +122,20 @@ class Pin(BaseCmd):
 
         self.pin = _Pin(*a, **kw)
 
-    async def setup(self):
+    async def setup(self) -> None:
         "initialization, triggers change"
         await super().setup()
         if getattr(self, "tg", None) is None:
             self.tg = await AC_use(self, TaskGroup())
         await self.tg.spawn(self.pin.flag_watch)
 
-    async def cmd(self, val: bool = NotGiven) -> None | bool:
+    async def cmd(self, val: bool = NotGiven) -> bool | None:
         "Simple Data protocol."
         if val is NotGiven:
             return self.pin()
         self.pin(val)
 
-    async def stream(self, msg):
+    async def stream(self, msg) -> None:
         """
         R/W data stream. The initial argument says whether you want to
         read. Waits for change if @o (old value) is not None.
@@ -143,7 +143,7 @@ class Pin(BaseCmd):
         o = msg.get("o", None)
         async with TaskGroup() as tg, msg.stream() as m:
 
-            async def _rd():
+            async def _rd() -> None:
                 val = bool(self.pin())
                 if o is not val:
                     await m.send(val)

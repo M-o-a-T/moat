@@ -32,7 +32,7 @@ from moat.lib.run import AliasedGroup, option_ng
 @click.group(name="history", cls=AliasedGroup, short_help="Manage weather history and logs")
 @click.option("--time", "-t", type=str, default=None, help="Sample time (ISO timestamp)")
 @click.pass_obj
-async def cli(obj, time):
+async def cli(obj, time) -> None:
     """Manage site weather-history samples and event logs."""
     obj.time = time
 
@@ -42,7 +42,7 @@ async def cli(obj, time):
 
 @cli.command(name="show")
 @click.pass_obj
-async def show_(obj):
+async def show_(obj) -> None:
     """Show one sample, or list all samples of this site."""
     site = site_of(obj)
     if obj.time is None:
@@ -67,7 +67,7 @@ async def show_(obj):
 @option_ng("--wind", "-w", type=float, help="Wind speed")
 @option_ng("--sun", "-s", type=float, help="Sunshine")
 @click.pass_obj
-async def add(obj, **kw):
+async def add(obj, **kw) -> None:
     """Add a weather sample to this site."""
     site = site_of(obj)
     if obj.time is None:
@@ -89,7 +89,7 @@ async def add(obj, **kw):
 @option_ng("--wind", "-w", type=float, help="Wind speed")
 @option_ng("--sun", "-s", type=float, help="Sunshine")
 @click.pass_obj
-async def set_(obj, **kw):
+async def set_(obj, **kw) -> None:
     """Modify a weather sample of this site."""
     site = site_of(obj)
     if obj.time is None:
@@ -102,7 +102,7 @@ async def set_(obj, **kw):
 
 @cli.command(name="delete")
 @click.pass_obj
-async def delete_(obj):
+async def delete_(obj) -> None:
     """Remove a weather sample from this site."""
     site = site_of(obj)
     if obj.time is None:
@@ -117,7 +117,7 @@ async def delete_(obj):
 @cli.group(name="log", cls=AliasedGroup, short_help="Manage this site's event log")
 @click.option("--id", "log_id", type=int, default=None, help="Log entry id")
 @click.pass_obj
-async def log_cli(obj, log_id):
+async def log_cli(obj, log_id) -> None:
     """Manage scheduler/operator event entries for this site."""
     obj.log_id = log_id
 
@@ -141,7 +141,7 @@ def _log_dump(lg: Log) -> dict:
 
 @log_cli.command(name="show")
 @click.pass_obj
-async def log_show(obj):
+async def log_show(obj) -> None:
     """Show one log entry, or list all entries of this site."""
     site = site_of(obj)
     if obj.log_id is None:
@@ -165,7 +165,7 @@ async def log_show(obj):
 @option_ng("--controller", "-c", type=str, help="Controller name, or '-' to clear")
 @click.option("--valve", "-v", type=str, default=None, help="Valve spec 'C:V', or '-' to clear")
 @click.pass_obj
-async def log_add(obj, valve, **kw):
+async def log_add(obj, valve, **kw) -> None:
     """Add a log entry to this site."""
     if not is_given(kw.get("logger", ...)):
         raise click.UsageError("A log entry needs --logger.")
@@ -191,7 +191,7 @@ async def log_add(obj, valve, **kw):
 @option_ng("--controller", "-c", type=str, help="Controller name, or '-' to clear")
 @click.option("--valve", "-v", type=str, default=None, help="Valve spec 'C:V', or '-' to clear")
 @click.pass_obj
-async def log_set(obj, valve, **kw):
+async def log_set(obj, valve, **kw) -> None:
     """Modify a log entry of this site."""
     lg = _log_of(obj)
     ts = kw.pop("timestamp", NotGiven)
@@ -206,6 +206,6 @@ async def log_set(obj, valve, **kw):
 
 @log_cli.command(name="delete")
 @click.pass_obj
-async def log_delete(obj):
+async def log_delete(obj) -> None:
     """Remove a log entry from this site."""
     obj.session.delete(_log_of(obj))

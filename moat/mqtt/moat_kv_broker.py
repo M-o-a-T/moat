@@ -27,7 +27,7 @@ class MoatKVbroker(Broker):
         "_moat_kv_broker__tranparent",
     )
 
-    def __init__(self, tg: anyio.abc.TaskGroup, config=None, plugin_namespace=None):
+    def __init__(self, tg: anyio.abc.TaskGroup, config=None, plugin_namespace=None) -> None:
         self.__client = None
         super().__init__(tg, config=config, plugin_namespace=plugin_namespace)
         cfg = self.config["kv"]
@@ -46,7 +46,7 @@ class MoatKVbroker(Broker):
         if self.__topic[: len(self.__base)] == self.__base:
             raise ValueError("'topic' must not start with 'base'")
 
-    async def __read_encap(self, client, cfg: dict, evt: anyio.abc.Event | None = None):  # pylint: disable=unused-argument  # noqa: ARG002
+    async def __read_encap(self, evt: anyio.abc.Event | None = None) -> None:  # pylint: disable=unused-argument
         """
         Read encapsulated messages from the real server and forward them
         """
@@ -63,7 +63,7 @@ class MoatKVbroker(Broker):
                         sess = sess[0]
                 await super().broadcast_message(session=sess, **d)
 
-    async def __read_topic(self, topic, client, cfg: dict, evt: anyio.abc.Event | None = None):  # pylint: disable=unused-argument  # noqa: ARG002
+    async def __read_topic(self, topic, evt: anyio.abc.Event | None = None) -> None:  # pylint: disable=unused-argument
         """
         Read topical messages from the real server and forward them
         """
@@ -75,17 +75,17 @@ class MoatKVbroker(Broker):
                 t = m.topic
                 await super().broadcast_message(topic=t, data=d, session=None)
 
-    async def __session(self, cfg: dict, evt: anyio.abc.Event | None = None):
+    async def __session(self, cfg: dict, evt: anyio.abc.Event | None = None) -> None:
         """
         Connect to the real server, read messages, forward them
         """
         try:
-            self.__client = client = await moat_kv_client_scope(**cfg)
+            self.__client = await moat_kv_client_scope(**cfg)
             async with anyio.create_task_group() as tg:
 
-                async def start(p, *a):
+                async def start(p, *a) -> None:
                     evt = anyio.Event()
-                    tg.start_soon(p, *a, client, cfg, evt)
+                    tg.start_soon(p, *a, evt)
                     await evt.wait()
 
                 if self.__topic:
@@ -100,7 +100,7 @@ class MoatKVbroker(Broker):
         finally:
             self.__client = None
 
-    async def __retain_reader(self, cfg: dict, evt: anyio.abc.Event | None = None):  # pylint: disable=unused-argument  # noqa: ARG002
+    async def __retain_reader(self, cfg: dict, evt: anyio.abc.Event | None = None) -> None:  # pylint: disable=unused-argument  # noqa: ARG002
         """
         Read changes from MoaT-KV and broadcast them
         """
@@ -130,7 +130,7 @@ class MoatKVbroker(Broker):
                 )
                 await err.record_working("moat.mqtt", msg.path)
 
-    async def start(self):  # noqa: D102
+    async def start(self) -> None:  # noqa: D102
         cfg = self.config["kv"]
 
         await super().start()
@@ -151,7 +151,7 @@ class MoatKVbroker(Broker):
         force_qos=None,
         qos=None,
         retain=False,
-    ):
+    ) -> None:
         if isinstance(topic, str):
             ts = tuple(topic.split("/"))
         else:

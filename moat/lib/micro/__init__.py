@@ -218,7 +218,7 @@ ObjSequence = (list, tuple)
 _breakpoint = breakpoint
 
 
-def breakpoint():  # noqa:D103,A001
+def breakpoint() -> None:  # noqa:D103,A001
     _breakpoint()
 
 

@@ -64,7 +64,7 @@ class ServerUserMaker(BaseServerAuthMaker):
         self.name = msg.name
         return self
 
-    async def send(self, cmd):
+    async def send(self, cmd) -> None:
         await cmd.send(step="SendWant")
         msg = await cmd.recv()
         assert msg.step == "WantName"
@@ -127,7 +127,7 @@ class ClientUserMaker(BaseClientAuthMaker):
             self._chain = m.chain
             return self
 
-    async def send(self, client: Client, _kind="user"):
+    async def send(self, client: Client, _kind="user") -> None:
         """Send a record representing this user to the server."""
         async with client._stream(  # noqa:SLF001
             action="auth_set",

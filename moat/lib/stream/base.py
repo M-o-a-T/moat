@@ -90,7 +90,7 @@ class Base(_AACMBase):
     s = None
     cfg: attrdict
 
-    def __init__(self, cfg: attrdict | None = None):
+    def __init__(self, cfg: attrdict | None = None) -> None:
         if cfg is None:
             cfg = attrdict()
         self.cfg = cfg
@@ -132,14 +132,14 @@ class Base(_AACMBase):
     ) -> bool | None:
         return await AC_exit(self, exc_type, exc, tb)
 
-    async def setup(self):
+    async def setup(self) -> None:
         """
         Basic async setup method. You may use AC_exit.
 
         Call the superclass first, when overriding.
         """
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         """
         Object destructor.
 
@@ -164,7 +164,7 @@ class BaseConn(Base):
 
     s: Any = None
 
-    async def setup(self):
+    async def setup(self) -> None:
         """
         Object construction.
 
@@ -176,7 +176,7 @@ class BaseConn(Base):
 
         self.s = await self.stream()
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         """
         Object destructor.
 
@@ -273,7 +273,7 @@ class StackedConn(BaseConn):
 
     link: BaseConn | None = None
 
-    def __init__(self, link: BaseConn, cfg):
+    def __init__(self, link: BaseConn, cfg) -> None:
         super().__init__(cfg=cfg)
         self.link = link
 

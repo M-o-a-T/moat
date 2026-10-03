@@ -69,7 +69,7 @@ def _strip_final_indent(text: str) -> str:
     return text
 
 
-def _clear_screen():
+def _clear_screen() -> None:
     reader = _get_reader()
     reader.scheduled_commands.append("clear_screen")
 

@@ -31,7 +31,7 @@ class BaseLayerCmd(BaseSuperCmd):
     app: BaseCmd | None = None
     name: str = "_"
 
-    async def run_app(self):
+    async def run_app(self) -> None:
         """
         The command handler's executor. By default, calls ``self.app.run``
         within the command's context.
@@ -43,7 +43,7 @@ class BaseLayerCmd(BaseSuperCmd):
             raise RuntimeError("No app")
         await self.app.run()
 
-    async def task(self):
+    async def task(self) -> None:
         """
         Run the app as a subtask.
 
@@ -62,7 +62,7 @@ class BaseLayerCmd(BaseSuperCmd):
             # await self.app.stopped()
             # the return from the taskgroup already does that
 
-    async def setup(self):
+    async def setup(self) -> None:
         "attach the nested app"
         await super().setup()
         self.app = await self.gen_cmd()
@@ -71,7 +71,7 @@ class BaseLayerCmd(BaseSuperCmd):
             if L:
                 self.set_ready()
 
-    async def reload(self):
+    async def reload(self) -> None:
         "reload the nested app"
         await super().reload()
         if self.app is not None:
@@ -113,7 +113,7 @@ class BaseLayerCmd(BaseSuperCmd):
 
     if L:
 
-        def set_ready(self):
+        def set_ready(self) -> None:
             "guards that the nested app exists"
             if self.app is None:
                 raise RuntimeError("early")

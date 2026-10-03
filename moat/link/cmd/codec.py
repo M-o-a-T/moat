@@ -15,7 +15,7 @@ from moat.link.meta import MsgMeta
 @click.group(cls=AliasedGroup, short_help="Manage codecs.")
 @click.option("-m", "--meta", is_flag=True, help="include metadata")
 @click.pass_context
-async def cli(ctx, meta):
+async def cli(ctx, meta) -> None:
     """
     Manage MoaT-Link codecs and converters.
 
@@ -37,7 +37,7 @@ async def cli(ctx, meta):
 @click.option("-s", "--script", type=click.File(mode="w", lazy=True), help="Save the data here")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def get(obj, path, script, encode, decode):
+async def get(obj, path, script, encode, decode) -> None:
     """Read a codec entry."""
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
@@ -68,7 +68,7 @@ async def get(obj, path, script, encode, decode):
 @cli.command(name="list")
 @click.argument("path", type=P, nargs=1, default=P(":"))
 @click.pass_obj
-async def list_(obj, path):
+async def list_(obj, path) -> None:
     """List codec entries below ``PATH``."""
     full = obj.codec_prefix + path
     seen = False
@@ -88,7 +88,7 @@ async def list_(obj, path):
 @click.option("-o", "--out", nargs=2, multiple=True, help="Encoding sample")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def set_(obj, path, encode, decode, data, in_, out):
+async def set_(obj, path, encode, decode, data, in_, out) -> None:
     """Save codec information at ``PATH`` (below the codec prefix)."""
     if not len(path):
         raise click.UsageError("You need a non-empty path.")

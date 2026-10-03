@@ -89,7 +89,7 @@ class FilenoTerm(FilenoBuf, TermBuf):
     Warning: Setting up raw mode etc. is the responsibility of the caller.
     """
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
 
         self.__orig_termstate = await self.tget()
@@ -135,7 +135,7 @@ class FilenoTerm(FilenoBuf, TermBuf):
         else:
             return True
 
-    async def forget_input(self):
+    async def forget_input(self) -> None:
         "Delete pending input"
         termios.tcflush(self.rfd, termios.TCIFLUSH)
 

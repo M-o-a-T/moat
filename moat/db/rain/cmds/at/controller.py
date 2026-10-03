@@ -18,7 +18,7 @@ from moat.lib.run import AliasedGroup, option_ng
 @click.group(name="controller", cls=AliasedGroup, short_help="Manage irrigation controllers")
 @click.option("--name", "-n", type=str, default=None, help="Controller name")
 @click.pass_obj
-async def cli(obj, name):
+async def cli(obj, name) -> None:
     """Manage irrigation controllers."""
     obj.name = name
 
@@ -34,7 +34,7 @@ def opts(c):
 
 @cli.command(name="show")
 @click.pass_obj
-async def show_(obj):
+async def show_(obj) -> None:
     """Show one controller, or list all controllers in this site."""
     if obj.name is None:
         seen = False
@@ -51,7 +51,7 @@ async def show_(obj):
 @cli.command()
 @opts
 @click.pass_obj
-async def add(obj, **kw):
+async def add(obj, **kw) -> None:
     """Add a controller to this site."""
     name = require_name(obj, "controller")
     if not is_given(kw.get("location", ...)):
@@ -67,7 +67,7 @@ async def add(obj, **kw):
 @cli.command(name="set")
 @opts
 @click.pass_obj
-async def set_(obj, **kw):
+async def set_(obj, **kw) -> None:
     """Modify a controller."""
     name = require_name(obj, "controller")
     c = get_one(obj, Controller, "controller", site=site_of(obj), name=name)
@@ -78,7 +78,7 @@ async def set_(obj, **kw):
 
 @cli.command(name="delete")
 @click.pass_obj
-async def delete_(obj):
+async def delete_(obj) -> None:
     """Remove a controller (and its valves)."""
     name = require_name(obj, "controller")
     c = get_one(obj, Controller, "controller", site=site_of(obj), name=name)

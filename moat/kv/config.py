@@ -25,7 +25,7 @@ class ConfigEntry(ClientEntry):  # noqa:D101
         logger.warning("Online config sub-entries are ignored")
         return ClientEntry
 
-    async def set_value(self, value):  # noqa:D102
+    async def set_value(self, value) -> None:  # noqa:D102
         await self.root.client.config._update(self._name, value)  # noqa:SLF001
 
 

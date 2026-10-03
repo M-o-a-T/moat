@@ -26,7 +26,7 @@ from collections.abc import Mapping
 logger = logging.getLogger(__name__)
 
 
-async def mon(ow, hd):
+async def mon(ow, hd) -> None:
     """
     Monitor OWFS for changes.
     """
@@ -73,7 +73,7 @@ async def mon(ow, hd):
                 await node.root.err.record_working("onewire", Path.build(node.subpath) + attr)
 
 
-async def task(client, cfg, server=None, evt=None):  # noqa: D103
+async def task(client, cfg, server=None, evt=None) -> None:  # noqa: D103
     async with OWFS() as ow:
         hd = await OWFSroot.as_handler(client)
         await ow.add_task(mon, ow, hd)

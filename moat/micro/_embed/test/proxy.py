@@ -10,10 +10,10 @@ from moat.lib.proxy import as_proxy
 
 
 class Bar:
-    def __init__(self, x):
+    def __init__(self, x) -> None:
         self.x = x
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}.x={self.x}"
 
 
@@ -25,5 +25,5 @@ class Foo(Bar):
 b = as_proxy("b", Bar(95))
 
 
-async def run():
+async def run() -> None:
     pass

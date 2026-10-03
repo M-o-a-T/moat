@@ -10,7 +10,7 @@ from moat.link.client import Link
 
 @click.group(cls=AliasedGroup, short_help="Manage notifications.")  # pylint: disable=undefined-variable
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx) -> None:
     """
     Handle notifications.
     """
@@ -22,7 +22,7 @@ async def cli(ctx):
 @cli.command()
 @click.option("-b", "--backend", type=str, multiple=True, help="Restrict to this backend")
 @click.pass_obj
-async def run(obj, backend):
+async def run(obj, backend) -> None:
     """
     Forward notification messages.
 
@@ -40,7 +40,7 @@ async def run(obj, backend):
 
 @cli.command()
 @click.pass_obj
-async def mirror(obj):
+async def mirror(obj) -> None:
     """
     Mirror errors to the notification subtree.
 

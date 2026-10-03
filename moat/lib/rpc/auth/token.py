@@ -22,7 +22,7 @@ class SubAuth(_SubAuth):
                             is rejected.
     """
 
-    async def task(self):
+    async def task(self) -> None:
         """We want(client) / accept(server) anon auth."""
         if L:
             self.set_ready()
@@ -33,7 +33,7 @@ class SubAuth(_SubAuth):
             await self.remote(self.auth)
         self.accept()
 
-    async def cmd(self, token: str):
+    async def cmd(self, token: str) -> None:
         """Check token."""
         if token in self.auth:
             self.accept()

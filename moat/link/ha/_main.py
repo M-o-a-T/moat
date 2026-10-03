@@ -187,7 +187,7 @@ for _v in _types.values():
 @click.group(cls=AliasedGroup, short_help="Manage Home Assistant.")
 @click.option("-t", "--test", is_flag=True, help="Use test data.")
 @click.pass_context
-async def cli(ctx, test):
+async def cli(ctx, test) -> None:
     """
     Manage Home Assistant integration.
     """
@@ -224,7 +224,7 @@ Known types: {}
 )
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
-async def set_(obj, typ, path, list_options, force, plus, **kw):
+async def set_(obj, typ, path, list_options, force, plus, **kw) -> None:
     path = P(path)
     if typ == "-":
         t = None
@@ -351,7 +351,7 @@ set_.__doc__ = """
 @click.option("-c", "--cmd", is_flag=True, help="Use command-line names")
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
-async def get(obj, typ, path, cmd):
+async def get(obj, typ, path, cmd) -> None:
     if typ == "-":
         async for name in obj.conn.d_list(obj.hass_name):
             print(name, file=obj.stdout)
@@ -411,7 +411,7 @@ get.__doc__ = """
 @click.pass_obj
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
-async def delete(obj, typ, path):
+async def delete(obj, typ, path) -> None:
     """Delete a device."""
 
     path = P(path)

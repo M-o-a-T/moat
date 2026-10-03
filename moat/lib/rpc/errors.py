@@ -85,7 +85,7 @@ class StreamError(RuntimeError):  # noqa: D101
             return m
         return super().__new__(cls)
 
-    def __init__(self, msg=()):
+    def __init__(self, msg=()) -> None:
         # CPython calls __init__ again with the original error code
         # when __new__ returned a subclass instance.
         if getattr(self, "_init", False):
@@ -97,7 +97,7 @@ class StreamError(RuntimeError):  # noqa: D101
 class Flow(BaseException):
     "Flow control indication."
 
-    def __init__(self, n):
+    def __init__(self, n) -> None:
         self.n = n
 
 

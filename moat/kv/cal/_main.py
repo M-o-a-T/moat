@@ -25,7 +25,7 @@ now = partial(datetime.now, utc)
 
 @click.group(cls=AliasedGroup, short_help="Manage calendar polling.")
 @click.pass_obj
-async def cli(obj):
+async def cli(obj) -> None:
     """
     List known calendars and poll them.
     """
@@ -34,7 +34,7 @@ async def cli(obj):
 
 @cli.command("run")
 @click.pass_obj
-async def run_(obj):
+async def run_(obj) -> None:
     """Process calendar alarms"""
     from moat.kv.client import client_scope  # noqa: PLC0415
 
@@ -103,7 +103,7 @@ async def run_(obj):
 
 @cli.command("list")
 @click.pass_obj
-async def list_(obj):
+async def list_(obj) -> None:
     """Emit the current state as a YAML file."""
     prefix = obj.cfg.kv.cal.prefix
     path = Path()

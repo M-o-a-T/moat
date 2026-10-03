@@ -74,23 +74,23 @@ class Cmd(BaseCmd):
         bits="int:bits per word(8)",
     )
 
-    def __init__(self, cfg: dict):
+    def __init__(self, cfg: dict) -> None:
         super().__init__(cfg)
 
-    async def setup(self):
+    async def setup(self) -> None:
         """
         Open a bus.
         """
         await super().setup()
         self._setup()
 
-    async def reload(self):
+    async def reload(self) -> None:
         "reconfigured"
         self._teardown()
         self._setup()
         await super().reload()
 
-    def _setup(self):
+    def _setup(self) -> None:
         cfg = self.cfg
         bus = cfg.get("bus", 0)
         dev = cfg.get("dev", 0)
@@ -107,12 +107,12 @@ class Cmd(BaseCmd):
         self._bus_id = (bus, dev)
         self.lock = _get_bus_lock(bus, dev)
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         "shutdown"
         self._teardown()
         await super().teardown()
 
-    def _teardown(self):
+    def _teardown(self) -> None:
         s = self._spi
         if s is not None:
             del self._spi

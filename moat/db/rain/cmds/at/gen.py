@@ -40,7 +40,7 @@ from moat.db.rain.engine import generate_schedule
 @click.option("--save/--no-save", default=True, help="Persist the generated schedules")
 @click.option("--verbose", "-v", is_flag=True, default=False, help="Narrate every decision")
 @click.pass_obj
-async def cli(obj, controller, valve, horizon_days, delay_min, save, verbose):
+async def cli(obj, controller, valve, horizon_days, delay_min, save, verbose) -> None:
     """Generate schedules for this site's valves (driest first)."""
     res = generate_schedule(
         obj.session,

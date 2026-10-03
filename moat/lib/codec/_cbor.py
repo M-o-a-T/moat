@@ -42,11 +42,11 @@ CBOR_TAG_CBOR_LEADER = const(55800)  # header for multiple CBOR items
 class Tag:
     "a random CBOR tag"
 
-    def __init__(self, tag: int, value: Any = None):
+    def __init__(self, tag: int, value: Any = None) -> None:
         self.tag = tag
         self.value = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Tag({self.tag!r}, {self.value!r})"
 
     def __eq__(self, other):
@@ -107,7 +107,7 @@ def _bignum_to_bytearray(val):
 class ExtraData(ValueError):
     "buffer contains data beyond end of encoded object"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "decoder received extra data."
 
 
@@ -119,7 +119,7 @@ class Codec(_Codec):
 
     _buf_out: bytearray | None = None
 
-    def __init__(self, use_attrdict: bool = False, **kw):
+    def __init__(self, use_attrdict: bool = False, **kw) -> None:
         super().__init__(**kw)
         self.use_attrdict = use_attrdict
         self.__kw = kw
@@ -247,7 +247,7 @@ class Codec(_Codec):
         self._enc_type_num(CBOR_BYTES, len(outb))
         w(outb)
 
-    def _enc_string(self, val):
+    def _enc_string(self, val) -> None:
         if isinstance(val, str):
             val = val.encode("utf8", "surrogateescape")
             self._enc_type_num(CBOR_TEXT, len(val))
@@ -255,7 +255,7 @@ class Codec(_Codec):
             self._enc_type_num(CBOR_BYTES, len(val))
         self._w(val)
 
-    def _enc_array(self, arr):
+    def _enc_array(self, arr) -> None:
         try:
             self._enc_type_num(CBOR_ARRAY, len(arr))
         except TypeError:
@@ -267,26 +267,26 @@ class Codec(_Codec):
             for x in arr:
                 self._enc_any(x)
 
-    def _enc_dict(self, d):
+    def _enc_dict(self, d) -> None:
         self._enc_type_num(CBOR_MAP, len(d))
         for k, v in d.items():
             self._enc_any(k)
             self._enc_any(v)
 
-    def _enc_bool(self, b):
+    def _enc_bool(self, b) -> None:
         self._w(struct.pack("B", CBOR_TRUE if b else CBOR_FALSE))
 
-    def _enc_tag(self, t, val=...):
+    def _enc_tag(self, t, val=...) -> None:
         if val is Ellipsis:
             t, val = t.tag, t.value
         self._enc_type_num(CBOR_TAG, t)
         self._enc_any(val)
 
-    def _w(self, d):
+    def _w(self, d) -> None:
         assert self._buf_out is not None  # set by encode() before calling _enc_any()
         self._buf_out.extend(d)
 
-    def _enc_any(self, ob):
+    def _enc_any(self, ob) -> None:
         w = self._w
         if ob is None:
             w(struct.pack("B", CBOR_NULL))

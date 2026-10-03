@@ -66,7 +66,7 @@ class CtxObj(ABC, Generic[T_Ctx]):
 
     def __aexit__(
         self,
-        *tb: type[BaseException] | None | BaseException | TracebackType,
+        *tb: type[BaseException] | BaseException | TracebackType | None,
     ) -> Awaitable[bool | None]:
         try:
             assert self.__ctx is not None

@@ -52,7 +52,7 @@ class BaseCmdBBM(BaseCmd):
 
     s = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self.w_lock = Lock()
 
@@ -60,11 +60,11 @@ class BaseCmdBBM(BaseCmd):
         "create the actual data stream. Override this!"
         raise NotImplementedError("setup", self.path)
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         self.s = await self.stream()
 
-    async def run(self):  # noqa:D102
+    async def run(self) -> None:  # noqa:D102
         ACM(self)
         try:
             await super().run()
@@ -94,7 +94,7 @@ class BaseCmdBBM(BaseCmd):
 
     doc_wr = dict(_d="write bytestream", _0="bytes:data")
 
-    async def cmd_wr(self, b: Buffer):
+    async def cmd_wr(self, b: Buffer) -> None:
         """write some data"""
         if L:
             await self.wait_ready()
@@ -107,13 +107,13 @@ class BaseCmdBBM(BaseCmd):
         _d="r/w byte stream", _0="int:rdbuflen (64)", _i="bytes:to send", _o="bytes:received"
     )
 
-    async def stream_rw(self, msg):
+    async def stream_rw(self, msg) -> None:
         "read/write byte stream"
         n = msg.get(0, 64)
         async with msg.stream() as st, TaskGroup() as tg:
 
             @tg.start_soon
-            async def rd():
+            async def rd() -> None:
                 while True:
                     await st.send(await self.cmd_rd(n))
 
@@ -141,7 +141,7 @@ class BaseCmdBBM(BaseCmd):
 
     doc_cwr = dict(_d="write console", _0="bytes:data")
 
-    async def cmd_cwr(self, b: Buffer):
+    async def cmd_cwr(self, b: Buffer) -> None:
         """write some console data"""
         async with self.w_lock:
             if self.s is None:
@@ -152,13 +152,13 @@ class BaseCmdBBM(BaseCmd):
         _d="r/w console stream", _0="int:rdbuflen (64)", _i="bytes:to send", _o="bytes:received"
     )
 
-    async def stream_crw(self, msg):
+    async def stream_crw(self, msg) -> None:
         "read/write console stream"
         n = msg.get(0, 64)
         async with msg.stream() as st, TaskGroup() as tg:
 
             @tg.start_soon
-            async def crd():
+            async def crd() -> None:
                 while True:
                     await st.send(await self.cmd_crd(n))
 
@@ -186,12 +186,12 @@ class BaseCmdBBM(BaseCmd):
 
     doc_mrw = dict(_d="r/w msg stream", _i="any:message", _o="any:message")
 
-    async def stream_mrw(self, msg):
+    async def stream_mrw(self, msg) -> None:
         "read/write message stream"
         async with msg.stream() as st, TaskGroup() as tg:
 
             @tg.start_soon
-            async def mrd():
+            async def mrd() -> None:
                 while True:
                     await st.send(await self.cmd_r())
 
@@ -219,12 +219,12 @@ class BaseCmdBBM(BaseCmd):
 
     doc_brw = dict(_d="r/w block stream", _i="bytes:message", _o="bytes:message")
 
-    async def stream_brw(self, msg):
+    async def stream_brw(self, msg) -> None:
         "read/write block stream"
         async with msg.stream() as st, TaskGroup() as tg:
 
             @tg.start_soon
-            async def brd():
+            async def brd() -> None:
                 while True:
                     await st.send(await self.cmd_rb())
 

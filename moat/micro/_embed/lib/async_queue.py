@@ -29,7 +29,7 @@ class Queue:
     interrupted between calling qsize() and doing an operation on the Queue.
     """
 
-    def __init__(self, maxsize=99):
+    def __init__(self, maxsize=99) -> None:
         self.maxsize = maxsize
         self._queue = deque((), maxsize)
         self._full = core.TaskQueue()
@@ -70,7 +70,7 @@ class Queue:
             raise EOFError if self._closed_w else QueueEmpty
         return self._get()
 
-    def _put(self, val):
+    def _put(self, val) -> None:
         if self._empty.peek():
             core._task_queue.push(self._empty.pop())  # noqa:SLF001
         self._queue.append(val)
@@ -88,7 +88,7 @@ class Queue:
             yield
         self._put(val)
 
-    def put_nowait(self, val):
+    def put_nowait(self, val) -> None:
         """Put an item into the queue without blocking.
 
         If no free slot is immediately available, raise QueueFull.
@@ -101,7 +101,7 @@ class Queue:
         """Number of items in the queue."""
         return len(self._queue)
 
-    def empty(self):
+    def empty(self) -> bool:
         """Return True if the queue is empty, False otherwise."""
         return not self._queue
 
@@ -116,7 +116,7 @@ class Queue:
         else:
             return self.qsize() >= self.maxsize
 
-    def close_sender(self):
+    def close_sender(self) -> None:
         """
         Close the send part of the queue.
 

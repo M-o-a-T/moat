@@ -28,7 +28,7 @@ __all__ = ["Backend", "get_backend"]
 class Backend(CtxObj, metaclass=ABCMeta):
     """Base class for metrics backends."""
 
-    def __init__(self, cfg: dict, name: str):
+    def __init__(self, cfg: dict, name: str) -> None:
         self.cfg = cfg
         self.name = name
         self.logger = logging.getLogger(f"moat.link.metrics.backend.{name}")

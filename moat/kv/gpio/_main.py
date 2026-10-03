@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @click.group(cls=AliasedGroup, short_help="Manage GPIO controllers.")
-async def cli():
+async def cli() -> None:
     """
     List GPIO controllers, modify device handling …
     """
@@ -29,7 +29,7 @@ async def cli():
 @cli.command()
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def dump(obj, path):
+async def dump(obj, path) -> None:
     """Emit the current state as a YAML file."""
     cfg = obj.cfg.kv.gpio
     res = {}
@@ -53,7 +53,7 @@ async def dump(obj, path):
 @cli.command("list")
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def list_(obj, path):
+async def list_(obj, path) -> None:
     """List the next stage."""
     cfg = obj.cfg.kv.gpio
     if len(path) > 3:
@@ -67,7 +67,7 @@ async def list_(obj, path):
 @attr_args
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def attr_(obj, path, **kw):
+async def attr_(obj, path, **kw) -> None:
     """Set/get/delete attributes of a given GPIO element.
 
     `--eval` without a value deletes the attribute.
@@ -81,7 +81,7 @@ async def attr_(obj, path, **kw):
 @cli.command()
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def delete(obj, path):
+async def delete(obj, path) -> None:
     """
     Delete a port.
     """
@@ -105,7 +105,7 @@ async def delete(obj, path):
 )
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def port(obj, path, typ, mode, attr):
+async def port(obj, path, typ, mode, attr) -> None:
     """Add/modify a port. This is a shortcut for the "attr" command.
 
     \b
@@ -168,7 +168,7 @@ async def port(obj, path, typ, mode, attr):
     await _attr(obj, (), val, path, False, res)
 
 
-async def _attr(obj, attr, value, path, eval_, res=None):
+async def _attr(obj, attr, value, path, eval_, res=None) -> None:
     # Sub-attr setter. (Or whole-attr-setter if 'attr' is empty.)
     # Special: if eval_ is True, a value of '-' deletes. A mapping replaces instead of updating.
     cfg = obj.cfg.kv.gpio
@@ -207,7 +207,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
 @click.argument("name", nargs=1)
 @click.argument("controller", nargs=-1)
 @click.pass_obj
-async def monitor(obj, name, controller):
+async def monitor(obj, name, controller) -> None:
     """Stand-alone task to monitor a single contoller.
 
     The first argument must be the local host name.

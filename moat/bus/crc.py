@@ -172,8 +172,8 @@ we reverse it for you.
         help="set parameters to MoaT standard for CRC8/11/16",
     )
     @click.argument("sample", nargs=-1)
-    def main(bits, depth, poly, t_c, t_p, sample, hexsample, std):  # noqa:D103
-        def pbd(p, b, d):
+    def main(bits, depth, poly, t_c, t_p, sample, hexsample, std) -> None:  # noqa:D103
+        def pbd(p, b, d) -> None:
             nonlocal poly, bits, depth
             poly = poly or p
             bits = bits or b

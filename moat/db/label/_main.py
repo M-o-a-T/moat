@@ -45,7 +45,7 @@ class CustomContext(click.Context):
 
 @load_subgroup(prefix="moat.db.label")
 @click.pass_context
-def cli(ctx):
+def cli(ctx) -> None:
     """Labels for boxes and things."""
     obj = ctx.obj
 
@@ -63,7 +63,7 @@ def cli(ctx):
 @cli.group(cls=AliasedGroup)
 @click.option("--nr", "-N", type=str, help="Scancode of the label")
 @click.pass_obj
-def one(obj, text, nr):
+def one(obj, text, nr) -> None:
     """
     Single labels.
     """
@@ -74,7 +74,7 @@ def one(obj, text, nr):
 
 @one.command(name="show")
 @click.pass_obj
-def show_(obj):
+def show_(obj) -> None:
     """
     Show label details / list all unassigned labels.
 
@@ -117,7 +117,7 @@ def opts(c):
 @one.command()
 @opts
 @click.pass_obj
-def add(obj, **kw):
+def add(obj, **kw) -> None:
     """
     Add a label.
     """
@@ -135,7 +135,7 @@ def add(obj, **kw):
 @one.command()
 @opts
 @click.pass_obj
-def set(obj, **kw):  # noqa: A001
+def set(obj, **kw) -> None:  # noqa: A001
     """
     Change a label.
     """
@@ -157,7 +157,7 @@ def set(obj, **kw):  # noqa: A001
 
 @one.command()
 @click.pass_obj
-def delete(obj):
+def delete(obj) -> None:
     """
     Delete a label.
     """
@@ -193,7 +193,7 @@ def delete(obj):
     help="Destination file",
     default=None,
 )
-def print_(obj, printer, output):
+def print_(obj, printer, output) -> None:
     """
     Printing!
     """
@@ -227,7 +227,7 @@ def print_(obj, printer, output):
 @print_.command(name="test")
 @click.option("-f", "--format", "label", help="Format ")
 @click.pass_obj
-def test(obj, label):
+def test(obj, label) -> None:
     """\
     Create a test PDF that frames first and last labels.
     """
@@ -241,7 +241,7 @@ def test(obj, label):
     p.print(obj.filename)
 
 
-def _testpage(p: Labels, fmt: attrdict):
+def _testpage(p: Labels, fmt: attrdict) -> None:
     p.set_line_width(0.5)
     w, h = fmt.size
     xx, yy = fmt.extent
@@ -255,7 +255,7 @@ def _testpage(p: Labels, fmt: attrdict):
 @click.option("-t", "--test", is_flag=True, help="Add test frames")
 @click.argument("sheets", nargs=-1, type=int)
 @click.pass_obj
-def print_sheet(obj, sheets, test):
+def print_sheet(obj, sheets, test) -> None:
     """\
     Print these sheets.
     """
@@ -373,7 +373,7 @@ def print_sheet(obj, sheets, test):
 @cli.group(cls=AliasedGroup)
 @click.option("--name", "-n", "name", type=str, help="Name of the label type")
 @click.pass_obj
-def typ(obj, name):
+def typ(obj, name) -> None:
     """
     Label types.
     """
@@ -383,7 +383,7 @@ def typ(obj, name):
 
 @typ.command(name="show")
 @click.pass_obj
-def typ_show_(obj):
+def typ_show_(obj) -> None:
     """
     Show label type details / list all label types.
 
@@ -427,7 +427,7 @@ def typ_opts(c):
 @typ.command(name="add")
 @typ_opts
 @click.pass_obj
-def typ_add(obj, **kw):
+def typ_add(obj, **kw) -> None:
     """
     Add a label type.
     """
@@ -442,7 +442,7 @@ def typ_add(obj, **kw):
 @typ.command(name="set")
 @typ_opts
 @click.pass_obj
-def typ_set(obj, **kw):
+def typ_set(obj, **kw) -> None:
     """
     Change a label type.
     """
@@ -459,7 +459,7 @@ def typ_set(obj, **kw):
 
 @typ.command(name="delete")
 @click.pass_obj
-def typ_delete(obj):
+def typ_delete(obj) -> None:
     """
     Delete a label type.
     """
@@ -482,7 +482,7 @@ def typ_delete(obj):
 @cli.group(name="format", cls=AliasedGroup)
 @click.option("--name", "-n", "name", type=str, help="Name of the sheet type")
 @click.pass_obj
-def sheettyp(obj, name):
+def sheettyp(obj, name) -> None:
     """
     Label formats, i.e. kinds of pre-cut sheets to print on.
     """
@@ -492,7 +492,7 @@ def sheettyp(obj, name):
 
 @sheettyp.command(name="show")
 @click.pass_obj
-def sheettyp_show_(obj):
+def sheettyp_show_(obj) -> None:
     """
     Show format details / list all formats.
 
@@ -533,7 +533,7 @@ def sheettyp_opts(c):
 @sheettyp.command(name="add")
 @sheettyp_opts
 @click.pass_obj
-def sheettyp_add(obj, **kw):
+def sheettyp_add(obj, **kw) -> None:
     """
     Add a sheet type.
     """
@@ -548,7 +548,7 @@ def sheettyp_add(obj, **kw):
 @sheettyp.command(name="set")
 @sheettyp_opts
 @click.pass_obj
-def sheettyp_set(obj, **kw):
+def sheettyp_set(obj, **kw) -> None:
     """
     Change a label type.
     """
@@ -565,7 +565,7 @@ def sheettyp_set(obj, **kw):
 
 @sheettyp.command(name="delete")
 @click.pass_obj
-def sheettyp_delete(obj):
+def sheettyp_delete(obj) -> None:
     """
     Delete a label type.
     """
@@ -588,7 +588,7 @@ def sheettyp_delete(obj):
 @cli.group(cls=AliasedGroup)
 @click.option("--nr", "-N", type=str, help="Number of the sheet")
 @click.pass_obj
-def sheet(obj, nr):
+def sheet(obj, nr) -> None:
     """
     Printed sheets with labels.
     """
@@ -599,7 +599,7 @@ def sheet(obj, nr):
 @sheet.command(name="show")
 @click.option("-l", "--labels", is_flag=True, help="show labels")
 @click.pass_obj
-def sheet_show_(obj, labels):
+def sheet_show_(obj, labels) -> None:
     """
     Show sheet details / list all unprinted sheets.
 
@@ -652,7 +652,7 @@ def _pr(yes, no):
 @sheet_opts
 @click.option("-f", "--fill", is_flag=True, help="Fill with un-printed labels")
 @click.pass_obj
-def sheet_add(obj, printed, unprinted, fill, **kw):
+def sheet_add(obj, printed, unprinted, fill, **kw) -> None:
     """
     Add a sheet.
     """
@@ -682,7 +682,7 @@ def sheet_add(obj, printed, unprinted, fill, **kw):
 @sheet_opts
 @click.pass_obj
 @click.option("--force", "-F", is_flag=True, help="Allow changing the paper format")
-def sheet_set(obj, printed, unprinted, **kw):
+def sheet_set(obj, printed, unprinted, **kw) -> None:
     """
     Change a sheet.
     """
@@ -711,7 +711,7 @@ def sheet_set(obj, printed, unprinted, **kw):
 )
 @click.option("--typ", "-t", type=str, help="Label type; this flag creates a new sheet.")
 @click.pass_obj
-def sheet_gen(obj, pattern, file, start, count, typ):
+def sheet_gen(obj, pattern, file, start, count, typ) -> None:
     """
     Generate new labels, filling a sheet.
 
@@ -793,7 +793,7 @@ def sheet_gen(obj, pattern, file, start, count, typ):
 )
 @click.argument("labels", nargs=-1)
 @click.pass_obj
-def sheet_place(obj, labels, numeric):
+def sheet_place(obj, labels, numeric) -> None:
     """
     Place labels onto a sheet.
     """
@@ -837,7 +837,7 @@ def sheet_place(obj, labels, numeric):
 
 @sheet.command(name="flush")
 @click.pass_obj
-def sheet_flush(obj):
+def sheet_flush(obj) -> None:
     sess = obj.session
 
     if obj.nr is None:
@@ -864,7 +864,7 @@ def sheet_flush(obj):
 
 @sheet.command(name="delete")
 @click.pass_obj
-def sheet_delete(obj):
+def sheet_delete(obj) -> None:
     """
     Delete a label type.
     """

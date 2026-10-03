@@ -13,7 +13,7 @@ class Backend(metaclass=ABCMeta):
     Abstract superclass for MoaT-KV transport backends.
     """
 
-    def __init__(self, tg):
+    def __init__(self, tg) -> None:
         self._tg = tg
         self._njobs = 0
         self._ended = None
@@ -26,7 +26,7 @@ class Backend(metaclass=ABCMeta):
         This async context manager returns a connection.
         """
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         """
         Force-close the connection.
         """

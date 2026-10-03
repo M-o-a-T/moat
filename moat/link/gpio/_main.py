@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(cls=AliasedGroup, short_help="Manage GPIO controllers.")
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx) -> None:
     """
     Manage GPIO controllers and line configurations.
     """
@@ -41,7 +41,7 @@ async def cli(ctx):
 @cli.command("dump")
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def dump(obj, path):
+async def dump(obj, path) -> None:
     """Emit the current state as a YAML file."""
     if len(path) > 3:
         raise click.UsageError("Only up to three path elements (host.chip:pin) allowed")
@@ -52,7 +52,7 @@ async def dump(obj, path):
 @cli.command("list")
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def list_(obj, path):
+async def list_(obj, path) -> None:
     """List the next stage."""
     if len(path) > 3:
         raise click.UsageError("Only up to three path elements (host.chip:pin) allowed")
@@ -66,7 +66,7 @@ async def list_(obj, path):
 @attr_args
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def attr_(obj, path, **kw):
+async def attr_(obj, path, **kw) -> None:
     """Set/get/delete attributes of a given GPIO element.
 
     `--eval` without a value deletes the attribute.
@@ -81,7 +81,7 @@ async def attr_(obj, path, **kw):
 @cli.command("delete")
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def delete(obj, path):
+async def delete(obj, path) -> None:
     """Delete a port."""
     if len(path) != 3:
         raise click.UsageError("Three path elements (host.chip:pin) required")
@@ -102,7 +102,7 @@ async def delete(obj, path):
 )
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def port(obj, path, typ, mode, attr):
+async def port(obj, path, typ, mode, attr) -> None:
     """Add/modify a port. This is a shortcut for the "attr" command.
 
     \b
@@ -171,7 +171,7 @@ async def port(obj, path, typ, mode, attr):
 @click.argument("name", nargs=1)
 @click.argument("chip", nargs=1)
 @click.pass_obj
-async def monitor(obj, name, chip):
+async def monitor(obj, name, chip) -> None:
     """Stand-alone task to monitor a single GPIO chip.
 
     The first argument is the host name, the second the chip name.

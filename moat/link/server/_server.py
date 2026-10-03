@@ -269,22 +269,22 @@ class HelloProc:
     A hacked-up command processor for receiving the first client message.
     """
 
-    def __init__(self, client):
+    def __init__(self, client) -> None:
         self.client = client
 
-    async def received(self, msg):
+    async def received(self, msg) -> None:
         qlen = msg.get("qlen", 0)
         self.client.qlen = min(qlen, self.client.server.cfg.server.buffer)
         del self.client.in_stream[0]
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         self.client.in_stream.pop(0, None)
 
 
 class _Sub_d(MsgHandler):
     "Data access namespace."
 
-    def __init__(self, parent: ServerClient):
+    def __init__(self, parent: ServerClient) -> None:
         super().__init__(parent.server.cfg)
         self.parent = parent
 
@@ -361,7 +361,7 @@ class _Sub_d(MsgHandler):
 class _Sub_e(MsgHandler):
     "Error handling namespace."
 
-    def __init__(self, parent: ServerClient):
+    def __init__(self, parent: ServerClient) -> None:
         super().__init__(parent.server.cfg)
         self.parent = parent
 
@@ -390,7 +390,7 @@ class _Sub_e(MsgHandler):
 class _Sub_i(_CommonSubI):
     "Server informational namespace."
 
-    def __init__(self, parent: ServerClient):
+    def __init__(self, parent: ServerClient) -> None:
         super().__init__(parent)
         self.parent = parent
 
@@ -419,7 +419,7 @@ class _Sub_i(_CommonSubI):
 class _Sub_s(MsgHandler):
     "Save/load namespace."
 
-    def __init__(self, parent: ServerClient):
+    def __init__(self, parent: ServerClient) -> None:
         super().__init__(parent.server.cfg)
         self.parent = parent
 
@@ -448,7 +448,7 @@ class ServerClient(LinkCommon):
     name: str
     server: Server
 
-    def __init__(self, server: Server, prefix: str, stream: Stream):
+    def __init__(self, server: Server, prefix: str, stream: Stream) -> None:
         self.server = server
         self.cfg = server.cfg
         self.prefix = prefix
@@ -475,13 +475,13 @@ class ServerClient(LinkCommon):
     def sender(self) -> MsgSender:
         return self._sender
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         """
         Shut this client down
         """
         self.tg.cancel_scope.cancel()
 
-    async def run(self):
+    async def run(self) -> None:
         """Main loop for this client connection."""
 
         self.logger.debug("START %s C_%s", self.name, self.client_nr)
@@ -531,7 +531,7 @@ class ServerClient(LinkCommon):
                 with anyio.fail_after(self.server.cfg.server.probe.timeout):
                     await self._sender.cmd(P("i.乒"))
 
-    async def setup(self):
+    async def setup(self) -> None:
         "Attach delegated sub-command handlers."
         self._sub_i = _Sub_i(self)
         await super().setup()
@@ -542,7 +542,7 @@ class ServerClient(LinkCommon):
         await AC_use(self, self.delegate(P("e"), self._sub_eh))
         await AC_use(self, self.delegate(P("s"), self._sub_sh))
 
-    async def wait_ready(self, wait: bool = True):
+    async def wait_ready(self, wait: bool = True) -> bool | None:
         "Standard; waits for auth to complete"
         if self._hello is None:
             return False
@@ -586,7 +586,7 @@ class ServerClient(LinkCommon):
 
         return await super().handle(msg, rcmd)
 
-    async def d_get_stream_(self, msg):
+    async def d_get_stream_(self, msg) -> None:
         """Get the data of a sub-node.
 
         Arguments:
@@ -607,7 +607,7 @@ class ServerClient(LinkCommon):
         else:
             await msg.result(d.data, *d.meta.dump())
 
-    async def d_collect_stream_(self, msg):
+    async def d_collect_stream_(self, msg) -> None:
         """Collate the dicts on the path from some root to a sub-node.
 
         This is used to e.g. collect path-specific config data for a subsystem.
@@ -645,7 +645,7 @@ class ServerClient(LinkCommon):
         "Send the list of currently-known clients"
         return self.server.stream_cl(msg)
 
-    async def d_list_stream_(self, msg):
+    async def d_list_stream_(self, msg) -> None:
         """Get the child names of a sub-node.
         Arguments:
         * path
@@ -664,7 +664,7 @@ class ServerClient(LinkCommon):
             for k in list(d.keys()):
                 await msg.send(k)
 
-    async def d_walk_stream_(self, msg):
+    async def d_walk_stream_(self, msg) -> None:
         """
         Get a whole subtree.
         Arguments:
@@ -676,7 +676,7 @@ class ServerClient(LinkCommon):
 
         ps = PathShortener()
 
-        async def _writer(p, n):
+        async def _writer(p, n) -> None:
             try:
                 nd = n.data
             except ValueError:
@@ -724,7 +724,7 @@ class ServerClient(LinkCommon):
         d = data[path]
         return d.data
 
-    async def d_search_stream_(self, msg):
+    async def d_search_stream_(self, msg) -> None:
         """Search for wildcard-matching sub-node data.
 
         Arguments:
@@ -833,7 +833,7 @@ class ServerClient(LinkCommon):
 
             if rec or sub:
 
-                async def rec_del(n, p):
+                async def rec_del(n, p) -> None:
                     await anyio.sleep(0.01)
                     for pp, nn in n.items():
                         await rec_del(nn, p / pp)
@@ -887,7 +887,7 @@ class ServerClient(LinkCommon):
             kw["args"] = msg.args[1:]
         return self.server.set_error(msg[0], None, kw, MsgMeta(origin=self.name))
 
-    async def e_mon_stream_(self, msg: Msg):
+    async def e_mon_stream_(self, msg: Msg) -> None:
         path = msg[0]
         kw = dict(msg.kw)
         kw["start"] = mtime.time()
@@ -941,7 +941,7 @@ class ServerClient(LinkCommon):
         await anyio.sleep(t)
         return id in self.server.known_ids
 
-    async def d_deltree_stream_(self, msg):
+    async def d_deltree_stream_(self, msg) -> None:
         """Delete a node's value.
         Sub-nodes are cleared (after their parent).
         """
@@ -954,7 +954,7 @@ class ServerClient(LinkCommon):
 
         async with msg.stream_w() if msg.can_stream else nullcontext() as ws:
 
-            async def _del(path: Path, entry: Node):
+            async def _del(path: Path, entry: Node) -> None:
                 if entry.data is NotGiven:
                     return
 
@@ -1054,7 +1054,7 @@ class Server(MsgHandler):
         load: anyio.Path | FSPath | str | None = None,
         save: anyio.Path | FSPath | str | None = None,
         force_local: bool = False,
-    ):
+    ) -> None:
         self.data = Node()
         self.rdata = Node()
         self.name = name
@@ -1101,7 +1101,7 @@ class Server(MsgHandler):
     def server_link(self, name):
         return self._server_link[name]
 
-    def rename_client(self, client: ServerClient, name: str):
+    def rename_client(self, client: ServerClient, name: str) -> None:
         """
         Change a client name (result of protocol startup)
         """
@@ -1113,7 +1113,7 @@ class Server(MsgHandler):
         client.name = name
         self._clients[name] = client
 
-    def refresh_auth(self):
+    def refresh_auth(self) -> None:
         """
         Generate a new access token (but remember the previous one)
         """
@@ -1162,7 +1162,7 @@ class Server(MsgHandler):
     async def _backend_monitor(
         self,
         task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
-    ):
+    ) -> None:
         """
         The task that listens to the backend's message stream and updates
         the data store.
@@ -1200,7 +1200,9 @@ class Server(MsgHandler):
 
                 await self.maybe_update(path, msg.data, msg.meta)
 
-    async def _backend_sender(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
+    async def _backend_sender(
+        self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED
+    ) -> None:
         rdr = self.write_monitor.reader(99, skip=False)
         task_status.started()
         async for msg in rdr:
@@ -1220,7 +1222,7 @@ class Server(MsgHandler):
         ready: anyio.Event,
         *,
         task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
-    ):
+    ) -> None:
         """
         This task
         * sends PING messages
@@ -1283,7 +1285,7 @@ class Server(MsgHandler):
                     if not self._local_mode():
                         await actor.set_value(True)
 
-    async def set_main_link(self):
+    async def set_main_link(self) -> None:
         await self.backend.send(
             P(":R.run.service.main.conn"),
             {"node": uname().node, "link": self.link_data, "auth": {"token": self.cur_auth}},
@@ -1305,7 +1307,7 @@ class Server(MsgHandler):
         self._stamp_out += 1
         return self._stamp_out
 
-    async def wait_stamp(self, stamp):
+    async def wait_stamp(self, stamp) -> None:
         """
         Wait until the server has seen this stamp value (or better) on its
         ``stamp`` channel.
@@ -1313,7 +1315,7 @@ class Server(MsgHandler):
         while self._stamp_in < stamp:
             await self._stamp_in_evt.wait()
 
-    async def fetch_data(self, nodes):
+    async def fetch_data(self, nodes) -> None:
         """
         We are newly started and don't have any data.
 
@@ -1321,7 +1323,7 @@ class Server(MsgHandler):
         """
         nodes  # noqa:B018  # pyright:ignore
 
-    async def recover_split(self, prio, replace, local_history, sources):
+    async def recover_split(self, prio, replace, local_history, sources) -> None:
         """
         Recover from a network split.
 
@@ -1339,7 +1341,7 @@ class Server(MsgHandler):
         err: str | BaseException | NotGivenType | None,
         kw: dict[str, Any],
         meta: MsgMeta,
-    ):
+    ) -> None:
         """
         Update error data.
 
@@ -1393,7 +1395,7 @@ class Server(MsgHandler):
         ftr: bool | Tag = True,
         prefix=P(":"),
         **kw,
-    ):
+    ) -> None:
         """Save the current state.
 
         @hdr and @ftr are items to prepend/append to the data stream.
@@ -1474,7 +1476,9 @@ class Server(MsgHandler):
     def get_state(self):
         return dict()
 
-    async def save(self, path: str | anyio.Path, task_status=anyio.TASK_STATUS_IGNORED, **kw):
+    async def save(
+        self, path: str | anyio.Path, task_status=anyio.TASK_STATUS_IGNORED, **kw
+    ) -> None:
         """Save the current state to ``path``."""
         shorter = PathShortener([])
         try:
@@ -1494,7 +1498,7 @@ class Server(MsgHandler):
         save_state: bool = False,
         task_status=anyio.TASK_STATUS_IGNORED,
         **kw,
-    ):
+    ) -> None:
         """Save the current state to ``path``.
         Continue writing updates until cancelled.
 
@@ -1573,7 +1577,7 @@ class Server(MsgHandler):
                 self._writing_done.set()
 
     @staticmethod
-    async def _save_stream(rdr, mw, shorter, ign):
+    async def _save_stream(rdr, mw, shorter, ign) -> None:
         # helper for .save_stream() to keep the indent levels down
 
         last_saved = mtime.monotonic()
@@ -1611,7 +1615,7 @@ class Server(MsgHandler):
                 last_saved = mtime.monotonic()
                 last_saved_count = 0
 
-    async def _flush_deleted(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _flush_deleted(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Background task to remove deleted nodes from the tree
         """
@@ -1833,7 +1837,7 @@ class Server(MsgHandler):
             await self._unlink_state_file(fi.path)
         del files[pos + 1 :]
 
-    async def _save_task(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _save_task(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Background task to periodically restart the saver task.
 
@@ -1900,7 +1904,7 @@ class Server(MsgHandler):
             rewrite = (rewrite or save.rewrite) - 1
             kw["prev"] = self._name_for_file(fn)
 
-    async def run_saver(self, path: PathType | None, save_state: bool = True, **kw):
+    async def run_saver(self, path: PathType | None, save_state: bool = True, **kw) -> None:
         """
         Start a task that continually saves to disk.
 
@@ -1927,7 +1931,7 @@ class Server(MsgHandler):
         else:
             await self.write_monitor.send(self.gen_hdr_stop(reason="log_end"))
 
-    async def _sigterm(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _sigterm(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         with anyio.open_signal_receiver(signal.SIGTERM) as r:
             task_status.started()
 
@@ -1975,7 +1979,7 @@ class Server(MsgHandler):
 
             # Semi-detached taskgroups for clients and listeners
 
-            async def run_tg(task_status):
+            async def run_tg(task_status) -> None:
                 async with anyio.create_task_group() as tg:
                     task_status.started(tg)
                     await anyio.sleep_forever()
@@ -2112,11 +2116,11 @@ class Server(MsgHandler):
             _tg.cancel_scope.cancel()
             self._stopped.set()
 
-    async def wait_stopped(self):
+    async def wait_stopped(self) -> None:
         "wait until service ends"
         await self._stopped.wait()
 
-    async def _stop_writers(self):
+    async def _stop_writers(self) -> None:
         """Tell our writers to stop"""
         await self.write_monitor.send(self.gen_hdr_stop(reason="Shutdown"))
         while self._writing:
@@ -2129,14 +2133,14 @@ class Server(MsgHandler):
                     self.logger.error("Shutdown: still writing to %r", fn)
                 return
 
-    async def cancel(self):
+    async def cancel(self) -> None:
         """Cancel the server task.
 
         Unlike `stop` this does not allow the server to shut down cleanly.
         """
         self._tg.cancel_scope.cancel()  # pyright:ignore  # ??
 
-    async def stop(self):
+    async def stop(self) -> None:
         """
         Tell the server to shut down cleanly.
 
@@ -2145,7 +2149,7 @@ class Server(MsgHandler):
         self._stop_flag.set()
         await self._stopped.wait()
 
-    async def _auth_update(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _auth_update(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Background task to refresh the auth data.
         """
@@ -2167,7 +2171,7 @@ class Server(MsgHandler):
 
     async def _run_server_link(
         self, name: str, data: dict[str, Any], *, task_status=anyio.TASK_STATUS_IGNORED
-    ):
+    ) -> None:
         """
         Run a single client link to another server.
 
@@ -2207,7 +2211,7 @@ class Server(MsgHandler):
                 if name in self._server_link and self._server_link[name][0] is sc:
                     self._server_link.pop(name)
 
-    async def _watch_up(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _watch_up(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Monitor servers' service announcements and connects to them
         so that client links can be forwarded.
@@ -2235,7 +2239,7 @@ class Server(MsgHandler):
                     continue
                 await tg.start(self._run_server_link, name, msg.data)
 
-    async def _down_one(self, name: str):
+    async def _down_one(self, name: str) -> None:
         if self.link_data is None:
             # We're still starting up (`_watch_up` runs while the initial
             # sync is in progress): no data and no open ports yet, thus
@@ -2260,7 +2264,7 @@ class Server(MsgHandler):
         async with anyio.create_task_group() as tg:
 
             @tg.start_soon
-            async def changed():
+            async def changed() -> None:
                 async for msg in main:
                     if msg.meta.origin != name:
                         tg.cancel_scope.cancel()
@@ -2275,7 +2279,7 @@ class Server(MsgHandler):
                 await anyio.sleep(gap * n / len(self._ping_history))
             await self.set_main_link()
 
-    async def _watch_down(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _watch_down(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Monitor "down" messages and broadcast our own info if it's the active node.
         """
@@ -2291,7 +2295,7 @@ class Server(MsgHandler):
                     return
                 tg.start_soon(self._down_one, msg.data)
 
-    async def _read_main(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _read_main(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Task to read the main service monitoring channel
         """
@@ -2303,7 +2307,7 @@ class Server(MsgHandler):
             async for msg in mon:
                 self.service_monitor(msg)
 
-    async def _read_stamp(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _read_stamp(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Task to read our stamping channel
         """
@@ -2350,7 +2354,7 @@ class Server(MsgHandler):
                 del self._syncing[name]
         return True
 
-    async def _sync_one(self, conn: MsgSender, prefix: Path = Path()):
+    async def _sync_one(self, conn: MsgSender, prefix: Path = Path()) -> None:
         async with conn.cmd(P("d.walk"), prefix).stream_in() as feed:
             pl = PathLongener()
             upd = 0
@@ -2367,7 +2371,7 @@ class Server(MsgHandler):
                 self.logger.debug("Sync Msg %r", msg)
         self.logger.info("Sync finished. %d new, %d existing", upd, skp)
 
-    async def _load_initial(self, fn):
+    async def _load_initial(self, fn) -> None:
         upd, _skp, tags, mode = await self.load_file(fn=fn)
         if mode != "init" and not upd:
             raise RuntimeError("No data!")
@@ -2375,7 +2379,7 @@ class Server(MsgHandler):
             raise RuntimeError("No or incomplete tags!")
         return
 
-    async def _read_initial(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _read_initial(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Read initial data from either file backup or a remote server.
 
@@ -2392,7 +2396,7 @@ class Server(MsgHandler):
         async with anyio.create_task_group() as tg:
 
             @tg.start_soon
-            async def trigger():
+            async def trigger() -> None:
                 with anyio.fail_after(self.cfg.server.timeout.startup):
                     await ready.wait()
                 task_status.started()
@@ -2411,7 +2415,7 @@ class Server(MsgHandler):
                     break
                 ready.set()
 
-    async def _read_saved_data(self, ready: anyio.Event):
+    async def _read_saved_data(self, ready: anyio.Event) -> None:
         save = self.cfg.server.save
         dest = anyio.Path(save.dir)
         if not await dest.is_dir():
@@ -2558,7 +2562,7 @@ class Server(MsgHandler):
             self.logger.info("Loading from %r done: %d/%d", fn, upd, skp)
             return upd, skp, tags, mode
 
-    async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):
+    async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event) -> None:
         """
         Iterate over service announcement messages and sync from remote servers.
 
@@ -2584,7 +2588,7 @@ class Server(MsgHandler):
     def get_cached_error(self, name) -> Exception | str | None:
         return self._error_cache.pop(name, None)
 
-    async def _run_server(self, tg, name, cfg, *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _run_server(self, tg, name, cfg, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """runs a listener on a single port"""
         if "host" in cfg:
             # TODO SSL and/or whatnot
@@ -2617,7 +2621,7 @@ class Server(MsgHandler):
             task_status.started(listener.extra(SocketAttribute.local_address))
             await listener.serve(partial(self._client_task, name), task_group=tg)
 
-    async def _client_task(self, name, stream):
+    async def _client_task(self, name, stream) -> None:
         """
         Manager for a single client connection.
 
@@ -2735,7 +2739,7 @@ class Server(MsgHandler):
             for cn in cl:
                 await ml.send(cn)
 
-    async def _monitor_ids(self, *, task_status):
+    async def _monitor_ids(self, *, task_status) -> None:
         async with self.backend.monitor(
             P(":R.run.id"),
             raw=False,
@@ -2752,7 +2756,7 @@ class Server(MsgHandler):
                 elif isinstance(name, str):
                     self.known_ids.add(name)
 
-    async def _monitor_pings(self, *, task_status):
+    async def _monitor_pings(self, *, task_status) -> None:
         async with self.backend.monitor(
             P(":R.run.ping.id"),
             raw=False,

@@ -25,18 +25,18 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
     # StackedMsg is first because MicroPython uses only the first class and
     # we get `cwr` and `crd` that way.
 
-    def __init__(self, link, cfg):
+    def __init__(self, link, cfg) -> None:
         super().__init__(link, cfg)
         self.txt = cfg.get("txt", "S")
         self.decode = self.txt[0] == "!"
         if self.decode:
             self.txt = self.txt[1:]
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         log("X:%s start", self.txt)
         await super().setup()
 
-    async def teardown(self):  # noqa:D102
+    async def teardown(self) -> None:  # noqa:D102
         log("X:%s stop", self.txt)
         await super().teardown()
 

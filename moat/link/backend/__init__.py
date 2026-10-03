@@ -69,7 +69,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
     _njobs: int = 0
     _ended: anyio.Event | None = None
 
-    def __init__(self, cfg: attrdict, name: str, id: str):
+    def __init__(self, cfg: attrdict, name: str, id: str) -> None:
         self.cfg = cfg
         self.name = name
         self.id = id
@@ -95,7 +95,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         self,
         topic: Path,
         qos: QoS | None = None,
-        codec: Codec | str | None | EllipsisType = NotGiven,
+        codec: Codec | str | EllipsisType | None = NotGiven,
         raw: bool | None = False,
         echo: bool = False,
         no_local: bool = False,
@@ -114,7 +114,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         self,
         topic: Path,
         data: Any,
-        codec: Codec | str | None | EllipsisType = NotGiven,
+        codec: Codec | str | EllipsisType | None = NotGiven,
         **kw: Any,
     ) -> None:
         """
@@ -128,7 +128,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         data: Any = None,
         exc: Exception | None = None,
         **kw: Any,
-    ):
+    ) -> None:
         """
         Send a somewhat-free-form error message.
         """

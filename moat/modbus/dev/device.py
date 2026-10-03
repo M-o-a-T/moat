@@ -46,7 +46,7 @@ class NotARegisterError(ValueError):
     pass
 
 
-def mark_orig(d):  # noqa: D103
+def mark_orig(d) -> None:  # noqa: D103
     if isinstance(d, Mapping):
         d._is_orig = True  # noqa: SLF001
         for k, v in d.items():
@@ -216,7 +216,7 @@ class Register(BaseValue):
     last_gen = -1
     block = None
 
-    def __init__(self, d: attrdict, path, unit=None):
+    def __init__(self, d: attrdict, path, unit=None) -> None:
         try:
             self.reg_type = get_kind(d["reg_type"])
         except KeyError:
@@ -270,7 +270,7 @@ class Register(BaseValue):
             if not isinstance(const_val, Path):
                 self.reg._value = const_val  # noqa: SLF001
 
-    async def start(self):  # noqa: D102
+    async def start(self) -> None:  # noqa: D102
         pass
 
     def __aiter__(self):
@@ -308,7 +308,7 @@ class Register(BaseValue):
         return val
 
     @value.setter
-    def value(self, val):
+    def value(self, val) -> None:
         """Sets the value that'll be written to the bus.
         Reverses factor+offset-adjustment.
         Should trigger an update.
@@ -365,7 +365,7 @@ class Register(BaseValue):
 
         return result
 
-    def decode(self, regs: list[int]):
+    def decode(self, regs: list[int]) -> None:
         """Encode registers into self"""
         self.reg.decode(regs)
 
@@ -379,7 +379,7 @@ class Register(BaseValue):
         """Generation number for the current value"""
         return self.reg.gen
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"‹{str(self.reg_type)[0].lower()}{self.register} @{self.path}:{self.value}›"
 
     __str__ = __repr__
@@ -411,10 +411,10 @@ class BaseDevice:
     cfg: attrdict | None = None
     cfg_path: FSPath | None = None
 
-    def __init__(self, factory=Register):
+    def __init__(self, factory=Register) -> None:
         self.factory = factory
 
-    async def load(self, path: str | None = None, data: dict | None = None):
+    async def load(self, path: str | None = None, data: dict | None = None) -> None:
         """Load a device description from @path, augmented by @data"""
         if self.cfg is not None:
             raise RuntimeError("already called")
@@ -454,7 +454,7 @@ class ClientDevice(CtxObj, BaseDevice):
         client: ModbusClient,
         host: HostCommon,
         factory: type = Register,
-    ):
+    ) -> None:
         super().__init__(factory)
         self.client = client
         self.host = host
@@ -468,13 +468,13 @@ class ClientDevice(CtxObj, BaseDevice):
         await self.add_registers()
         yield self
 
-    async def as_scope(self):
+    async def as_scope(self) -> None:
         "Basic scope generator"
         async with self:
             scope.register(self)
             await scope.no_more_dependents()
 
-    async def add_slots(self):
+    async def add_slots(self) -> None:
         """Add configured slots to this instance"""
         assert self.unit is not None
         if "slots" not in self.data:
@@ -485,7 +485,7 @@ class ClientDevice(CtxObj, BaseDevice):
                 v = {}  # noqa:PLW2901
             self.slots[k] = await self.unit.slot_scope(k, **v)
 
-    async def add_registers(self):
+    async def add_registers(self) -> None:
         """Replace entries w/ register/slot members with Register instances"""
         assert self.unit is not None
 
@@ -529,7 +529,7 @@ class ClientDevice(CtxObj, BaseDevice):
                         tg.start_soon(proc, v)
         return vals
 
-    async def poll_slot(self, slot: str, *, task_status=None):
+    async def poll_slot(self, slot: str, *, task_status=None) -> None:
         """Task to register and periodically poll a given slot"""
         # slots:
         #  1sec:
@@ -549,7 +549,7 @@ class ClientDevice(CtxObj, BaseDevice):
 
         await anyio.sleep_forever()
 
-    async def poll(self, slots: set | None = None, *, task_status=None):
+    async def poll(self, slots: set | None = None, *, task_status=None) -> None:
         """Task to periodically poll all slots"""
         assert self.unit is not None
         if slots is None:
@@ -567,7 +567,7 @@ class ServerDevice(BaseDevice):
     A server device, i.e. a unit that's accessed via modbus.
     """
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         super().__init__(*a, **k)
         self.unit = UnitContext()
 
@@ -576,12 +576,12 @@ class ServerDevice(BaseDevice):
         self.get_values = self.unit.get_values
         self.set_values = self.unit.set_values
 
-    async def load(self, path: str | None = None, data: dict | None = None):  # noqa: D102
+    async def load(self, path: str | None = None, data: dict | None = None) -> None:  # noqa: D102
         await super().load(path, data)
         self.data = fixup(self.cfg, root=self.cfg, path=Path(), this_file=self.cfg_path)
         await self.add_registers()
 
-    async def add_registers(self):
+    async def add_registers(self) -> None:
         """Replace entries w/ register/slot members with Register instances"""
 
         async def a_r(d, path=Path()):

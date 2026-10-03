@@ -20,7 +20,7 @@ from moat.util.exc import ExpectedError
 __all__ = ["cmd", "run"]
 
 
-def _show_usage_error(self, file=sys.stderr):
+def _show_usage_error(self, file=sys.stderr) -> None:
     color = None
     if self.ctx is not None:
         color = self.ctx.color
@@ -70,7 +70,7 @@ This is the main command handler for MoaT, the Master of all Things.
 """,
     )
 
-    async def runner():
+    async def runner() -> None:
         async with main_scope() as mt.main_scope:
             obj = attrdict(moat=mt)
             await main_.main(obj=obj)

@@ -29,11 +29,11 @@ class SubackPayload(MQTTPayload):  # noqa: D101
     RETURN_CODE_02 = 0x02
     RETURN_CODE_80 = 0x80
 
-    def __init__(self, return_codes=()):
+    def __init__(self, return_codes=()) -> None:
         super().__init__()
         self.return_codes = return_codes
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return type(self).__name__ + f"(return_codes={self.return_codes!r})"
 
     def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):  # noqa: ARG002, D102
@@ -70,7 +70,7 @@ class SubackPacket(MQTTPacket):  # noqa: D101
         fixed: MQTTFixedHeader = None,
         variable_header: PacketIdVariableHeader = None,
         payload=None,
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(SUBACK, 0x00)
         else:

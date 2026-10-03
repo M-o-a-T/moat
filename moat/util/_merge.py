@@ -11,7 +11,7 @@ from collections.abc import Mapping, MutableMapping, MutableSequence, Sequence
 from typing import TypeVar
 
 
-def _merge_dict(d: MutableMapping, other: Mapping, drop=False, replace=True):
+def _merge_dict(d: MutableMapping, other: Mapping, drop=False, replace=True) -> None:
     for key, value in list(other.items()):
         if value is NotGiven:
             d.pop(key, None)
@@ -33,7 +33,9 @@ def _merge_dict(d: MutableMapping, other: Mapping, drop=False, replace=True):
             del d[k]
 
 
-def _merge_list(item: MutableSequence, value: Sequence | Mapping, drop=False, replace=True):
+def _merge_list(
+    item: MutableSequence, value: Sequence | Mapping, drop=False, replace=True
+) -> None:
     off = 0
     if isinstance(value, (list, tuple)):
         # two lists

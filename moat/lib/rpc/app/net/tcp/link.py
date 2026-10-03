@@ -14,7 +14,7 @@ class Link(CmdMsg):
     An app that connects to a remote socket.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         stack = serial_stack(
             TcpLink(
                 cfg.get("host", "127.0.0.1"),

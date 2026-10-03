@@ -50,6 +50,11 @@ except AttributeError:
 
 import logging
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Never
+
 logger = logging.getLogger(__name__)
 
 QLEN = 10
@@ -152,7 +157,7 @@ class CallAdmin:
     _n_watch: int = None
     _n_watch_seen: int = None
 
-    def __init__(self, runner, state, data):
+    def __init__(self, runner, state, data) -> None:
         self._runner = runner
         self._state = state
         self._data = data
@@ -190,7 +195,7 @@ class CallAdmin:
             oka = getattr(self._runner, "ok_after", 0)
             if oka > 0:
 
-                async def is_ok(oka):
+                async def is_ok(oka) -> None:
                     await anyio.sleep(oka)
                     await self.setup_done()
 
@@ -205,14 +210,14 @@ class CallAdmin:
             sc.cancel()
             return res
 
-    async def _pinger(self):
+    async def _pinger(self) -> None:
         t = self._runner.ok_after or 10
         await anyio.sleep(t / 2)
         while True:
             await self._runner.state.ping()
             await anyio.sleep(t * 5)
 
-    async def _changed_code(self, code):
+    async def _changed_code(self, code) -> None:
         """
         Kill the job if the underlying code has changed
         """
@@ -220,7 +225,7 @@ class CallAdmin:
         self._restart = True
         self.cancel()
 
-    def cancel(self):
+    def cancel(self) -> None:
         """
         Cancel the running task
         """
@@ -237,7 +242,7 @@ class CallAdmin:
         """
         return await spawn(self._taskgroup, proc, *a, **kw)
 
-    async def setup_done(self, **kw):
+    async def setup_done(self, **kw) -> None:
         """
         Call this when your code has successfully started up.
         """
@@ -245,7 +250,7 @@ class CallAdmin:
         await self._state.save()
         await self._err.record_working("run", self._runner._path, **kw)  # noqa: SLF001
 
-    async def error(self, path=None, **kw):
+    async def error(self, path=None, **kw) -> Never:
         """
         Record that an error has occurred. This function records specific
         error data, then raises `ErrorRecorded` which the code is not
@@ -282,7 +287,7 @@ class CallAdmin:
 
             # pylint: disable=no-self-argument
 
-            def __init__(slf, admin, runner, client, cls, path, kw):
+            def __init__(slf, admin, runner, client, cls, path, kw) -> None:
                 kw.setdefault("fetch", True)
 
                 slf.admin = admin
@@ -293,7 +298,7 @@ class CallAdmin:
                 slf.cls = cls
                 slf.scope = None
 
-            async def run(slf):
+            async def run(slf) -> None:
                 @asynccontextmanager
                 async def _watch(path, kw):
                     if path.mark == "r":
@@ -327,7 +332,7 @@ class CallAdmin:
                                 if slf.admin._n_watch_seen == slf.admin._n_watch:  # noqa: SLF001
                                     await slf.runner.send_event(ReadyMsg(slf.admin._n_watch_seen))  # noqa: SLF001
 
-            def cancel(slf):
+            def cancel(slf) -> bool | None:
                 if slf.scope is None:
                     return False
                 sc, slf.scope = slf.scope, None
@@ -346,7 +351,7 @@ class CallAdmin:
         self._taskgroup.start_soon(w.run)
         return w
 
-    async def send(self, path, value=NotGiven, raw=None):
+    async def send(self, path, value=NotGiven, raw=None) -> None:
         """
         Publish an MQTT message.
 
@@ -408,7 +413,7 @@ class CallAdmin:
         class Monitor:
             """Helper class for reading an MQTT topic"""
 
-            def __init__(self, admin, runner, client, cls, path, kw):
+            def __init__(self, admin, runner, client, cls, path, kw) -> None:
                 self.admin = admin
                 self.runner = runner
                 self.client = client
@@ -417,7 +422,7 @@ class CallAdmin:
                 self.cls = cls
                 self.scope = None
 
-            async def run(self):
+            async def run(self) -> None:
                 with anyio.CancelScope() as sc:
                     self.scope = sc
                     async with self.client.msg_monitor(path, **kw) as watcher:
@@ -430,7 +435,7 @@ class CallAdmin:
                                 chg.path = Path.build(msg.topic)
                                 await self.runner.send_event(chg)
 
-            async def cancel(self):
+            async def cancel(self) -> bool | None:
                 if self.scope is None:
                     return False
                 sc, self.scope = self.scope, None
@@ -447,28 +452,28 @@ class CallAdmin:
 
     async def timer(self, delay, cls=TimerMsg):  # noqa: D102
         class Timer:
-            def __init__(self, runner, cls, tg):
+            def __init__(self, runner, cls, tg) -> None:
                 self.runner = runner
                 self.cls = cls
                 self.scope = None
                 self._taskgroup = tg
                 self.delay = None
 
-            async def _run(self):
+            async def _run(self) -> None:
                 with anyio.CancelScope() as sc:
                     self.scope = sc
                     await anyio.sleep(self.delay)
                     self.scope = None
                     await self.runner.send_event(self.cls(self))
 
-            def cancel(self):
+            def cancel(self) -> bool:
                 if self.scope is None:
                     return False
                 sc, self.scope = self.scope, None
                 sc.cancel()
                 return True
 
-            async def run(self, delay):
+            async def run(self, delay) -> None:
                 self.cancel()
                 self.delay = delay
                 if self.delay > 0:
@@ -532,21 +537,21 @@ class RunnerEntry(AttrClientEntry):
     _task = None
     retry = None
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         self.data = {}  # local data
 
         super().__init__(*a, **k)
 
         self._logger = logger_for(self._path)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__} {self.subpath!r}:{self.code!r}>"
 
     @property
     def state(self):  # noqa: D102
         return self.root.state.follow(self.subpath, create=None)
 
-    async def run(self):  # noqa: D102
+    async def run(self) -> None:  # noqa: D102
         if self.code is None:
             return  # nothing to do here
 
@@ -642,7 +647,7 @@ class RunnerEntry(AttrClientEntry):
 
                 await self.root.trigger_rescan()
 
-    async def send_event(self, evt):
+    async def send_event(self, evt) -> None:
         """Send an event to the running process."""
         if self._q is None:
             if self._running:
@@ -656,13 +661,13 @@ class RunnerEntry(AttrClientEntry):
             self._q = None
             self._logger.info("Discarding %r", evt)
 
-    async def seems_down(self):  # noqa: D102
+    async def seems_down(self) -> None:  # noqa: D102
         state = self.state
         state.node = None
         if not self._running:
             await state.save(wait=True)
 
-    async def set_value(self, value):
+    async def set_value(self, value) -> None:
         """Process incoming value changes"""
         c = self.code
         await super().set_value(value)
@@ -679,11 +684,11 @@ class RunnerEntry(AttrClientEntry):
 
         await self.root.trigger_rescan()
 
-    async def seen_value(self):  # noqa: D102
+    async def seen_value(self) -> None:  # noqa: D102
         await super().seen_value()
         await self.root.trigger_rescan()
 
-    async def run_at(self, t: float):
+    async def run_at(self, t: float) -> None:
         """Next run at this time."""
         self.target = t
         if not self._running:
@@ -757,7 +762,7 @@ class RunnerNode:
             root._nodes[name] = self  # noqa: SLF001
         return self
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         pass
 
 
@@ -792,7 +797,7 @@ class StateEntry(AttrClientEntry):
     def runner(self):  # noqa: D102
         return self.root.runner.follow(self.subpath, create=False)
 
-    async def startup(self):  # noqa: D102
+    async def startup(self) -> None:  # noqa: D102
         try:
             self.runner  # noqa:B018
         except KeyError:
@@ -816,13 +821,13 @@ class StateEntry(AttrClientEntry):
         )
         await self.save()
 
-    async def ping(self):  # noqa: D102
+    async def ping(self) -> None:  # noqa: D102
         if self.node != self.root.name:
             raise RuntimeError("Not our state!")
         self.pinged = mtime.time()
         await self.save()
 
-    async def stale(self):  # noqa: D102
+    async def stale(self) -> None:  # noqa: D102
         self.stopped = mtime.time()
         node, self.node = self.node, None
         self.backoff = min(20, self.backoff + 2)
@@ -834,7 +839,7 @@ class StateEntry(AttrClientEntry):
         )
         await self.save()
 
-    async def set_value(self, value):  # noqa: D102
+    async def set_value(self, value) -> None:  # noqa: D102
         n = self.node
 
         await super().set_value(value)
@@ -902,14 +907,14 @@ class StateRoot(MirrorRoot):
             return False
         return r.ready
 
-    def set_runner(self, runner):  # noqa: D102
+    def set_runner(self, runner) -> None:  # noqa: D102
         self._runner = ref(runner)
 
-    async def runner_running(self):  # noqa: D102
+    async def runner_running(self) -> None:  # noqa: D102
         for n in self.all_children:
             await n.startup()
 
-    async def kill_stale_nodes(self, names):
+    async def kill_stale_nodes(self, names) -> None:
         """States with node names in the "names" set are stale. Kill them."""
         for s in self.all_children:
             if s.node in names:
@@ -917,7 +922,7 @@ class StateRoot(MirrorRoot):
 
     _last_t = 0
 
-    async def ping(self):  # noqa: D102
+    async def ping(self) -> None:  # noqa: D102
         t = mtime.time()
         if t - self._last_t >= abs(self._cfg["ping"]):
             self._last_t = t
@@ -951,7 +956,7 @@ class _BaseRunnerRoot(ClientRoot):
     CFG = "runner"
     SUB = None
 
-    def __init__(self, *a, _subpath, err=None, code=None, nodes=0, **kw):
+    def __init__(self, *a, _subpath, err=None, code=None, nodes=0, **kw) -> None:
         super().__init__(*a, **kw)
         self.err = err
         self.code = code
@@ -973,7 +978,7 @@ class _BaseRunnerRoot(ClientRoot):
             cfg_ = combine_dict(cfg, client._cfg["runner"])  # noqa: SLF001
         return await super().as_handler(client, subpath=subpath, _subpath=subpath, cfg=cfg_, **kw)
 
-    async def run_starting(self):
+    async def run_starting(self) -> None:
         from .code import CodeRoot  # noqa: PLC0415
         from .errors import ErrorRoot  # noqa: PLC0415
 
@@ -990,7 +995,7 @@ class _BaseRunnerRoot(ClientRoot):
 
         await super().run_starting()
 
-    async def _state_runner(self):
+    async def _state_runner(self) -> None:
         self.state = await StateRoot.as_handler(
             self.client,
             cfg=self._cfg,
@@ -1003,13 +1008,13 @@ class _BaseRunnerRoot(ClientRoot):
         """my node name"""
         return self.client.client_name
 
-    def get_node(self, name):  # noqa: ARG002
+    def get_node(self, name) -> None:  # noqa: ARG002
         """
         If the runner keeps track of "foreign" nodes, allocate them
         """
         return None
 
-    async def running(self):
+    async def running(self) -> None:
         self._tg.start_soon(self._run_actor)
 
         # the next block needs to be atomic
@@ -1018,7 +1023,7 @@ class _BaseRunnerRoot(ClientRoot):
         await self.state.runner_running()
         await super().running()
 
-    async def _run_actor(self):
+    async def _run_actor(self) -> Never:
         """
         This method is started as a long-lived task of the root as soon as
         the subtree's data are loaded.
@@ -1027,12 +1032,12 @@ class _BaseRunnerRoot(ClientRoot):
         """
         raise RuntimeError("You want to override me.")
 
-    async def trigger_rescan(self):
+    async def trigger_rescan(self) -> None:
         """Tell the _run_actor task to rescan our job list prematurely"""
         if self._trigger is not None:
             self._trigger.set()
 
-    async def _run_now(self, evt=None):
+    async def _run_now(self, evt=None) -> None:
         t_next = self._run_next
         with anyio.CancelScope() as sc:
             self._run_now_task = sc
@@ -1066,7 +1071,7 @@ class _BaseRunnerRoot(ClientRoot):
                     self._tg.start_soon(j.run)
                     await anyio.sleep(self._start_delay)
 
-    async def notify_actor_state(self, msg=None):
+    async def notify_actor_state(self, msg=None) -> None:
         """
         Notify all running jobs about a possible change in active status.
         """
@@ -1104,7 +1109,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
     seen_load = None
     _tagged: bool = False
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:
         super().__init__(*a, **kw)
         self.group = (
             P(self.client.config.server["root"]) + P(self._cfg["name"]) | "any" | self._path[-1]
@@ -1120,7 +1125,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
         # bus is slow
         return self._act.cycle_time_max * (self._act.history_size + 2.5)
 
-    async def _run_actor(self):
+    async def _run_actor(self) -> None:
         """
         Monitor the Actor state, run a :meth:`_run_now` subtask whenever we're 'it'.
         """
@@ -1179,7 +1184,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
 
             pass  # end of actor task
 
-    async def find_stale_nodes(self, cur):
+    async def find_stale_nodes(self, cur) -> None:
         """
         Find stale nodes (i.e. last seen < cur) and clean them.
         """
@@ -1203,7 +1208,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
         if names:
             await self.state.kill_stale_nodes(names)
 
-    async def _age_killer(self, age_q):
+    async def _age_killer(self, age_q) -> None:
         """
         Subtask which cleans up stale tasks
 
@@ -1259,7 +1264,7 @@ class SingleRunnerRoot(_BaseRunnerRoot):
     state = None
     tg = None
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:
         super().__init__(*a, **kw)
         self.group = (
             P(self.client.config.server["root"]) + P(self._cfg["name"])
@@ -1268,7 +1273,7 @@ class SingleRunnerRoot(_BaseRunnerRoot):
             | self._path[-1]
         )
 
-    async def set_value(self, value):  # noqa: D102
+    async def set_value(self, value) -> None:  # noqa: D102
         await super().set_value(value)
         try:
             cores = value["cores"]
@@ -1286,7 +1291,7 @@ class SingleRunnerRoot(_BaseRunnerRoot):
         """Timeout after which we really should have gotten another ping"""
         return self._act.cycle_time_max * 1.5
 
-    async def _run_actor(self):
+    async def _run_actor(self) -> None:
         async with anyio.create_task_group() as tg:
             age_q = create_queue(1)
 
@@ -1310,7 +1315,7 @@ class SingleRunnerRoot(_BaseRunnerRoot):
 
                 pass  # end of actor task
 
-    async def _age_notifier(self, age_q):
+    async def _age_notifier(self, age_q) -> None:
         """
         This background job triggers :meth:`notify_actor_state` when too much
         time has passed without an AuthPing.
@@ -1337,13 +1342,13 @@ class AllRunnerRoot(SingleRunnerRoot):
     _act = None
     code = None
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:
         super().__init__(*a, **kw)
         self.group = (
             P(self.client.config.server["root"]) + P(self._cfg["name"]) | "all" | self._path[-1]
         )
 
-    async def _state_runner(self):
+    async def _state_runner(self) -> None:
         self.state = await StateRoot.as_handler(
             self.client,
             cfg=self._cfg,

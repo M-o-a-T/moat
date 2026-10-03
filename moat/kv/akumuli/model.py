@@ -19,7 +19,7 @@ from collections.abc import Mapping
 logger = logging.getLogger(__name__)
 
 
-def _test_hook(e: Entry):  # pylint: disable=unused-argument
+def _test_hook(e: Entry) -> None:  # pylint: disable=unused-argument
     pass
 
 
@@ -34,22 +34,22 @@ class _AkumuliBase(ClientEntry):
     def server(self):
         return self.parent.server
 
-    async def set_value(self, val):  # pylint: disable=arguments-differ
+    async def set_value(self, val) -> None:  # pylint: disable=arguments-differ
         await super().set_value(val)
         if self.server is not None:
             await self._update_server()
 
-    async def update_server(self):
+    async def update_server(self) -> None:
         await self.parent.update_server()
 
-    async def _update_server(self):
+    async def _update_server(self) -> None:
         if not self.val_d(True, "present"):
             return
         await self.setup()
         for k in self:
             await k._update_server()  # noqa:SLF001
 
-    async def setup(self):
+    async def setup(self) -> None:
         pass
 
 
@@ -76,19 +76,19 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
     def tg(self):  # noqa:D102
         return self.parent.tg
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"N {Path.build(self.subpath[1:])} {Path.build(self.source)}"
             f" {Path.build(self.attr)} {self.series}"
             f" {' '.join(f'{k}={v}' for k, v in self.tags.items())}"
         )
 
-    def _update_disable(self, off):
+    def _update_disable(self, off) -> None:
         self.disabled = off
         for k in self:
             k._update_disable(off)  # noqa:SLF001
 
-    async def with_output(self, evt, src, attr, series, tags, mode):
+    async def with_output(self, evt, src, attr, series, tags, mode) -> None:
         """
         Task that monitors one entry and writes its value to Akumuli.
         """
@@ -132,7 +132,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
                     await self.server.put(e)
                     await self.root.err.record_working("akumuli", self.subpath)
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         if self._work is not None:
             self._work.cancel()
@@ -181,7 +181,7 @@ class AkumuliServer(_AkumuliBase, AttrClientEntry):  # noqa:D101
     ATTRS = ("topic",)
     AUX_ATTRS = ("host", "port")
 
-    def __str__(self):
+    def __str__(self) -> str:
         res = f"{self._name}: {self.host}:{self.port}"
         if self.topic:
             res += " Topic:" + str(self.topic)
@@ -199,7 +199,7 @@ class AkumuliServer(_AkumuliBase, AttrClientEntry):  # noqa:D101
     def tg(self):  # noqa:D102
         return self._server._distkv__tg  # noqa:SLF001  # set in .task
 
-    async def set_value(self, val):  # noqa:D102
+    async def set_value(self, val) -> None:  # noqa:D102
         if val is NotGiven:
             return
         self.host = val.get("server", {}).get("host", None)
@@ -216,11 +216,11 @@ class AkumuliServer(_AkumuliBase, AttrClientEntry):  # noqa:D101
         s["port"] = self.port
         return res
 
-    async def set_server(self, server):  # noqa:D102
+    async def set_server(self, server) -> None:  # noqa:D102
         self._server = server
         await self._update_server()
 
-    def set_paths(self, paths):
+    def set_paths(self, paths) -> None:
         """set enabled paths. Empty: all are on"""
         for v in self:
             v._update_disable(bool(paths))  # noqa:SLF001
@@ -234,7 +234,7 @@ class AkumuliServer(_AkumuliBase, AttrClientEntry):  # noqa:D101
             else:
                 v.disabled = False
 
-    async def flush(self):  # noqa:D102
+    async def flush(self) -> None:  # noqa:D102
         await self.server.flush()
 
 
@@ -242,7 +242,7 @@ class AkumuliRoot(_AkumuliBase, ClientRoot):  # noqa:D101
     CFG = "akumuli"
     err = None
 
-    async def run_starting(self, server=None):  # noqa:D102
+    async def run_starting(self, server=None) -> None:  # noqa:D102
         self._server = server
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
@@ -251,5 +251,5 @@ class AkumuliRoot(_AkumuliBase, ClientRoot):  # noqa:D101
     def child_type(self, name):  # noqa:D102,ARG002
         return AkumuliServer
 
-    async def update_server(self):  # noqa:D102
+    async def update_server(self) -> None:  # noqa:D102
         await self._update_server()

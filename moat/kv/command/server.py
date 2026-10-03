@@ -61,7 +61,7 @@ from moat.kv.server import Server
 @click.argument("name", nargs=1)
 @click.argument("nodes", nargs=-1)
 @click.pass_obj
-async def cli(obj, name, load, save, init, incremental, eval_, auth, force, nodes):
+async def cli(obj, name, load, save, init, incremental, eval_, auth, force, nodes) -> None:
     """
     This command starts a MoaT-KV server.
 

@@ -395,7 +395,7 @@ class HostGroup(Base):
 
 @event.listens_for(Address, "before_insert")
 @event.listens_for(Address, "before_update")
-def validate_address_not_mac_link_local(mapper, connection, model):
+def validate_address_not_mac_link_local(mapper, connection, model) -> None:
     """Reject MAC-derived EUI-64 link-local addresses.
 
     Such addresses are fully determined by the interface's already-unique
@@ -494,7 +494,7 @@ def _sync_addresses(sess, iface: Interface) -> None:
 
 
 @event.listens_for(Session, "before_flush")
-def regenerate_addresses(session_ctx, _instances, items):
+def regenerate_addresses(session_ctx, _instances, items) -> None:
     """Regenerate derived address rows for dirty interfaces.
 
     Triggered before each flush; examines all :class:`Interface` objects

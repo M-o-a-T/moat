@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(cls=AliasedGroup, short_help="Manage 1wire devices.")
 @click.pass_obj
-async def cli(obj):
+async def cli(obj) -> None:
     """
     List Onewire devices, modify device handling …
     """
@@ -36,7 +36,7 @@ async def cli(obj):
 @click.option("-d", "--device", help="Device to access.")
 @click.option("-f", "--family", help="Device family to modify.")
 @click.pass_obj
-async def list_(obj, device, family):
+async def list_(obj, device, family) -> None:
     """Emit the current state as a YAML file."""
     if device is not None and family is not None:
         raise click.UsageError("Family and device code can't both be used")
@@ -88,7 +88,7 @@ async def list_(obj, device, family):
 @click.argument("attr", nargs=1)
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def attr__(obj, device, family, write, attr, interval, path, attr_):
+async def attr__(obj, device, family, write, attr, interval, path, attr_) -> None:
     """Show/add/modify an entry to repeatedly read an 1wire device's attribute.
 
     You can only set an interval, not a path, on family codes.
@@ -141,7 +141,7 @@ async def attr__(obj, device, family, write, attr, interval, path, attr_):
 @attr_args
 @click.argument("subpath", nargs=1, type=P, default=P(":"))
 @click.pass_obj
-async def set_(obj, device, family, subpath, **kw):
+async def set_(obj, device, family, subpath, **kw) -> None:
     """Set or delete some random attribute.
 
     For deletion, use '-e ATTR -'.
@@ -168,7 +168,7 @@ async def set_(obj, device, family, subpath, **kw):
 @click.option("-d", "--delete", is_flag=True, help="Delete this server.")
 @click.argument("name", nargs=-1)
 @click.pass_obj
-async def server_(obj, name, host, port, delete):
+async def server_(obj, name, host, port, delete) -> None:
     """
     Configure a server.
 
@@ -210,7 +210,7 @@ async def server_(obj, name, host, port, delete):
 @cli.command()
 @click.pass_obj
 @click.argument("server", nargs=-1)
-async def monitor(obj, server):
+async def monitor(obj, server) -> None:
     """Stand-alone task to monitor one or more OWFS servers."""
     from .task import task  # noqa: PLC0415
 

@@ -95,13 +95,13 @@ class Thing(Base):
 
 @event.listens_for(Thing, "before_insert")
 @event.listens_for(Thing, "before_update")
-def validate_thing_coords(mapper, connection, model):  # noqa: D103
+def validate_thing_coords(mapper, connection, model) -> None:  # noqa: D103
     mapper, connection  # noqa:B018
     par = model.container
     if par is not None:
         par = par.boxtyp
 
-    def chk(p):
+    def chk(p) -> None:
         pp = f"pos_{p}"
         ppos = getattr(par, pp, None)
 

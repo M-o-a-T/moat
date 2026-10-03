@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class MonitoredValue:  # noqa: D101
-    def __init__(self, value, text, options):
+    def __init__(self, value, text, options) -> None:
         super().__init__()
         self.value = value
         self.text = text
@@ -59,7 +59,7 @@ class Service:  # noqa: D101
         "never",
     }
 
-    def __init__(self, id, serviceName, deviceInstance):  # pylint:disable=redefined-builtin
+    def __init__(self, id, serviceName, deviceInstance) -> None:  # pylint:disable=redefined-builtin
         super().__init__()
         self.id = id
         self.name = serviceName
@@ -76,7 +76,7 @@ class Service:  # noqa: D101
 
     # For legacy code, attributes can still be accessed as if keys from a
     # dictionary.
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
         setattr(self, key, value)
 
     def __getitem__(self, key):
@@ -85,7 +85,7 @@ class Service:  # noqa: D101
         except AttributeError:
             raise KeyError(key) from None
 
-    def set_seen(self, path):  # noqa: D102
+    def set_seen(self, path) -> None:  # noqa: D102
         self._seen.add(path)
 
     def seen(self, path):  # noqa: D102
@@ -121,7 +121,7 @@ class DbusMonitor(CtxObj):
         deviceAddedCallback=None,
         deviceRemovedCallback=None,
         vebusDeviceInstance0=False,
-    ):
+    ) -> None:
         # valueChangedCallback is the callback that we call when something
         # has changed. def value_changed_on_dbus(dbusServiceName, dbusPath,
         # options, changes, deviceInstance): in which `changes` is a tuple
@@ -240,7 +240,7 @@ class DbusMonitor(CtxObj):
     #           path='/'):
     #       return await _call(self.handler_item_changes, msg, senderId=msg.sender.name)
 
-    def dbus_name_owner_changed(self, msg):  # noqa: D102
+    def dbus_name_owner_changed(self, msg) -> None:  # noqa: D102
         name, oldowner, newowner = msg.body
         if not name.startswith("com.victronenergy."):
             return
@@ -248,7 +248,7 @@ class DbusMonitor(CtxObj):
         assert self._tg is not None
         self._tg.start_soon(self._process_name_owner_changed, name, oldowner, newowner)
 
-    async def _process_name_owner_changed(self, name, _oldowner, newowner):
+    async def _process_name_owner_changed(self, name, _oldowner, newowner) -> None:
         if newowner != "":
             # so we found some new service. Check if we can do something with it.
             newdeviceadded = await self.scan_dbus_service(name)
@@ -268,7 +268,7 @@ class DbusMonitor(CtxObj):
             self.servicesByClass[service.service_class].remove(service)
             await _call(self.deviceRemovedCallback, name, deviceInstance)
 
-    async def scan_dbus_service(self, serviceName):
+    async def scan_dbus_service(self, serviceName) -> bool:
         """
         Scans the given dbus service to see if it contains anything interesting for us.
         If it does, add it to our list of monitored D-Bus services.
@@ -372,7 +372,7 @@ class DbusMonitor(CtxObj):
 
         return True
 
-    def handler_item_changes(self, service, items):  # noqa: D102
+    def handler_item_changes(self, service, items) -> None:  # noqa: D102
         for path, changes in items.items():
             try:
                 v = unwrap_dbus_value(changes["Value"])
@@ -400,7 +400,7 @@ class DbusMonitor(CtxObj):
     #             t = str(v)
     #         self._handler_value_changes(service, path, v, t)
 
-    def _handler_value_changes(self, service, path, value, text):
+    def _handler_value_changes(self, service, path, value, text) -> None:
         try:
             a = service.paths[path]
         except KeyError:
@@ -427,7 +427,7 @@ class DbusMonitor(CtxObj):
                 a.options,
             )
 
-    async def _execute_value_changes(self, serviceName, objectPath, changes, options):
+    async def _execute_value_changes(self, serviceName, objectPath, changes, options) -> None:
         # double check that the service still exists, as it might have
         # disappeared between scheduling-for and executing this function.
         if serviceName not in self.servicesByName:
@@ -461,7 +461,7 @@ class DbusMonitor(CtxObj):
 
     # returns if a dbus exists now, by doing a blocking dbus call.
     # Typically seen will be sufficient and doesn't need access to the dbus.
-    async def exists(self, serviceName, objectPath):  # noqa: D102
+    async def exists(self, serviceName, objectPath) -> bool | None:  # noqa: D102
         try:
             await self.call_bus(serviceName, objectPath, None, "GetValue")
             return True
@@ -567,7 +567,7 @@ class DbusMonitor(CtxObj):
     #
     #         return result
     #
-    async def track_value(self, serviceName, objectPath, callback, *args, **kwargs):
+    async def track_value(self, serviceName, objectPath, callback, *args, **kwargs) -> None:
         """
         A DbusMonitor can watch specific service/path combos for changes
         so that it is not fully reliant on the global handler_value_changes
@@ -576,7 +576,7 @@ class DbusMonitor(CtxObj):
         """
         cb = partial(callback, *args, **kwargs)
 
-        def root_tracker(items):
+        def root_tracker(items) -> None:
             # Check if objectPath in dict
             try:
                 v = items[objectPath]

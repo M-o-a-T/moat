@@ -35,7 +35,7 @@ class BattComm(BaseCmd):
 
     n_cells: int | None = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self.t = ticks_ms()
         self.seq = 0
@@ -45,11 +45,11 @@ class BattComm(BaseCmd):
         self.rate = cfg.get("rate", 2400)
         self.n_cells = cfg.get("n", 16)
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         self.comm = self.root.sub_at(self.cfg["comm"])
 
-    async def task(self):  # noqa:D102
+    async def task(self) -> None:  # noqa:D102
         # Wait for the comm link to be ready before reading
         comm_name = self.cfg["comm"][0]
         await self.root.sub[comm_name].wait_ready()
@@ -147,9 +147,9 @@ class BattComm(BaseCmd):
         logger.debug("RES %s", pformat(res))
         return res
 
-    async def _read(self):
+    async def _read(self) -> None:
         # task to read serial data from the Serial subsystem
-        def set_err(seq, err):
+        def set_err(seq, err) -> None:
             n, self.waiting[seq] = self.waiting[seq], None
             if n is not None:
                 n.set_error(err)

@@ -34,7 +34,7 @@ from .model import Address, Cable, Host, HostGroup, Interface, Network, Vlan
 
 @load_subgroup(prefix="moat.db.inv", invoke_without_command=False)
 @click.pass_context
-def cli(ctx):
+def cli(ctx) -> None:
     """Network inventory management."""
     obj = ctx.obj
     sess = ctx.with_resource(database(obj.cfg.db))
@@ -50,7 +50,7 @@ def cli(ctx):
 class _ShowGroup(AliasedGroup):
     """A command group that runs its ``show`` subcommand if none is given."""
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:
         kw.setdefault("no_args_is_help", False)
         super().__init__(*a, **kw)
 
@@ -100,7 +100,7 @@ def _norm_iface(name: str) -> str:
 @click.option("--tag", "-t", "tag", type=int, help="802.1Q VLAN tag")
 @click.option("--name", "-n", "vname", type=str, help="VLAN name (instead of '--tag')")
 @click.pass_obj
-def vlan_grp(obj, tag, vname):
+def vlan_grp(obj, tag, vname) -> None:
     """Manage VLANs.
 
     Select a VLAN with '-t TAG' or '-n NAME'.
@@ -114,7 +114,7 @@ def vlan_grp(obj, tag, vname):
 
 @vlan_grp.command(name="show")
 @click.pass_obj
-def vlan_show(obj):
+def vlan_show(obj) -> None:
     """Show a VLAN or list all VLANs.
 
     Use 'vlan -t TAG show' or 'vlan -n NAME show' for a single VLAN.
@@ -144,7 +144,7 @@ def vlan_opts(c):
 @vlan_grp.command(name="add")
 @vlan_opts
 @click.pass_obj
-def vlan_add(obj, **kw):
+def vlan_add(obj, **kw) -> None:
     """Add a VLAN."""
     if obj.tag is None:
         raise click.UsageError("The VLAN needs a tag!")
@@ -157,7 +157,7 @@ def vlan_add(obj, **kw):
 @vlan_grp.command(name="set")
 @vlan_opts
 @click.pass_obj
-def vlan_set(obj, **kw):
+def vlan_set(obj, **kw) -> None:
     """Modify a VLAN."""
     v = _get_one(obj, Vlan, "VLAN", tag=obj.tag)
     v.apply(**kw)
@@ -165,7 +165,7 @@ def vlan_set(obj, **kw):
 
 @vlan_grp.command(name="delete")
 @click.pass_obj
-def vlan_delete(obj):
+def vlan_delete(obj) -> None:
     """Delete a VLAN."""
     v = _get_one(obj, Vlan, "VLAN", tag=obj.tag)
     obj.session.delete(v)
@@ -180,7 +180,7 @@ def vlan_delete(obj):
 @click.option("--name", "-n", type=str, help="Network name")
 @click.option("--address", "-a", type=str, help="An address in the network (instead of '--name')")
 @click.pass_obj
-def net_grp(obj, name, address):
+def net_grp(obj, name, address) -> None:
     """Manage IP networks on VLANs.
 
     Select a network with '-n NAME' or '-a ADDRESS'.
@@ -211,7 +211,7 @@ def _net_for(obj, address: str) -> Network:
 
 @net_grp.command(name="show")
 @click.pass_obj
-def net_show(obj):
+def net_show(obj) -> None:
     """Show a network or list all networks.
 
     Use 'net -n NAME show' or 'net -a ADDRESS show' for a single network.
@@ -245,7 +245,7 @@ def net_opts(c):
 @net_grp.command(name="add")
 @net_opts
 @click.pass_obj
-def net_add(obj, **kw):
+def net_add(obj, **kw) -> None:
     """Add a network."""
     name = _require(obj, "network")
     _absent(obj, Network, "network", name=name)
@@ -257,7 +257,7 @@ def net_add(obj, **kw):
 @net_grp.command(name="set")
 @net_opts
 @click.pass_obj
-def net_set(obj, **kw):
+def net_set(obj, **kw) -> None:
     """Modify a network."""
     n = _get_one(obj, Network, "network", name=obj.name)
     n.apply(**kw)
@@ -265,7 +265,7 @@ def net_set(obj, **kw):
 
 @net_grp.command(name="delete")
 @click.pass_obj
-def net_delete(obj):
+def net_delete(obj) -> None:
     """Delete a network."""
     n = _get_one(obj, Network, "network", name=obj.name)
     obj.session.delete(n)
@@ -319,7 +319,7 @@ def _select_host(obj, domain: str | None, name: str | None, addr: str | None = N
 @click.option("--name", "-n", type=str, help="Short name of the host (instead of '--domain')")
 @click.option("--addr", "-a", type=str, help="Select the host that owns this IP address")
 @click.pass_obj
-def host_grp(obj, domain, name, addr):
+def host_grp(obj, domain, name, addr) -> None:
     """Manage hosts.
 
     Select a host with '-d FQDN', '-n NAME', or '-a ADDR', e.g.
@@ -331,7 +331,7 @@ def host_grp(obj, domain, name, addr):
 @host_grp.command(name="show")
 @click.option("--type", "-t", "type_", type=str, help="Thing type to filter by")
 @click.pass_obj
-def host_show(obj, type_):
+def host_show(obj, type_) -> None:
     """Show a host or list all hosts.
 
     Use 'host -d FQDN show' or 'host -n NAME show' for a single host.
@@ -366,7 +366,7 @@ def host_opts(c):
 @host_grp.command(name="add")
 @host_opts
 @click.pass_obj
-def host_add(obj, **kw):
+def host_add(obj, **kw) -> None:
     """Add a host."""
     domain = obj.domain
     if domain is None:
@@ -380,7 +380,7 @@ def host_add(obj, **kw):
 @host_grp.command(name="set")
 @host_opts
 @click.pass_obj
-def host_set(obj, **kw):
+def host_set(obj, **kw) -> None:
     """Modify a host."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     h.apply(**kw)
@@ -388,7 +388,7 @@ def host_set(obj, **kw):
 
 @host_grp.command(name="delete")
 @click.pass_obj
-def host_delete(obj):
+def host_delete(obj) -> None:
     """Delete a host (and its Thing)."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     obj.session.delete(h)
@@ -403,7 +403,7 @@ def host_delete(obj):
 @click.option("--addr", "-a", type=str, help="Select the interface that owns this IP address")
 @click.argument("iname", type=str)
 @click.pass_obj
-def iface_grp(obj, iname, addr):
+def iface_grp(obj, iname, addr) -> None:
     """Manage interfaces of a host.
 
     Use '.' for the empty-named interface (former direct attachment),
@@ -450,7 +450,7 @@ def _iname(obj) -> str:
 
 @iface_grp.command(name="show")
 @click.pass_obj
-def iface_show(obj):
+def iface_show(obj) -> None:
     """Show an interface, or list all interfaces of the host.
 
     Use 'host -n NAME iface - show' to list all interfaces, or
@@ -485,7 +485,7 @@ def iface_opts(c):
 @iface_grp.command(name="add")
 @iface_opts
 @click.pass_obj
-def iface_add(obj, **kw):
+def iface_add(obj, **kw) -> None:
     """Add an interface to a host."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     _absent(obj, Interface, "interface", host=h, name=_iname(obj))
@@ -502,7 +502,7 @@ def iface_add(obj, **kw):
 @iface_grp.command(name="set")
 @iface_opts
 @click.pass_obj
-def iface_set(obj, **kw):
+def iface_set(obj, **kw) -> None:
     """Modify an interface."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     i = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
@@ -516,7 +516,7 @@ def iface_set(obj, **kw):
 
 @iface_grp.command(name="delete")
 @click.pass_obj
-def iface_delete(obj):
+def iface_delete(obj) -> None:
     """Delete an interface."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     i = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
@@ -526,7 +526,7 @@ def iface_delete(obj):
 @iface_grp.command(name="link")
 @click.argument("dest", type=str)
 @click.pass_obj
-def iface_link(obj, dest):
+def iface_link(obj, dest) -> None:
     """Create a cable between this interface and another.
 
     DEST is specified as ``DOMAIN:IFACE`` (use ``.`` for the direct
@@ -601,14 +601,14 @@ def _resolve_iface_spec(obj, spec: str) -> Interface:
 
 @iface_grp.group(name="addr", cls=_ShowGroup)
 @click.pass_obj
-def addr_grp(obj):
+def addr_grp(obj) -> None:
     """Manage addresses on an interface."""
     pass
 
 
 @addr_grp.command(name="show")
 @click.pass_obj
-def addr_show(obj):
+def addr_show(obj) -> None:
     """Show addresses on an interface."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     i = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
@@ -621,7 +621,7 @@ def addr_show(obj):
 @addr_grp.command(name="add")
 @click.option("--addr", "-a", type=str, required=True, help="IP address (e.g. 10.0.0.5/24)")
 @click.pass_obj
-def addr_add(obj, addr):
+def addr_add(obj, addr) -> None:
     """Add a manual address to an interface."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     i = _get_one(obj, Interface, "interface", host=h, name=_iname(obj))
@@ -633,7 +633,7 @@ def addr_add(obj, addr):
 @addr_grp.command(name="delete")
 @click.option("--addr", "-a", type=str, required=True, help="IP address to remove")
 @click.pass_obj
-def addr_delete(obj, addr):
+def addr_delete(obj, addr) -> None:
     """Remove a manual address from an interface."""
     from .ip import IpValue  # noqa: PLC0415
 
@@ -657,7 +657,7 @@ def addr_delete(obj, addr):
 @click.option("--name", "-n", type=str, help="Short name of the wire (instead of '--domain')")
 @click.option("--addr", "-a", type=str, help="Select the wire that owns this IP address")
 @click.pass_obj
-def wire_grp(obj, domain, name, addr):
+def wire_grp(obj, domain, name, addr) -> None:
     """Manage wires (hosts with thing type 'wire' and two interfaces a/b).
 
     Select a wire with '-d FQDN', '-n NAME', or '-a ADDR'.
@@ -667,7 +667,7 @@ def wire_grp(obj, domain, name, addr):
 
 @wire_grp.command(name="show")
 @click.pass_obj
-def wire_show(obj):
+def wire_show(obj) -> None:
     """Show a wire or list all wires.
 
     Use 'wire -d FQDN show' or 'wire -n NAME show' for a single wire.
@@ -706,7 +706,7 @@ def wire_opts(c):
 @wire_grp.command(name="add")
 @wire_opts
 @click.pass_obj
-def wire_add(obj, **kw):
+def wire_add(obj, **kw) -> None:
     """Add a wire (creates a host with thing type 'wire' and interfaces a/b)."""
     domain = obj.domain
     if domain is None:
@@ -724,7 +724,7 @@ def wire_add(obj, **kw):
 @wire_grp.command(name="set")
 @wire_opts
 @click.pass_obj
-def wire_set(obj, **kw):
+def wire_set(obj, **kw) -> None:
     """Modify a wire."""
     h = _get_one(obj, Host, "wire", domain=obj.domain)
     h.apply(**kw)
@@ -732,7 +732,7 @@ def wire_set(obj, **kw):
 
 @wire_grp.command(name="delete")
 @click.pass_obj
-def wire_delete(obj):
+def wire_delete(obj) -> None:
     """Delete a wire (and its Thing)."""
     h = _get_one(obj, Host, "wire", domain=obj.domain)
     obj.session.delete(h)
@@ -748,7 +748,7 @@ def wire_delete(obj):
 )
 @click.argument("dest", type=str)
 @click.pass_obj
-def wire_link(obj, end, dest):
+def wire_link(obj, end, dest) -> None:
     """Connect a wire endpoint to another interface.
 
     Links the 'b' end (farther from the main router) by default.
@@ -773,14 +773,14 @@ def wire_link(obj, end, dest):
 
 @cli.group(name="cable", cls=_ShowGroup)
 @click.pass_obj
-def cable_grp(obj):
+def cable_grp(obj) -> None:
     """Manage cables."""
     pass
 
 
 @cable_grp.command(name="show")
 @click.pass_obj
-def cable_show(obj):
+def cable_show(obj) -> None:
     """List all cables."""
     sess = obj.session
     with sess.execute(select(Cable)) as rs:
@@ -803,14 +803,14 @@ def cable_show(obj):
 @cli.group(name="group", cls=_ShowGroup)
 @click.option("--name", "-n", type=str, help="Group name")
 @click.pass_obj
-def group_grp(obj, name):
+def group_grp(obj, name) -> None:
     """Manage host groups."""
     obj.name = name
 
 
 @group_grp.command(name="show")
 @click.pass_obj
-def group_show(obj):
+def group_show(obj) -> None:
     """Show a group or list all groups.
 
     Use 'group -n NAME show' for a single group.
@@ -838,7 +838,7 @@ def group_opts(c):
 @group_grp.command(name="add")
 @group_opts
 @click.pass_obj
-def group_add(obj, **kw):
+def group_add(obj, **kw) -> None:
     """Add a group."""
     name = _require(obj, "group")
     _absent(obj, HostGroup, "group", name=name)
@@ -850,7 +850,7 @@ def group_add(obj, **kw):
 @group_grp.command(name="set")
 @group_opts
 @click.pass_obj
-def group_set(obj, **kw):
+def group_set(obj, **kw) -> None:
     """Modify a group."""
     g = _get_one(obj, HostGroup, "group", name=obj.name)
     g.apply(**kw)
@@ -858,7 +858,7 @@ def group_set(obj, **kw):
 
 @group_grp.command(name="delete")
 @click.pass_obj
-def group_delete(obj):
+def group_delete(obj) -> None:
     """Delete a group."""
     g = _get_one(obj, HostGroup, "group", name=obj.name)
     obj.session.delete(g)
@@ -872,14 +872,14 @@ def group_delete(obj):
 @host_grp.group(name="group", cls=_ShowGroup)
 @click.option("--name", "-g", type=str, help="Group name")
 @click.pass_obj
-def host_group_grp(obj, name):
+def host_group_grp(obj, name) -> None:
     """Manage group memberships of a host."""
     obj.group_name = name
 
 
 @host_group_grp.command(name="show")
 @click.pass_obj
-def host_group_show(obj):
+def host_group_show(obj) -> None:
     """Show groups of a host."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     for g in sorted(h.groups, key=lambda x: x.name):
@@ -888,7 +888,7 @@ def host_group_show(obj):
 
 @host_group_grp.command(name="add")
 @click.pass_obj
-def host_group_add(obj):
+def host_group_add(obj) -> None:
     """Add a host to a group."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     g = _get_one(obj, HostGroup, "group", name=obj.group_name)
@@ -897,7 +897,7 @@ def host_group_add(obj):
 
 @host_group_grp.command(name="delete")
 @click.pass_obj
-def host_group_delete(obj):
+def host_group_delete(obj) -> None:
     """Remove a host from a group."""
     h = _get_one(obj, Host, "host", domain=obj.domain)
     g = _get_one(obj, HostGroup, "group", name=obj.group_name)
@@ -919,7 +919,7 @@ def host_group_delete(obj):
 @click.option("-n", "--dry-run", is_flag=True, help="Report, but don't store anything.")
 @click.option("-f", "--force", is_flag=True, help="Import even if the inventory isn't empty.")
 @click.pass_obj
-async def migrate_from_kv(obj, infile, dry_run, force):
+async def migrate_from_kv(obj, infile, dry_run, force) -> None:
     """Import the MoaT-KV inventory ('moat kv inv').
 
     Prints a report of skipped entries and of changes to review.

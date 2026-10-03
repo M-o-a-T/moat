@@ -71,7 +71,7 @@ for _i, _c in InvControl.MODES.items():
     type=click.File("r"),
     help="Configuration file (YAML)",
 )
-async def cli(debug, mode, no_op, param, config):
+async def cli(debug, mode, no_op, param, config) -> None:
     """
     This program controls a Victron Energy inverter.
     """

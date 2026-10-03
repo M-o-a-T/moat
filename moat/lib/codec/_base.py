@@ -42,7 +42,7 @@ class Codec:
     ``__anext__``.
     """
 
-    def __init__(self, ext=None):
+    def __init__(self, ext=None) -> None:
         if ext is None:
             ext = Extension()  # empty
         self.ext = ext
@@ -113,7 +113,7 @@ if TYPE_CHECKING:
 
 
 class Extension:
-    def __init__(self):
+    def __init__(self) -> None:
         self.enc: dict[type, tuple[int | None, Callable]] = {}
         self.dec: dict[int, Callable] = {}
 

@@ -9,7 +9,7 @@ from asyncowfs.mock import some_server
 from .task import task
 
 
-async def server(client, tree: dict | None = None, options: dict | None = None, evt=None):  # noqa: D103
+async def server(client, tree: dict | None = None, options: dict | None = None, evt=None) -> None:  # noqa: D103
     async with (
         anyio.create_task_group() as tg,
         await anyio.create_tcp_listener(
@@ -19,7 +19,7 @@ async def server(client, tree: dict | None = None, options: dict | None = None, 
         ) as listener,
     ):
 
-        async def may_close():
+        async def may_close() -> None:
             with contextlib.suppress(anyio.ClosedResourceError, anyio.BrokenResourceError):
                 await listener.serve(partial(some_server, tree or {}, options or {}))
 

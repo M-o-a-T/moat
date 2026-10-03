@@ -27,22 +27,22 @@ class _WAGObase(ClientEntry):
             self._server = self.parent.server
         return self._server
 
-    async def set_value(self, val):  # pylint: disable=arguments-differ
+    async def set_value(self, val) -> None:  # pylint: disable=arguments-differ
         await super().set_value(val)
         if self.server is not None:
             await self._update_server()
 
-    async def update_server(self):
+    async def update_server(self) -> None:
         await self.parent.update_server()
 
-    async def _update_server(self):
+    async def _update_server(self) -> None:
         if not self.val_d(True, "present"):
             return
         await self.setup()
         for k in self:
             await k._update_server()  # noqa: SLF001
 
-    async def setup(self):
+    async def setup(self) -> None:
         pass
 
 
@@ -65,7 +65,7 @@ class _WAGOnode(_WAGObase):
     def tg(self):
         return self.server.task_group
 
-    async def setup(self):
+    async def setup(self) -> None:
         await super().setup()
         if self.server is None:
             self._poll = None
@@ -84,7 +84,7 @@ class WAGOinput(_WAGOnode):
     An input port is polled or counted.
     """
 
-    async def _poll_task(self, dest, *, task_status):
+    async def _poll_task(self, dest, *, task_status) -> None:
         with anyio.CancelScope() as sc:
             self._poll = sc
             rest = self.find_cfg("rest", default=False)
@@ -93,7 +93,7 @@ class WAGOinput(_WAGOnode):
                 async for val in mon:
                     await self.client.set(dest, value=(val != rest))
 
-    async def _count_task(self, dest, intv, direc, *, task_status):
+    async def _count_task(self, dest, intv, direc, *, task_status) -> None:
         with anyio.CancelScope() as sc:
             self._poll = sc
             delta = await self.client.get(dest)
@@ -111,7 +111,7 @@ class WAGOinput(_WAGOnode):
                 async for val in mon:
                     await self.client.set(dest, value=val + delta)
 
-    async def setup(self):  # noqa: D102
+    async def setup(self) -> None:  # noqa: D102
         await super().setup()
 
         if self.server is None:
@@ -144,7 +144,7 @@ class WAGOoutput(_WAGOnode):
     _work = None
     _work_done = None
 
-    async def with_output(self, src, proc, *args, task_status):
+    async def with_output(self, src, proc, *args, task_status) -> None:
         """
         Task that monitors one entry and writes its value to the Wago controller.
 
@@ -203,7 +203,7 @@ class WAGOoutput(_WAGOnode):
                             comment=f"Bad value: {val!r}",
                         )
 
-    async def _set_value(self, val, preload, state, negate):
+    async def _set_value(self, val, preload, state, negate) -> None:
         """
         Task that monitors one entry and writes its value to the Wago controller.
 
@@ -215,7 +215,7 @@ class WAGOoutput(_WAGOnode):
         if state is not None:
             await self.client.set(state, value=val)
 
-    async def _oneshot_value(self, val, preload, state, negate, t_on):  # pylint: disable=unused-argument
+    async def _oneshot_value(self, val, preload, state, negate, t_on) -> None:  # pylint: disable=unused-argument
         """
         Task that monitors one entry. Its value is written to the
         controller but if it's = ``direc`` it's reverted autonomously after
@@ -227,7 +227,7 @@ class WAGOoutput(_WAGOnode):
 
         """
 
-        async def work_oneshot(task_status):
+        async def work_oneshot(task_status) -> None:
             nonlocal t_on
             if isinstance(t_on, (Path, list, tuple)):
                 t_on = (await self.client.get(t_on)).value_or(None)
@@ -268,7 +268,7 @@ class WAGOoutput(_WAGOnode):
             else:
                 await self._set_value(False, None, state, negate)
 
-    async def _pulse_value(self, val, preload, state, negate, t_on, t_off):
+    async def _pulse_value(self, val, preload, state, negate, t_on, t_off) -> None:
         """
         Pulse the value.
 
@@ -276,7 +276,7 @@ class WAGOoutput(_WAGOnode):
         """
         preload  # noqa:B018
 
-        async def work_pulse(task_status):
+        async def work_pulse(task_status) -> None:
             nonlocal t_on
             nonlocal t_off
             if isinstance(t_on, (Path, list, tuple)):
@@ -327,7 +327,7 @@ class WAGOoutput(_WAGOnode):
             else:
                 await self._set_value(False, None, state, negate)
 
-    async def setup(self):  # noqa: D102
+    async def setup(self) -> None:  # noqa: D102
         await super().setup()
         if self.server is None:
             return
@@ -399,7 +399,7 @@ class WAGOoutputBase(_WAGObaseNUM):  # noqa: D101
 
 
 class _WAGObaseSERV(_WAGObase):
-    async def set_value(self, val):
+    async def set_value(self, val) -> None:
         await super().set_value(val)
         await self.update_server()
 
@@ -419,11 +419,11 @@ class WAGOserver(_WAGObaseSERV):  # noqa: D101
     def server(self):  # noqa: D102
         return self._server
 
-    async def set_server(self, server):  # noqa: D102
+    async def set_server(self, server) -> None:  # noqa: D102
         self._server = server
         await self._update_server()
 
-    async def setup(self):  # noqa: D102
+    async def setup(self) -> None:  # noqa: D102
         await super().setup()
         s = self.server
         if s is not None:
@@ -437,7 +437,7 @@ class WAGOroot(_WAGObase, ClientRoot):  # noqa: D101
     CFG = "wago"
     err = None
 
-    async def run_starting(self, server=None):  # noqa: D102
+    async def run_starting(self, server=None) -> None:  # noqa: D102
         self._server = server
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
@@ -454,5 +454,5 @@ class WAGOroot(_WAGObase, ClientRoot):  # noqa: D101
     def child_type(self, name):  # noqa: ARG002, D102
         return WAGOserver
 
-    async def update_server(self):  # noqa: D102
+    async def update_server(self) -> None:  # noqa: D102
         await self._update_server()

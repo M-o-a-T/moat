@@ -37,7 +37,7 @@ class _InvSub:
         long_name=None,
         prepare=None,
         list_recursive=False,
-    ):
+    ) -> None:
         self.name = name
         self.id_name = id_name
         self.id_typ = id_typ
@@ -120,7 +120,7 @@ def std_command(cli, *a, **kw):
     )
     @click.argument("name", type=str, nargs=1)
     @click.pass_context
-    async def typ(ctx, name):
+    async def typ(ctx, name) -> None:
         obj = ctx.obj
         if tinv.prepare is not None:
             await tinv.prepare(obj)
@@ -179,7 +179,7 @@ def std_command(cli, *a, **kw):
     @tinv.id_arg
     @tinv.apply_aux
     @click.pass_obj
-    async def add(obj, **kw):
+    async def add(obj, **kw) -> None:
         name = obj[tnname]
         if obj[tname] is not None:
             raise RuntimeError(f"{name} already exists")
@@ -198,7 +198,7 @@ def std_command(cli, *a, **kw):
     @typ.command("set", short_help=f"Modify a {tinv.long_name} server")
     @tinv.apply_aux
     @click.pass_obj
-    async def set_(obj, **kw):
+    async def set_(obj, **kw) -> None:
         n = obj[tname]
         if n is None:
             raise KeyError(tname)
@@ -211,7 +211,7 @@ def std_command(cli, *a, **kw):
 
     @typ.command(short_help=f"Delete a {tinv.long_name} server")
     @click.pass_obj
-    async def delete(obj, **kw):  # noqa: ARG001
+    async def delete(obj, **kw) -> None:  # noqa: ARG001
         name = obj[tnname]
         n = this(obj).by_name(name)
         if n is not None:
@@ -221,7 +221,7 @@ def std_command(cli, *a, **kw):
         Delete a {tinv.long_name} server.
         """
 
-    async def _v_mod(obj, thing, **kw):
+    async def _v_mod(obj, thing, **kw) -> None:
         tinv.apply(obj, thing, kw)
         for k, v in kw.items():
             if v:

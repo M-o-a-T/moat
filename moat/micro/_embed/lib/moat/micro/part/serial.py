@@ -26,7 +26,7 @@ class NamedSerial(FileBuf):
 
     doc = dict(_c=dict(_d="Serial port", port="int:port# (1)", timeout="int:timeout(ms,50)"))
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg=cfg, timeout=cfg.get("timeout", 50))
 
     async def stream(self):  # noqa: D102

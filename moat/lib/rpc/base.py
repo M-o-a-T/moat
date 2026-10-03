@@ -71,7 +71,7 @@ class Caller:
         sender: BaseMsgHandler | MsgRoot,
         data: tuple[str | Path, list[Any] | tuple[Any, ...], dict[str, Any]],
         _list: bool | EllipsisType | None = NotGiven,
-    ):
+    ) -> None:
         """
         Args:
             sender: the MsgSender on which we call :py:meth:`MsgSender.handle` to get the result.
@@ -254,7 +254,7 @@ class MsgSender(BaseMsgHandler):
 
     Caller_: type[Caller] = Caller
 
-    def __init__(self, root: MsgRoot):
+    def __init__(self, root: MsgRoot) -> None:
         """
         This class accepts client-side MoaT-cmd calls and turns them into
         messages.
@@ -276,7 +276,7 @@ class MsgSender(BaseMsgHandler):
     def root(self) -> MsgRoot:  # noqa: D102
         return self._root
 
-    def set_root(self, root: MsgRoot):  # noqa: D102
+    def set_root(self, root: MsgRoot) -> None:  # noqa: D102
         if type(self) is not MsgSender:
             raise RuntimeError("not in a subclass")
         assert not isinstance(root, MsgSender)
@@ -382,7 +382,7 @@ class SubMsgSender(MsgSender):
     _path: Path
     _rpath: list[PathElem]
 
-    def __init__(self, root: MsgRoot, path: Path, caller=None):
+    def __init__(self, root: MsgRoot, path: Path, caller=None) -> None:
         """
         Setup.
         """
@@ -397,7 +397,7 @@ class SubMsgSender(MsgSender):
         if caller is not None:
             self.Caller_ = caller
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}:{self.root} {self._path}"
 
     @property
@@ -509,7 +509,7 @@ class MsgHandler(Base, BaseMsgHandler, MsgRoot):
         return self
 
     @property
-    def sender(self):
+    def sender(self) -> None:
         """
         If you implement a ``MsgHandler`` that controls a remote link,
         override this method to return a MsgSender that transmits to the
@@ -685,7 +685,7 @@ class MsgHandler(Base, BaseMsgHandler, MsgRoot):
             res["s"] = s
         return res
 
-    async def check_rdy(self, msg: Msg, rcmd: list[PathElem]):
+    async def check_rdy(self, msg: Msg, rcmd: list[PathElem]) -> None:
         """
         Basic boilerplate command for handling basic readiness checks in
         `handle` and similar methods.

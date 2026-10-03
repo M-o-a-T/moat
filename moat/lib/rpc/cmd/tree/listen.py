@@ -52,7 +52,7 @@ class BaseListenOneCmd(BaseLayerCmd):
 
         return serial_stack(conn, self.cfg)
 
-    async def reject(self, conn: BaseBuf):
+    async def reject(self, conn: BaseBuf) -> None:
         """
         Close the connection.
         """
@@ -60,7 +60,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         async with conn:
             pass
 
-    async def handler(self, conn):
+    async def handler(self, conn) -> None:
         """
         Process a connection
         """
@@ -157,7 +157,7 @@ class BaseListenCmd(BaseSubCmd):
     listener = BaseListenOneCmd.listener
     wrapper = BaseListenOneCmd.wrapper
 
-    async def handler(self, conn):
+    async def handler(self, conn) -> None:
         """
         Process a new connection.
         """

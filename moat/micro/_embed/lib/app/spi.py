@@ -51,20 +51,20 @@ class Cmd(BaseCmd):
         pha="int:phase(0)",
     )
 
-    async def setup(self):
+    async def setup(self) -> None:
         """
         Open a bus.
         """
         await super().setup()
         self._setup()
 
-    async def reload(self):
+    async def reload(self) -> None:
         "reconfigured"
         self._teardown()
         self._setup()
         await super().reload()
 
-    def _setup(self):
+    def _setup(self) -> None:
         cfg = self.cfg
 
         # CS pin handling
@@ -105,12 +105,12 @@ class Cmd(BaseCmd):
             self._bus = self._cache[0]
             self.lock = self._cache[1]
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         "shutdown"
         self._teardown()
         await super().teardown()
 
-    def _teardown(self):
+    def _teardown(self) -> None:
         if self._cache is not None:
             # Hardware SPI - clear ownership on shared bus
             if self._cache[2] is self:
@@ -122,7 +122,7 @@ class Cmd(BaseCmd):
             self._bus.deinit()
             self._bus = None
 
-    def _ensure_config(self):
+    def _ensure_config(self) -> None:
         """Reinit bus if another driver used it since we did."""
         if self._cache is not None and self._cache[2] is not self:
             self._bus.init(**self._spi_cfg)

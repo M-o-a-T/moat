@@ -34,7 +34,7 @@ class Codec(_cbor.Codec):
     CBOR codec with MoaT's standard extensions.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(ext=std_ext)
 
     def decode(self, data: ByteType):  # noqa:D102,RUF100

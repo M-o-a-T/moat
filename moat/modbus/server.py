@@ -146,7 +146,7 @@ class UnitContext:
 class BaseModbusServer(CtxObj):
     """Basic base class for servers."""
 
-    def __init__(self, identity: Identity | None = None, response_manipulator=None):
+    def __init__(self, identity: Identity | None = None, response_manipulator=None) -> None:
         self.units: dict[int, UnitContext] = {}
         self.broadcast_enable = False
         self.response_manipulator = response_manipulator
@@ -224,13 +224,13 @@ class SerialModbusServer(BaseModbusServer):
     ignore_missing_devices = False
     single = False
 
-    def __init__(self, identity=None, timeout=None, **args):
+    def __init__(self, identity=None, timeout=None, **args) -> None:
         super().__init__(identity=identity)
         self.args = args
         self.timeout = timeout
         self.framer = FramerRTU(True)
 
-    async def serve(self, opened=None):  # noqa: D102
+    async def serve(self, opened=None) -> None:  # noqa: D102
         from anyio_serial import Serial  # pylint: disable=import-outside-toplevel  # noqa:PLC0415,I001
 
         async with Serial(**self.args) as ser:
@@ -271,7 +271,7 @@ class SerialModbusServer(BaseModbusServer):
                     with anyio.fail_after(2):
                         await self._process(msg)
 
-    async def _process(self, request: PDU):
+    async def _process(self, request: PDU) -> None:
         broadcast = False
         unit = request.unit_id
         tid = request.transaction_id
@@ -361,11 +361,11 @@ class RelayServer:
     framer: FramerRTU
     _serial: ByteStream
 
-    def __init__(self, client, *a, **k):
+    def __init__(self, client, *a, **k) -> None:
         self._client = client
         super().__init__(*a, **k)
 
-    async def _process(self, request: PDU):
+    async def _process(self, request: PDU) -> None:
         request = self.mon_request(request)
         tid = request.transaction_id
         resp = await self._client.execute(request)
@@ -397,14 +397,14 @@ class ModbusServer(BaseModbusServer):
     taskgroup = None
     single = False
 
-    def __init__(self, identity=None, address=None, port=None):
+    def __init__(self, identity=None, address=None, port=None) -> None:
         super().__init__(identity=identity)
 
         self.framer_cls = FramerTCP
         self.address = address or "localhost"
         self.port = port if port is not None else 502
 
-    async def serve(self, opened: anyio.Event | None = None):
+    async def serve(self, opened: anyio.Event | None = None) -> None:
         """Run this server.
 
         Sets the ``opened`` event, if given, as soon as the server port is open.
@@ -431,7 +431,7 @@ class ModbusServer(BaseModbusServer):
         finally:
             self.taskgroup = None
 
-    async def _serve_one(self, conn):
+    async def _serve_one(self, conn) -> None:
         reset_frame = False
         framer = FramerTCP(True)
 

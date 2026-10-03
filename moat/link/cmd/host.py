@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(cls=AliasedGroup, short_help="Manage host services.")  # pylint: disable=undefined-variable
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx) -> None:
     """
     Each server that's connected to moat-link should run a host service.
 
@@ -45,7 +45,7 @@ async def cli(ctx):
 @click.option("-n", "--no-main", is_flag=True, help="Main server verbose no-action mode")
 @click.option("-d", "--debug", is_flag=True, help="Debug?")
 @click.pass_obj
-async def run(obj, main, no_main, debug):
+async def run(obj, main, no_main, debug) -> None:
     """
     Host management background task.
 
@@ -73,7 +73,7 @@ async def run(obj, main, no_main, debug):
 @click.option("-t", "--timeout", type=float, help="Stop after this many seconds.")
 @click.option("-d", "--dump", is_flag=True, help="Show details.")
 @click.pass_obj
-async def list(obj, timeout, dump):  # noqa: A001
+async def list(obj, timeout, dump) -> None:  # noqa: A001
     """
     Host list.
 
@@ -114,14 +114,14 @@ async def list(obj, timeout, dump):  # noqa: A001
     tty = sys.stdout.isatty()
     shown = False
 
-    def clear():
+    def clear() -> None:
         """Erase a pending transient status line."""
         nonlocal shown
         if shown:
             print("\r\x1b[K", end="")
             shown = False
 
-    def show_status(hid, k, ok, value):
+    def show_status(hid, k, ok, value) -> None:
         """Report a service's state and value, if they changed."""
         nonlocal shown
         if status.get((hid, k)) == (ok, value) or not verbose:
@@ -180,7 +180,7 @@ async def list(obj, timeout, dump):  # noqa: A001
 @cli.command()
 @click.argument("paths", type=P, nargs=-1)
 @click.pass_obj
-async def kill(obj, paths):
+async def kill(obj, paths) -> None:
     """
     Kill a hosted service.
     """

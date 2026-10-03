@@ -51,7 +51,7 @@ class BaseSuperCmd(BaseCmd):
         Run (or reload) this app.
         """
 
-        async def _run(app):
+        async def _run(app) -> None:
             try:
                 await app.run()
             finally:
@@ -98,7 +98,7 @@ class BaseSubCmd(BaseSuperCmd):
 
     sub: dict[str, BaseCmd]
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self.sub = {}
 
@@ -137,7 +137,7 @@ class BaseSubCmd(BaseSuperCmd):
         """
         return self.attach(name, None)
 
-    async def reload(self):
+    async def reload(self) -> None:
         "reload apps"
         root = self.root
         if root is None:
@@ -230,11 +230,11 @@ class DirCmd(BaseSubCmd):
 
     SKIP_RDY = True
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self._lock = Lock()
 
-    async def reload(self):
+    async def reload(self) -> None:
         "called after the config has been updated"
         async with self._lock:
             await super().reload()
@@ -274,12 +274,12 @@ class DirCmd(BaseSubCmd):
 
     cmd_upd_ = reload
 
-    async def task(self):
+    async def task(self) -> None:
         "Setup apps"
         await self._setup_apps()
         await super().task()
 
-    async def _setup_apps(self):
+    async def _setup_apps(self) -> None:
         from moat.lib.rpc import LoadCmd  # noqa: PLC0415
 
         # log("Setup %s: %s", self, self.path)

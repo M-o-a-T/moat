@@ -24,7 +24,7 @@ __all__ = ["Backend"]
 class Backend(_Backend):
     """The Akumuli backend driver."""
 
-    def __init__(self, cfg: dict, name: str):
+    def __init__(self, cfg: dict, name: str) -> None:
         """
         Initialize Akumuli backend.
 

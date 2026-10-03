@@ -16,7 +16,7 @@ def help_preserve_blocks(text: str) -> str: ...
 def help_preserve_blocks(text: Callable) -> Callable: ...
 
 
-def help_preserve_blocks(text: str | None | Callable) -> str | None | Callable:
+def help_preserve_blocks(text: str | Callable | None) -> str | Callable | None:
     """Mark preformatted help paragraphs so Click does not reflow them."""
 
     func = None

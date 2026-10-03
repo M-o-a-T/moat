@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @click.group(cls=AliasedGroup, short_help="Manage Wago controllers.")
-async def cli():
+async def cli() -> None:
     """
     List Wago controllers, modify device handling …
     """
@@ -26,7 +26,7 @@ async def cli():
 @cli.command()
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def dump(obj, path):
+async def dump(obj, path) -> None:
     """Emit the current state as a YAML file."""
     res = {}
     path = P(path)
@@ -49,7 +49,7 @@ async def dump(obj, path):
 @cli.command("list")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def list_(obj, path):
+async def list_(obj, path) -> None:
     """List the next stage."""
     path = P(path)
     if len(path) > 4:
@@ -68,7 +68,7 @@ async def list_(obj, path):
 @attr_args
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def attr_(obj, path, **kw):
+async def attr_(obj, path, **kw) -> None:
     """Set/get/delete an attribute on a given Wago element.
 
     `--eval` without a value deletes the attribute.
@@ -91,7 +91,7 @@ async def attr_(obj, path, **kw):
 )
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def port_(obj, path, mode, attr):
+async def port_(obj, path, mode, attr) -> None:
     """Set/get/delete port settings. This is a shortcut for the "attr" command.
 
     \b
@@ -159,7 +159,7 @@ async def port_(obj, path, mode, attr):
 @click.option("-d", "--delete", is_flag=True, help="Delete this server.")
 @click.argument("name", nargs=-1)
 @click.pass_obj
-async def server_(obj, name, host, port, delete):
+async def server_(obj, name, host, port, delete) -> None:
     """
     Configure a server.
 
@@ -208,7 +208,7 @@ async def server_(obj, name, host, port, delete):
 @cli.command()
 @click.argument("name", nargs=1)
 @click.pass_obj
-async def monitor(obj, name):
+async def monitor(obj, name) -> None:
     """Stand-alone task to monitor a single contoller."""
     from .model import WAGOroot  # noqa: PLC0415
     from .task import task  # noqa: PLC0415

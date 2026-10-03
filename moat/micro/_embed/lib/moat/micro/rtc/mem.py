@@ -34,7 +34,7 @@ class RTC(RTCBase):
     is_FS = False
     is_ASYNC = False
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self._d = {}
         self._mem = None
@@ -50,7 +50,7 @@ class RTC(RTCBase):
 
         self._load()
 
-    def _load(self):
+    def _load(self) -> None:
         """Load data from RTC memory."""
         if self._mem is None:
             return
@@ -67,14 +67,14 @@ class RTC(RTCBase):
             log("RTC mem load error", err=exc)
             self._d = {}
 
-    def _save(self):
+    def _save(self) -> None:
         """Save data to RTC memory."""
         if self._mem is None:
             return
         tagged = Tag(CBOR_TAG_CBOR_FILEHEADER, self._d)
         self._mem(_codec.encode(tagged))
 
-    def reload(self):
+    def reload(self) -> None:
         """Reload data from RTC memory."""
         self._load()
 

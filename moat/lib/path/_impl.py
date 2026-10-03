@@ -53,11 +53,11 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 if TYPE_CHECKING:
-    from typing import Any, Literal
+    from typing import Any
 
 PathTuple: TypeAlias = tuple["PathElem", ...]
-PathElem: TypeAlias = None | bool | int | float | str | bytes | PathTuple
-PathElemI: TypeAlias = None | bool | int | float | str | bytes | tuple
+PathElem: TypeAlias = bool | int | float | str | bytes | PathTuple | None
+PathElemI: TypeAlias = bool | int | float | str | bytes | tuple | None
 
 __all__ = [
     "PS",
@@ -78,7 +78,7 @@ _PartRE = re.compile("[^:._]+|_|:|\\.")
 _RTagRE = re.compile("^:m[^:._]+:$")
 
 
-def set_root(cfg):
+def set_root(cfg) -> None:
     """
     Utility to force-set the root global.
 
@@ -176,7 +176,7 @@ class Path(Sequence[PathElem]):
         prefix: RootPath | Literal[True] | None = None,
         decoded: bool = False,
         _warn: bool = True,
-    ):
+    ) -> None:
         """
         Create a path from the given elements.
 
@@ -609,10 +609,10 @@ class Path(Sequence[PathElem]):
 
     # TODO add alternate output with hex integers
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"P({str(self)!r})"
 
-    def __format__(self, spec):
+    def __format__(self, spec) -> str:
         return str(self).__format__(spec)
 
     @classmethod
@@ -650,7 +650,7 @@ class Path(Sequence[PathElem]):
                 raise SyntaxError(f"Conflicting tags: {mark} vs. {mp[0][2:-1]}")
             return cls(mark=mark)
 
-        def add(x):
+        def add(x) -> None:
             nonlocal part
             if not isinstance(part, str):
                 part = ""
@@ -659,7 +659,7 @@ class Path(Sequence[PathElem]):
             except TypeError:
                 raise SyntaxError(f"Cannot add {x!r} at {pos}") from None
 
-        def done(new_part):
+        def done(new_part) -> None:
             nonlocal part
             nonlocal eval_
             if isinstance(part, str):
@@ -681,7 +681,7 @@ class Path(Sequence[PathElem]):
                 res.append(part)
             part = new_part
 
-        def new(x):
+        def new(x) -> None:
             nonlocal part
             if part is None:
                 raise SyntaxError(f"Cannot use {part!r} at {pos}")
@@ -1066,7 +1066,7 @@ class PathShortener:
     Caution: this shortener ignores path marks.
     """
 
-    def __init__(self, prefix: Path | list | tuple = Path()):
+    def __init__(self, prefix: Path | list | tuple = Path()) -> None:
         self.prefix = prefix if isinstance(prefix, Path) else Path.build(prefix)
         self.depth = len(prefix)
         self.path = []
@@ -1113,7 +1113,7 @@ class PathLongener:
 
     cls: type[Path] = Path
 
-    def __init__(self, prefix: Path | PathTuple = ()):
+    def __init__(self, prefix: Path | PathTuple = ()) -> None:
         if isinstance(prefix, Path):
             self.cls = type(prefix)
             prefix = prefix.raw
@@ -1181,7 +1181,7 @@ class Var:
     This mimics a ContextVar but without the context.
     """
 
-    def __init__(self, name, default=NotGiven):
+    def __init__(self, name, default=NotGiven) -> None:
         self.name = name
         self.default = default
         self.data = NotGiven
@@ -1221,11 +1221,11 @@ class Var:
         self.data = val
         return _VAR_SET_TOKEN
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         "check if value is set"
         return self.data is not NotGiven
 
-    def reset(self, token):
+    def reset(self, token) -> None:
         "reset value; no-op"
         if token is not _VAR_SET_TOKEN:
             raise ValueError(token)
@@ -1244,11 +1244,11 @@ class RootPath(Path):
 
     _mark = ""
 
-    def __init__(self, key: str, var: ContextVar[Path | None] | Var):
+    def __init__(self, key: str, var: ContextVar[Path | None] | Var) -> None:
         self._key = key
         self._var = var
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self._key}={super().__repr__()}"
 
     @property

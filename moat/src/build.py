@@ -63,7 +63,7 @@ class Status:
     and stdout is a terminal.
     """
 
-    def __init__(self, enabled: bool = False):
+    def __init__(self, enabled: bool = False) -> None:
         self.enabled = enabled and sys.stdout.isatty()
         self._len = 0
 

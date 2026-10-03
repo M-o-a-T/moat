@@ -14,6 +14,6 @@ class Link(CmdMsg):
     An app that connects to a remote Unix socket.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         stack = serial_stack(UnixLink(cfg["port"], retry=cfg.get("retry", attrdict())), cfg)
         super().__init__(cfg, stack)

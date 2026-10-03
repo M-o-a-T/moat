@@ -14,7 +14,7 @@ class Codec(_Codec):
 
     null: bytes | None = None
 
-    def __init__(self, on="on", off="off", null=None, **kw):
+    def __init__(self, on="on", off="off", null=None, **kw) -> None:
         super().__init__(**kw)
         if on is not None:
             self.on = on.encode("utf-8", "surrogateescape")
@@ -33,7 +33,7 @@ class Codec(_Codec):
             return self.on
         raise ValueError(obj)
 
-    def decode(self, data):
+    def decode(self, data) -> bool | None:
         "some text > bool"
         if data == self.on:
             return True

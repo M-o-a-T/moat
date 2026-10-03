@@ -146,7 +146,7 @@ class WindowsConsole(Console):  # noqa: D101
         self,
         term: str = "",
         encoding: str = "",
-    ):
+    ) -> None:
         term  # noqa:B018
         super().__init__(encoding)
 
@@ -307,16 +307,16 @@ class WindowsConsole(Console):  # noqa: D101
         ):
             raise WinError(GetLastError())
 
-    def _hide_cursor(self):
+    def _hide_cursor(self) -> None:
         self.__write("\x1b[?25l")
 
-    def _show_cursor(self):
+    def _show_cursor(self) -> None:
         self.__write("\x1b[?25h")
 
-    def _enable_blinking(self):
+    def _enable_blinking(self) -> None:
         self.__write("\x1b[?12h")
 
-    def _disable_blinking(self):
+    def _disable_blinking(self) -> None:
         self.__write("\x1b[?12l")
 
     def _enable_bracketed_paste(self) -> None:

@@ -71,7 +71,7 @@ class CalRoot(ClientRoot):  # noqa:D101
     CFG = "cal"
     err = None
 
-    async def run_starting(self):  # noqa:D102
+    async def run_starting(self) -> None:  # noqa:D102
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()

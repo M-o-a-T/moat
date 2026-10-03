@@ -22,7 +22,7 @@ class NullObj:
     actually accessed.
     """
 
-    def __init__(self, exc):
+    def __init__(self, exc) -> None:
         self._exc = exc
 
     def __call__(self, *a, **kw):  # noqa:ARG002
@@ -55,7 +55,7 @@ class NullObj:
 )
 @click.option("-m", "--metadata", is_flag=True, help="Include/print metadata.")
 @click.pass_context
-async def cli(ctx, host, port, auth, metadata):
+async def cli(ctx, host, port, auth, metadata) -> None:
     """The MoaT Key-Value subsystem.
 
     All commands (except 'server' and 'dump') connect to a MoaT-KV server.

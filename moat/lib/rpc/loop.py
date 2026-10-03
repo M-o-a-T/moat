@@ -36,15 +36,15 @@ class StreamLoop(HandlerStream):
 
     __other: StreamLoop | None = None
 
-    def __init__(self, h: MsgRoot, s: str):
+    def __init__(self, h: MsgRoot, s: str) -> None:
         super().__init__(h)
         self.__s = s
 
-    def attach_remote(self, other):
+    def attach_remote(self, other) -> None:
         "attach the other end to us"
         self.__other = other
 
-    async def write_stream(self):
+    async def write_stream(self) -> None:
         "write loop"
         other = self.__other
         if other is None:
@@ -64,7 +64,7 @@ class StreamLoop(HandlerStream):
             log("%s: %s %s", self.__s, f, " ".join(repr(x) for x in m))
             await other.msg_in(msg)
 
-    async def read_stream(self):
+    async def read_stream(self) -> None:
         "read loop. No-op; all work is done by the other side's writer."
         other = self.__other
         if other is None:

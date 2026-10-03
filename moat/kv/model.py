@@ -23,11 +23,11 @@ logger = getLogger(__name__)
 
 
 class NodeDataSkipped(Exception):  # noqa:D101
-    def __init__(self, node):
+    def __init__(self, node) -> None:
         super().__init__()
         self.node = node
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}:{self.node}>"
 
 
@@ -69,7 +69,7 @@ class Node:
         return self
 
     # pylint: disable=unused-argument
-    def __init__(self, name, tick=None, cache=None, create=True):
+    def __init__(self, name, tick=None, cache=None, create=True) -> None:
         name, tick, cache, create  # noqa:B018
         return
 
@@ -102,13 +102,13 @@ class Node:
                 if not n:
                     return
 
-    def __contains__(self, item):
+    def __contains__(self, item) -> bool:
         return item in self.entries
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.name} @{self.tick}>"
 
-    def seen(self, tick, entry=None, local=False):
+    def seen(self, tick, entry=None, local=False) -> None:
         """An event with this tick was in the entry's chain.
 
         Args:
@@ -147,7 +147,7 @@ class Node:
         self._deleted.add(tick)
         return self.entries.get(tick, None)
 
-    def clear_deleted(self, tick):
+    def clear_deleted(self, tick) -> None:
         """
         The data for this tick are definitely gone (deleted).
         """
@@ -160,7 +160,7 @@ class Node:
         if e is not None:
             e.purge_deleted()
 
-    def purge_deleted(self, r: RangeSet):
+    def purge_deleted(self, r: RangeSet) -> None:
         """
         All entries in this rangeset are deleted.
 
@@ -178,7 +178,7 @@ class Node:
                 if e is not None:
                     e.purge_deleted()
 
-    def supersede(self, tick):
+    def supersede(self, tick) -> None:
         """
         The event with this tick is no longer in the referred entry's chain.
         This happens when an entry is updated.
@@ -190,7 +190,7 @@ class Node:
         self._superseded.add(tick)
         self.entries.pop(tick, None)
 
-    def report_superseded(self, r: RangeSet, local=False):
+    def report_superseded(self, r: RangeSet, local=False) -> None:
         """
         Some node said that these entries may have been superseded.
 
@@ -212,7 +212,7 @@ class Node:
                 if e.chain.node is self and e.chain.tick == t:
                     logger.info("%s present but marked as superseded", e)
 
-    def report_missing(self, r: RangeSet):
+    def report_missing(self, r: RangeSet) -> None:
         """
         Some node doesn't know about these ticks.
 
@@ -221,7 +221,7 @@ class Node:
         """
         self._reported += r
 
-    def report_deleted(self, r: RangeSet, server):
+    def report_deleted(self, r: RangeSet, server) -> None:
         """
         This range has been reported as deleted.
 
@@ -287,7 +287,7 @@ class Node:
         """Values from this node which somebody else has not seen"""
         return self._reported
 
-    def kill_this_node(self, cache=None):
+    def kill_this_node(self, cache=None) -> None:
         """
         Remove this node from the system.
         No chain's first link may point to this node.
@@ -309,7 +309,7 @@ class NodeSet(defaultdict):
     Represents a dict (nodename > RangeSet).
     """
 
-    def __init__(self, encoded=None, cache=None):
+    def __init__(self, encoded=None, cache=None) -> None:
         super().__init__(RangeSet)
         if encoded is not None:
             assert cache is not None
@@ -319,10 +319,10 @@ class NodeSet(defaultdict):
                 r.__setstate__(v)
                 self[n] = r
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}({dict.__repr__(self)})"
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return any(v for v in self.values())
 
     def serialize(self):  # noqa:D102
@@ -348,7 +348,7 @@ class NodeSet(defaultdict):
                 res[k] = v.copy()
         return res
 
-    def add(self, node, tick):  # noqa:D102
+    def add(self, node, tick) -> None:  # noqa:D102
         assert not hasattr(node, "name")
         self[node].add(tick)
 
@@ -370,7 +370,7 @@ class NodeEvent:  ## no __hash__
 
     """
 
-    def __init__(self, node: Node, tick: int | None = None, prev: NodeEvent = None):
+    def __init__(self, node: Node, tick: int | None = None, prev: NodeEvent = None) -> None:
         self.node = node
         if tick is None:
             tick = node.tick
@@ -381,7 +381,7 @@ class NodeEvent:  ## no __hash__
         if prev is not None:
             self.prev = prev
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Length of this chain"""
         if self.prev is None:
             return 1
@@ -394,7 +394,7 @@ class NodeEvent:  ## no __hash__
             pr += " " + self.prev._repr_chain()  # noqa:SLF001
         return pr
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         pr = self._repr_chain()
         tk = ("-" if self.tick is None else self.tick,)
         return f"<{self.__class__.__name__} {pr} {tk}>"
@@ -460,7 +460,7 @@ class NodeEvent:  ## no __hash__
     def __gte__(self, other):
         return self.__eq__(other) or self.__gt__(other)
 
-    def __contains__(self, node):
+    def __contains__(self, node) -> bool:
         return self.find(node) is not None
 
     def find(self, node):
@@ -561,7 +561,9 @@ class NodeEvent:  ## no __hash__
 class UpdateEvent:
     """Represents an event which updates something."""
 
-    def __init__(self, event: NodeEvent, entry: Entry, new_value, old_value=NotGiven, tock=None):
+    def __init__(
+        self, event: NodeEvent, entry: Entry, new_value, old_value=NotGiven, tock=None
+    ) -> None:
         self.event = event
         self.entry = entry
         self.new_value = new_value
@@ -571,7 +573,7 @@ class UpdateEvent:
             event.node.mark_deleted(event.tick)
         self.tock = tock
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.entry.chain == self.event:
             res = ""
         else:
@@ -643,7 +645,7 @@ class Entry:
 
     monitors = None
 
-    def __init__(self, name: str, parent: Entry, tock=None):
+    def __init__(self, name: str, parent: Entry, tock=None) -> None:
         self.name = name
         self._sub = {}
         self.monitors = set()
@@ -653,7 +655,7 @@ class Entry:
             parent._add_subnode(self)
             self._parent = weakref.ref(parent)
 
-    def _add_subnode(self, child: Entry):
+    def _add_subnode(self, child: Entry) -> None:
         self._sub[child.name] = child
 
     def __hash__(self):
@@ -680,13 +682,13 @@ class Entry:
     def items(self):  # noqa:D102
         return self._sub.items()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._sub)
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self._data is not None or len(self._sub) > 0
 
-    def __contains__(self, key):
+    def __contains__(self, key) -> bool:
         return key in self._sub
 
     @property
@@ -794,7 +796,7 @@ class Entry:
         self._root = weakref.ref(root)
         return root
 
-    async def set(self, value):  # noqa:D102
+    async def set(self, value) -> None:  # noqa:D102
         self._data = value
 
     @property
@@ -807,7 +809,7 @@ class Entry:
             raise RuntimeError("Parent node is gone")
         return parent
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         try:
             res = f"<{self.__class__.__name__}:{self.path}"
             if self.chain is not None:
@@ -838,7 +840,7 @@ class Entry:
         self._data = NotGiven
         return c
 
-    def purge_deleted(self):
+    def purge_deleted(self) -> None:
         """
         Call :meth:`Node.clear_deleted` on each link in this entry's chain.
         """
@@ -849,7 +851,7 @@ class Entry:
             node.clear_deleted(tick)
         self._chop()
 
-    def _chop(self):
+    def _chop(self) -> None:
         """
         Remove a deleted entry (and possibly its parent).
         """
@@ -880,7 +882,7 @@ class Entry:
         await self.apply(evt, server=server)
         return evt
 
-    async def apply(self, evt: UpdateEvent, server=None, root=None, loading=False):
+    async def apply(self, evt: UpdateEvent, server=None, root=None, loading=False) -> None:
         """Apply this :cls`UpdateEvent` to me.
 
         Also, forward to watchers.
@@ -947,7 +949,7 @@ class Entry:
             n.seen(t, self)
         await self.updated(evt)
 
-    async def walk(self, proc, acl=None, max_depth=-1, min_depth=0, _depth=0, full=False):
+    async def walk(self, proc, acl=None, max_depth=-1, min_depth=0, _depth=0, full=False) -> None:
         """
         Call coroutine ``proc`` on this node and all its children).
 
@@ -999,7 +1001,7 @@ class Entry:
             res.path = path
         return res
 
-    async def updated(self, event: UpdateEvent):
+    async def updated(self, event: UpdateEvent) -> None:
         """Send an event to this node (and all its parents)'s watchers."""
         node = self
         while True:
@@ -1049,7 +1051,7 @@ class Watcher:
     q = None
     q_len = 10000
 
-    def __init__(self, root: Entry, full: bool = False, q_len: int | None = None):
+    def __init__(self, root: Entry, full: bool = False, q_len: int | None = None) -> None:
         self.root = root
         self.full = full
         if q_len is not None:

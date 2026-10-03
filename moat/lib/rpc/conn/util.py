@@ -37,7 +37,7 @@ class BaseConnIter:
     OS-assigned) port number.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.q = Queue(1)
         self.evt = Event()
         self._port_ready = Event()
@@ -114,7 +114,7 @@ class ListenerLink(BaseConn):
 
     listener: BaseConnIter
 
-    def __init__(self, listener: BaseConnIter):
+    def __init__(self, listener: BaseConnIter) -> None:
         super().__init__()
         self.listener = listener
 

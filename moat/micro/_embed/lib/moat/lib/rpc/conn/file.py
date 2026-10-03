@@ -25,12 +25,12 @@ class FileBuf(BaseBuf):
     _buf = None
     _any = lambda: 1  # noqa:E731
 
-    def __init__(self, cfg: dict | None = None, force_write=False, timeout=2):
+    def __init__(self, cfg: dict | None = None, force_write=False, timeout=2) -> None:
         super().__init__(cfg or {})
         self.force_write = force_write
         self.timeout = timeout
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         s = await self.stream()
         if isinstance(s, tuple):
             self.rs, self.ws = s

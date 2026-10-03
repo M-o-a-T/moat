@@ -18,13 +18,13 @@ class Cmd(BaseCmd):
 
     doc = dict(_c=dict(_d="Config read/write"))
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self.repeats = {}
 
     doc_r = dict(_d="read cfg", _r="parts:dict[str,Any]:Config data")
 
-    async def stream_r(self, msg):
+    async def stream_r(self, msg) -> None:
         """
         Read (part of) the configuration.
 
@@ -54,7 +54,7 @@ class Cmd(BaseCmd):
 
     doc_c = dict(_d="write cfg", p="Path:subpart", d="any:Data")
 
-    async def cmd_c(self, p, d=NotGiven, keep: bool = False):
+    async def cmd_c(self, p, d=NotGiven, keep: bool = False) -> None:
         """
         Online configuration mangling.
 
@@ -110,7 +110,7 @@ class Cmd(BaseCmd):
 
     doc_x = dict(_d="activate new config")
 
-    async def cmd_x(self):
+    async def cmd_x(self) -> None:
         """
         Activate the new config.
 

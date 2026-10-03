@@ -86,7 +86,7 @@ class Node:
         s.set_(item, data, meta)
         return True
 
-    def set_(self, path: Path, data: Any, meta: MsgMeta):
+    def set_(self, path: Path, data: Any, meta: MsgMeta) -> None:
         "Low-level node data setter. The (sub)path is not stored by default."
         path  # noqa:B018
         self._data = data
@@ -216,7 +216,7 @@ class Node:
             s = self
             for k in item:
                 try:
-                    s = s._sub[k]  # noqa:SLF001
+                    s = s._sub[k]
                 except KeyError:
                     raise ExpKeyError(k) from None
         else:
@@ -296,7 +296,7 @@ class Node:
             s = self
             for k in item:
                 try:
-                    s = s._sub[k]  # noqa:SLF001
+                    s = s._sub[k]
                 except KeyError:
                     return False
             return True
@@ -317,7 +317,7 @@ class Node:
         timestamp: float = 0,
         depth_first: bool = False,
         force: bool = False,
-    ):
+    ) -> None:
         """
         Calls coroutine ``proc(node,Subpath)`` on this node and all its children.
 
@@ -329,7 +329,7 @@ class Node:
         if @force is set, also visit empty nodes.
         """
 
-        async def _walk(s, p):
+        async def _walk(s, p) -> None:
             if depth_first and (max_depth is None or max_depth > len(p)):
                 for k, v in s._sub.items():  # noqa: SLF001
                     await _walk(v, p / k)
@@ -396,7 +396,7 @@ class NodeFinder:
     If nothing is found, raises `KeyError`.
     """
 
-    def __init__(self, src):
+    def __init__(self, src) -> None:
         self.steps = ((src, 0, 0),)
 
     @staticmethod

@@ -23,7 +23,7 @@ class UnixLink(AnyioBuf):
     A channel that connects to a remote Unix socket.
     """
 
-    def __init__(self, port: str | PathLike[str], retry: dict | None = None):
+    def __init__(self, port: str | PathLike[str], retry: dict | None = None) -> None:
         self.port = port
         if retry is None:
             retry = {}

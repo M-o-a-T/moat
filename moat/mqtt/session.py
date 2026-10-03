@@ -42,7 +42,7 @@ class ApplicationMessage:
         "topic",
     )
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    def __init__(self, packet_id, topic, qos, data, retain) -> None:
         if not isinstance(data, (bytes, bytearray)):
             raise TypeError(f"Non-bytes data for {topic}: {data!r}")
 
@@ -113,7 +113,7 @@ class IncomingApplicationMessage(ApplicationMessage):
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    def __init__(self, packet_id, topic, qos, data, retain) -> None:
         self.direction = INCOMING
         super().__init__(packet_id, topic, qos, data, retain)
 
@@ -125,7 +125,7 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    def __init__(self, packet_id, topic, qos, data, retain) -> None:
         self.direction = OUTGOING
         super().__init__(packet_id, topic, qos, data, retain)
 
@@ -133,7 +133,7 @@ class OutgoingApplicationMessage(ApplicationMessage):
 class Session:  # noqa: D101
     states = ["new", "connected", "disconnected"]
 
-    def __init__(self, plugins_manager):
+    def __init__(self, plugins_manager) -> None:
         self._init_states()
         self._plugins_manager = plugins_manager
         self.remote_address = None
@@ -177,7 +177,7 @@ class Session:  # noqa: D101
         # The broker we're attached to
         self._broker = None
 
-    def _init_states(self):
+    def _init_states(self) -> None:
         self.transitions = Machine(states=Session.states, initial="new")
         self.transitions.add_transition(trigger="connect", source="new", dest="connected")
         self.transitions.add_transition(trigger="connect", source="disconnected", dest="connected")
@@ -200,20 +200,20 @@ class Session:  # noqa: D101
         other = getattr(other, "client_id", other)
         return self.client_id == other
 
-    async def start(self, broker=None):  # noqa: D102
+    async def start(self, broker=None) -> None:  # noqa: D102
         if broker is not None:
             self._broker = broker
             if self._delivery_task is not None:
                 raise RuntimeError("Already running")
             broker._tg.start_soon(self._delivery_loop)  # noqa: SLF001
 
-    async def stop(self):  # noqa: D102
+    async def stop(self) -> None:  # noqa: D102
         if self._delivery_task is not None:
             self._delivery_task.cancel()
             await self._delivery_stopped.wait()
         self._broker = None  # break ref loop
 
-    async def put_message(self, app_message):  # noqa: D102
+    async def put_message(self, app_message) -> None:  # noqa: D102
         if app_message.retain and self._broker is not None and not self._broker._do_retain:  # noqa: SLF001
             raise RuntimeError("The broker doesn't do retains", repr(app_message.__getstate__()))
         if not app_message.topic:
@@ -243,7 +243,7 @@ class Session:  # noqa: D101
         # split up so that a breakpoint may be set
         return m
 
-    async def _delivery_loop(self):
+    async def _delivery_loop(self) -> None:
         """Server: process incoming messages"""
         try:
             with anyio.CancelScope() as scope:
@@ -297,7 +297,7 @@ class Session:  # noqa: D101
     def retained_messages_count(self):  # noqa: D102
         return self.retained_messages.qsize()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return type(self).__name__ + f"(clientId={self.client_id}, state={self.transitions.state})"
 
     def __getstate__(self):

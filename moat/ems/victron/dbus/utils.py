@@ -338,7 +338,7 @@ class DbusInterface(ServiceInterface, CtxObj):
 
     """
 
-    def __init__(self, bus, path, interface=None):
+    def __init__(self, bus, path, interface=None) -> None:
         self.dbus = bus
         self.path = path
         super().__init__(reg_name(INTF, interface))

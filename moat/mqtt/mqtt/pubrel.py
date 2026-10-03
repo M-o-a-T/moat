@@ -17,14 +17,14 @@ class PubrelPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.packet_id
 
     @packet_id.setter
-    def packet_id(self, val: int):
+    def packet_id(self, val: int) -> None:
         self.variable_header.packet_id = val
 
     def __init__(
         self,
         fixed: MQTTFixedHeader = None,
         variable_header: PacketIdVariableHeader = None,
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(PUBREL, 0x02)  # [MQTT-3.6.1-1]
         else:

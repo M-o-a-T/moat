@@ -59,6 +59,8 @@ if TYPE_CHECKING:
     from moat.mqtt.mqtt.unsubscribe import UnsubscribePacket
     from moat.mqtt.plugins.manager import PluginManager
 
+    from typing import Never
+
 try:
     ClosedResourceError = anyio.exceptions.ClosedResourceError
     BrokenResourceError = anyio.exceptions.BrokenResourceError
@@ -99,7 +101,7 @@ class ProtocolHandler:
 
     _got_packet: anyio.abc.Event = None
 
-    def __init__(self, plugins_manager: PluginManager, session: Session = None):
+    def __init__(self, plugins_manager: PluginManager, session: Session = None) -> None:
         self.logger = logging.getLogger(__name__ + "." + self.__class__.__name__)
         if session:
             self._init_session(session)
@@ -124,7 +126,7 @@ class ProtocolHandler:
         self._disconnect_waiter = None
         self._write_lock = anyio.Lock()
 
-    def _init_session(self, session: Session):
+    def _init_session(self, session: Session) -> None:
         assert session
         log = logging.getLogger(__name__)
         self.session = session
@@ -133,7 +135,7 @@ class ProtocolHandler:
         if self.keepalive_timeout <= 0:
             self.keepalive_timeout = None
 
-    async def attach(self, session, stream: StreamAdapter):  # noqa: D102
+    async def attach(self, session, stream: StreamAdapter) -> None:  # noqa: D102
         if self.session:
             raise ProtocolHandlerException("Handler is already attached to a session")
         self._init_session(session)
@@ -142,14 +144,14 @@ class ProtocolHandler:
         self._tg.start_soon(self._sender_loop, evt)
         await evt.wait()
 
-    async def detach(self):  # noqa: D102
+    async def detach(self) -> None:  # noqa: D102
         self.session = None
         self.stream = None
 
     def _is_attached(self):
         return self.session is not None
 
-    async def start(self):  # noqa: D102
+    async def start(self) -> None:  # noqa: D102
         self._disconnect_waiter = anyio.Event()
         if not self._is_attached():
             raise ProtocolHandlerException("Handler is not attached to a stream")
@@ -165,7 +167,7 @@ class ProtocolHandler:
             self.session.client_id if self.session else "?",
         )
 
-    async def stop(self):  # noqa: D102
+    async def stop(self) -> None:  # noqa: D102
         # Stop messages flow waiter
         self.logger.debug(
             "%s %s stopping",
@@ -190,7 +192,7 @@ class ProtocolHandler:
             self._disconnect_waiter.set()
         self.logger.debug("closed writer")
 
-    async def _stop_waiters(self):
+    async def _stop_waiters(self) -> None:
         if len(self._puback_waiters):
             self.logger.debug("Stopping %d puback waiters", len(self._puback_waiters))
         if len(self._pubcomp_waiters):
@@ -208,7 +210,7 @@ class ProtocolHandler:
             with contextlib.suppress(InvalidStateError):
                 await waiter.cancel()
 
-    async def _retry_deliveries(self):
+    async def _retry_deliveries(self) -> None:
         """
         Handle [MQTT-4.4.0-1] by resending PUBLISH and PUBREL messages for pending out messages
         :return:
@@ -216,7 +218,7 @@ class ProtocolHandler:
         done = pending = 0
         self.logger.debug("Begin messages delivery retries")
 
-        async def process_one(message):
+        async def process_one(message) -> None:
             with anyio.move_on_after(10):
                 with contextlib.suppress(CancelledError):
                     await self._handle_message_flow(message)
@@ -256,7 +258,7 @@ class ProtocolHandler:
 
         return message
 
-    async def _handle_message_flow(self, app_message):
+    async def _handle_message_flow(self, app_message) -> None:
         """
         Handle protocol flow for incoming and outgoing messages, depending on service level and according to MQTT
         spec. paragraph 4.3-Quality of Service levels and protocol flows
@@ -275,7 +277,7 @@ class ProtocolHandler:
         except CancelledError:
             pass
 
-    async def _handle_qos0_message_flow(self, app_message):
+    async def _handle_qos0_message_flow(self, app_message) -> None:
         """
         Handle QOS_0 application message acknowledgment
         For incoming messages, this method stores the message
@@ -298,7 +300,7 @@ class ProtocolHandler:
             else:
                 await self.session.put_message(app_message)
 
-    async def _handle_qos1_message_flow(self, app_message):
+    async def _handle_qos1_message_flow(self, app_message) -> None:
         """
         Handle QOS_1 application message acknowledgment
         For incoming messages, this method stores the message and reply with PUBACK
@@ -343,7 +345,7 @@ class ProtocolHandler:
             await self._send_packet(puback)
             app_message.puback_packet = puback
 
-    async def _handle_qos2_message_flow(self, app_message):
+    async def _handle_qos2_message_flow(self, app_message) -> None:
         """
         Handle QOS_2 application message acknowledgment
         For incoming messages, this method stores the message, sends PUBREC, waits for PUBREL, initiate delivery
@@ -435,11 +437,11 @@ class ProtocolHandler:
             await self._send_packet(pubcomp_packet)
             app_message.pubcomp_packet = pubcomp_packet
 
-    async def _reader_loop(self, evt):
+    async def _reader_loop(self, evt) -> None:
         self.logger.debug("%s Starting reader coro", self.session.client_id)
         self._got_packet = anyio.Event()
 
-        async def _timeout_loop():
+        async def _timeout_loop() -> None:
             keepalive_timeout = self.session.keep_alive
             if keepalive_timeout <= 0:
                 keepalive_timeout = None
@@ -549,10 +551,10 @@ class ProtocolHandler:
                     self._reader_task = None
                     await self.handle_connection_closed()
 
-    async def _send_packet(self, packet):
+    async def _send_packet(self, packet) -> None:
         await self._send_q.put(packet)
 
-    async def _sender_loop(self, evt):
+    async def _sender_loop(self, evt) -> None:
         keepalive_timeout = self.session.keep_alive
         if keepalive_timeout <= 0:
             keepalive_timeout = None
@@ -595,40 +597,40 @@ class ProtocolHandler:
             self._sender_stopped.set()
             self._sender_task = None
 
-    async def handle_write_timeout(self):  # noqa: D102
+    async def handle_write_timeout(self) -> None:  # noqa: D102
         self.logger.debug("%s write timeout unhandled", self.session.client_id)
 
-    async def handle_read_timeout(self):  # noqa: D102
+    async def handle_read_timeout(self) -> None:  # noqa: D102
         self.logger.debug("%s read timeout unhandled", self.session.client_id)
 
-    async def handle_connack(self, connack: ConnackPacket):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def handle_connack(self, connack: ConnackPacket) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.logger.debug("%s CONNACK unhandled", self.session.client_id)
 
-    async def handle_connect(self, connect: ConnectPacket):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def handle_connect(self, connect: ConnectPacket) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.logger.debug("%s CONNECT unhandled", self.session.client_id)
 
-    async def handle_subscribe(self, subscribe: SubscribePacket):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def handle_subscribe(self, subscribe: SubscribePacket) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.logger.debug("%s SUBSCRIBE unhandled", self.session.client_id)
 
-    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.logger.debug("%s UNSUBSCRIBE unhandled", self.session.client_id)
 
-    async def handle_suback(self, suback: SubackPacket):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def handle_suback(self, suback: SubackPacket) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.logger.debug("%s SUBACK unhandled", self.session.client_id)
 
-    async def handle_unsuback(self, unsuback: UnsubackPacket):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def handle_unsuback(self, unsuback: UnsubackPacket) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.logger.debug("%s UNSUBACK unhandled", self.session.client_id)
 
-    async def handle_pingresp(self, pingresp: PingRespPacket):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def handle_pingresp(self, pingresp: PingRespPacket) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.logger.debug("%s PINGRESP unhandled", self.session.client_id)
 
-    async def handle_pingreq(self, pingreq: PingReqPacket):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def handle_pingreq(self, pingreq: PingReqPacket) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.logger.debug("%s PINGREQ unhandled", self.session.client_id)
 
-    async def _handle_disconnect(self, disconnect: DisconnectPacket):  # pylint: disable=unused-argument  # noqa: ARG002
+    async def _handle_disconnect(self, disconnect: DisconnectPacket) -> None:  # pylint: disable=unused-argument  # noqa: ARG002
         self.logger.debug("%s DISCONNECT unhandled", self.session.client_id)
 
-    async def handle_disconnect(self, disconnect: DisconnectPacket):  # noqa: D102
+    async def handle_disconnect(self, disconnect: DisconnectPacket) -> Never:  # noqa: D102
         if not self._disconnecting:
             self._disconnecting = True
             self._tg.start_soon(self._handle_disconnect, disconnect)
@@ -636,10 +638,10 @@ class ProtocolHandler:
             self.logger.debug("%s DISCONNECT ignored", self.session.client_id)
         raise StopAsyncIteration  # end of the line
 
-    async def handle_connection_closed(self):  # noqa: D102
+    async def handle_connection_closed(self) -> None:  # noqa: D102
         self.logger.debug("%s Connection closed unhandled", self.session.client_id)
 
-    async def handle_puback(self, puback: PubackPacket):  # noqa: D102
+    async def handle_puback(self, puback: PubackPacket) -> None:  # noqa: D102
         packet_id = puback.variable_header.packet_id
         try:
             waiter = self._puback_waiters[packet_id]
@@ -649,7 +651,7 @@ class ProtocolHandler:
         except InvalidStateError:
             self.logger.warning("PUBACK waiter with Id '%d' already done", packet_id)
 
-    async def handle_pubrec(self, pubrec: PubrecPacket):  # noqa: D102
+    async def handle_pubrec(self, pubrec: PubrecPacket) -> None:  # noqa: D102
         packet_id = pubrec.packet_id
         try:
             waiter = self._pubrec_waiters[packet_id]
@@ -662,7 +664,7 @@ class ProtocolHandler:
         except InvalidStateError:
             self.logger.warning("PUBREC waiter with Id '%d' already done", packet_id)
 
-    async def handle_pubcomp(self, pubcomp: PubcompPacket):  # noqa: D102
+    async def handle_pubcomp(self, pubcomp: PubcompPacket) -> None:  # noqa: D102
         packet_id = pubcomp.packet_id
         try:
             waiter = self._pubcomp_waiters[packet_id]
@@ -675,7 +677,7 @@ class ProtocolHandler:
         except InvalidStateError:
             self.logger.warning("PUBCOMP waiter with Id '%d' already done", packet_id)
 
-    async def handle_pubrel(self, pubrel: PubrelPacket):  # noqa: D102
+    async def handle_pubrel(self, pubrel: PubrelPacket) -> None:  # noqa: D102
         packet_id = pubrel.packet_id
         try:
             waiter = self._pubrel_waiters[packet_id]
@@ -688,7 +690,7 @@ class ProtocolHandler:
         except InvalidStateError:
             self.logger.warning("PUBREL waiter with Id '%d' already done", packet_id)
 
-    async def handle_publish(self, publish_packet: PublishPacket):  # noqa: D102
+    async def handle_publish(self, publish_packet: PublishPacket) -> None:  # noqa: D102
         try:
             packet_id = publish_packet.variable_header.packet_id
             qos = publish_packet.qos

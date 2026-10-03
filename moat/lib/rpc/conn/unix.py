@@ -26,7 +26,7 @@ class UnixIter(BaseConnIter):
     @path: the socket file to listen on
     """
 
-    def __init__(self, path):
+    def __init__(self, path) -> None:
         super().__init__()
         self.path = path
         self.port = -1  # prevent blocking
@@ -39,5 +39,5 @@ class UnixIter(BaseConnIter):
             await li.serve(self._handle)
         raise RuntimeError("listener stopped")
 
-    async def _handle(self, client):
+    async def _handle(self, client) -> None:
         await self.add_conn(SingleAnyioBuf(client))

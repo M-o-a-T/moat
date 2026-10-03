@@ -49,7 +49,7 @@ class Service(CtxObj):
     #: The service name. Subclasses must set this.
     name: str
 
-    def __init__(self, cfg: attrdict, tg: TaskGroup):
+    def __init__(self, cfg: attrdict, tg: TaskGroup) -> None:
         self.cfg = cfg
         self.tg = tg
 

@@ -28,7 +28,7 @@ class MsgTerm(MsgHandler):
     lifecycle methods in :data:`_SKIP_METHODS`) are automatically forwarded.
     """
 
-    def __init__(self, term: TermBuf):
+    def __init__(self, term: TermBuf) -> None:
         self.term = term
 
         import inspect  # noqa: PLC0415
@@ -45,7 +45,7 @@ class MsgTerm(MsgHandler):
                 if not hasattr(self, fn):
                     setattr(self, fn, meth)
 
-    async def stream_raw(self, msg: Msg):
+    async def stream_raw(self, msg: Msg) -> None:
         """RPC bidirectional data stream for raw terminal I/O.
 
         Switches the terminal to raw mode for the duration of the stream,
@@ -58,7 +58,7 @@ class MsgTerm(MsgHandler):
                 await self.term.set_raw()
 
                 @tg.start_soon
-                async def _sender():
+                async def _sender() -> None:
                     buf = bytearray(32)
                     while True:
                         try:

@@ -21,7 +21,7 @@ def _tag_repr(dumper, data):
 
 
 class XTag:  # noqa: D101
-    def __init__(self, tag):
+    def __init__(self, tag) -> None:
         self.tag = tag
 
 

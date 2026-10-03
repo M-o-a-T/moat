@@ -62,7 +62,7 @@ class BusVars(CtxObj):
 
     _intf: Dbus | None = None
 
-    def __init__(self, bus):
+    def __init__(self, bus) -> None:
         self._bus = bus
 
     @asynccontextmanager
@@ -96,7 +96,7 @@ class InvInterface(DbusInterface):
 
     # pylint: disable=protected-access
 
-    def __init__(self, ctrl):
+    def __init__(self, ctrl) -> None:
         self.ctrl = ctrl
         super().__init__(ctrl.bus, "/Control", "inv")
 
@@ -302,7 +302,7 @@ class InvControl(BusVars):
         ),
     }
 
-    def __init__(self, bus, cfg):
+    def __init__(self, bus, cfg) -> None:
         super().__init__(bus)
         self.cfg = cfg
         self.op = cfg.get("op", {})
@@ -323,7 +323,7 @@ class InvControl(BusVars):
         self._dkv_evt = anyio.Event()
         self.clear_state()
 
-    def clear_state(self):
+    def clear_state(self) -> None:
         "clear state log"
         self._state = {}
 
@@ -331,7 +331,7 @@ class InvControl(BusVars):
         "return current state log"
         return self._state
 
-    def set_state(self, k, v):
+    def set_state(self, k, v) -> None:
         "update state log"
         self._state[k] = v
 
@@ -426,7 +426,7 @@ class InvControl(BusVars):
             return 0
         return -self._ib_chg.value
 
-    async def _update_vars(self):
+    async def _update_vars(self) -> None:
         "Register Dbus readers"
         if not self.acc_vebus.value:
             logger.warning("NO vebus")
@@ -456,12 +456,12 @@ class InvControl(BusVars):
             eventCallback=self._trigger_step,
         )
 
-    def _trigger_step(self, _sender, _path, _values):
+    def _trigger_step(self, _sender, _path, _values) -> None:
         "signal that power adjustment step is complete"
         self._trigger.set()
         self._trigger = anyio.Event()
 
-    async def trigger(self, sleep=3):
+    async def trigger(self, sleep=3) -> None:
         "Wait for power adjustment step to complete"
         await anyio.sleep(sleep)
         with anyio.move_on_after(5):
@@ -469,7 +469,7 @@ class InvControl(BusVars):
 
     i_batt_avg: Any | None = None
 
-    async def _i_batt_task(self, evt):
+    async def _i_batt_task(self, evt) -> None:
         """
         Calculate a running average of the last four battery current values.
         """
@@ -489,7 +489,7 @@ class InvControl(BusVars):
 
     i_pv_max = 0
 
-    async def _avg_task(self):
+    async def _avg_task(self) -> None:
         """
         Calculate exponential averages and decaying maxima.
         """
@@ -513,7 +513,7 @@ class InvControl(BusVars):
                 self.i_pv_max += (self.i_pv - self.i_pv_max) / 20
             await anyio.sleep(0.9)
 
-    async def _init_srv(self):
+    async def _init_srv(self) -> None:
         """setup exports"""
         srv = self.srv
         evt = anyio.Event()
@@ -549,7 +549,7 @@ class InvControl(BusVars):
     #   async def _change_mode(self, path, value):
     #       await self.change_mode(value)
 
-    async def change_mode(self, mode: str, data={}):  # noqa:B006
+    async def change_mode(self, mode: str, data={}) -> bool:  # noqa:B006
         "Switch mode to @mode, set config to @data"
         if self._mode is None or self._mode != mode:
             if self._change_mode_evt is None:
@@ -579,7 +579,7 @@ class InvControl(BusVars):
         self.op[param] = value
         return True
 
-    async def _run_mode_task(self):
+    async def _run_mode_task(self) -> None:
         "do the mode's work"
         # pylint:disable=protected-access
         if self._mode_task is not None:
@@ -597,11 +597,11 @@ class InvControl(BusVars):
             assert self._mode_task_stopped is not None
         self._mode_task_stopped.set()
 
-    async def _start_mode_task(self):
+    async def _start_mode_task(self) -> None:
         assert self._tg is not None
         self._tg.start_soon(self._run_mode_task)
 
-    async def _solar_log(self):
+    async def _solar_log(self) -> None:
         async with DbusMonitor(self._bus, self.MON) as mon:
             power = 0
             dkv = await self.distkv
@@ -658,7 +658,7 @@ class InvControl(BusVars):
 
                 mt = 900
 
-    async def _distkv_main(self):
+    async def _distkv_main(self) -> None:
         if "distkv" not in self.cfg:
             assert self._dkv_evt is not None
             self._dkv_evt.set()
@@ -687,7 +687,7 @@ class InvControl(BusVars):
         await self._dkv_evt.wait()
         return self._dkv
 
-    async def _init_intf(self):
+    async def _init_intf(self) -> None:
         # setup BMS interface
         proxy = await self._bus.get_proxy_object(self.s_battery.value, "/bms")
         self._bms_intf = await proxy.get_interface("org.m_o_a_t.bms")
@@ -725,7 +725,7 @@ class InvControl(BusVars):
         assert self._batt_intf is not None
         return await self._batt_intf[n].call_set_capacity(cap, loss, top)
 
-    async def run(self, mode=None):
+    async def run(self, mode=None) -> None:
         "do the work"
         self._change_mode_evt = anyio.Event()
         self._change_mode_evt.set()
@@ -1127,7 +1127,7 @@ class InvControl(BusVars):
         ps = balance(ps, val_min=-self.p_per_phase, val_max=self.p_per_phase)
         return ps
 
-    async def set_inv_ps(self, ps):
+    async def set_inv_ps(self, ps) -> None:
         "set inverter power from array"
         # OK, we're safe, implement
         if self.op.get("fake", False):
@@ -1171,7 +1171,7 @@ class InvControl(BusVars):
 class InvModeBase:
     "Base class for inverter control modules"
 
-    def __init__(self, intf):
+    def __init__(self, intf) -> None:
         self.intf = intf
         self.ps = None
         self.ps_min = [-999999999] * intf.n_phase
@@ -1186,7 +1186,7 @@ class InvModeBase:
     #   The power the Multi is feeding us. Negative.
     # p_cons_
     #   The power other consumers are taking from the bus. Negative.
-    async def set_inv_ps(self, ps):
+    async def set_inv_ps(self, ps) -> None:
         """
         Apply per-inverter power settings.
 
@@ -1337,13 +1337,13 @@ class InvModeBase:
 
 
 # from ._utils import _loader
-def _loader(path, cls, reg):
+def _loader(path, cls, reg) -> None:
     "Load submodule"
     # pylint: disable=import-outside-toplevel
     from importlib import import_module  # noqa: PLC0415
     from pathlib import Path  # noqa: PLC0415
 
-    def _imp(name):
+    def _imp(name) -> None:
         m = import_module("." + name, package=_loader.__module__)  # noqa:F821
         for n in m.__all__:
             c = getattr(m, n)

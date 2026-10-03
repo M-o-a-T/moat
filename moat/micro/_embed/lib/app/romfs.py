@@ -16,7 +16,7 @@ class Dev:
 
     doc = dict(_c=dict(_d="romfs abstraction, TODO"))
 
-    def __init__(self, n):
+    def __init__(self, n) -> None:
         self.dev = vfs.rom_ioctl(2, n)
         self.buf = bytearray(self.dev.ioctl(5, 0))
         self.pos = 0
@@ -41,7 +41,7 @@ class Dev:
         "device's buffer size"
         return len(self.buf)
 
-    def seek(self, n: int):
+    def seek(self, n: int) -> None:
         """go to @n, clears r/w flag"""
         if n == self.pos:
             return
@@ -52,7 +52,7 @@ class Dev:
         self.pos = n
         self._wr = None
 
-    def write(self, data: bytes):
+    def write(self, data: bytes) -> None:
         """write to the buffer"""
         if self._wr is False:
             raise ValueError("r/w")
@@ -65,7 +65,7 @@ class Dev:
         if self.cur_off == 0:
             self.wrb()
 
-    def wrb(self):
+    def wrb(self) -> None:
         """write the current buffer"""
         lb = len(self.buf)
         blk = self.cur_off // lb - (self.cur_off % lb == 0)
@@ -84,12 +84,12 @@ class Dev:
         self.pos += n
         return memoryview(self.buf)[np : np + n]
 
-    def rdb(self):
+    def rdb(self) -> None:
         """read the next buffer"""
         lb = len(self.buf)
         self.dev.readblocks(self.cur_off // lb, self.buf)
 
-    def close(self):
+    def close(self) -> None:
         """flush the buffer"""
         if self._wr:
             self.wrb()
@@ -105,7 +105,7 @@ class Cmd(BaseCmd):
 
     _dev_cache = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self._dev_cache = dict()
         self._dev_pos = dict()
@@ -136,7 +136,7 @@ class Cmd(BaseCmd):
 
     doc_cl = dict(_d="close device file", _0="int:n")
 
-    async def cmd_cl(self, dev: int):
+    async def cmd_cl(self, dev: int) -> None:
         "'close' device N"
         dev = self._dev_cache.pop(dev)
         dev.close()
@@ -150,7 +150,7 @@ class Cmd(BaseCmd):
         dev.seek(o)
         return dev.read(n)
 
-    async def stream_rd(self, msg):  # noqa: D102
+    async def stream_rd(self, msg) -> None:  # noqa: D102
         dev = self.dev(msg[0])
         off = msg[1] if len(msg) > 1 else 0
         blk = msg[2] if len(msg) > 2 else 64
@@ -171,7 +171,7 @@ class Cmd(BaseCmd):
         dev.seek(o)
         return dev.write(d)
 
-    async def stream_wr(self, msg):  # noqa: D102
+    async def stream_wr(self, msg) -> None:  # noqa: D102
         dev = self.dev(msg[0])
         off = msg[1] if len(msg) > 1 else 0
         dev.seek(off)

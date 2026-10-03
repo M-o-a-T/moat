@@ -61,14 +61,14 @@ class Main:
     user_task: Task = None
     tg: TaskGroup = None  # created in ./main.py
 
-    def __init__(self, wr_exc: Callable):
+    def __init__(self, wr_exc: Callable) -> None:
         ACM(self)
 
         self.evt = evt = Event()
         self.wait = evt.wait
         self.wr_exc = wr_exc
 
-    def start(self, cons: Console):
+    def start(self, cons: Console) -> None:
         """
         Start using this console.
 
@@ -82,7 +82,7 @@ class Main:
         self.console = cons
         self.evt.set()
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop using the console, if any.
 
@@ -100,7 +100,7 @@ class Main:
             finally:
                 self.console = None
 
-    def die(self, exc: Exception):
+    def die(self, exc: Exception) -> None:
         """
         Stop using the console and unwind.
 
@@ -108,7 +108,7 @@ class Main:
         """
         run_until_complete(create_task(self.die_(exc)))
 
-    async def die_(self, exc: Exception):
+    async def die_(self, exc: Exception) -> None:
         "async version of `die`."
         self.stop()
         if not isinstance(exc, CancelledError):
@@ -129,7 +129,7 @@ def bg(p, *a, **k) -> ValueEvent:
     """
     evt = ValueEvent()
 
-    async def run_(evt, p, a, k):
+    async def run_(evt, p, a, k) -> None:
         try:
             evt.set(await p(*a, **k))
         except BaseException as exc:
@@ -173,7 +173,7 @@ class Console(io.IOBase):
     _term = None
     _wr_evt: Event | None = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         self.cfg = cfg
         self._AC_ = main._AC_
 
@@ -267,7 +267,7 @@ class Console(io.IOBase):
 
     __enter__ = start
 
-    def stop(self):
+    def stop(self) -> None:
         "Stop using this."
         if main.console is self:
             main.console = None
@@ -288,7 +288,7 @@ class Cmd(BaseCmd):
     See :cls:`Console` for configuration.
     """
 
-    async def setup(self):
+    async def setup(self) -> None:
         "Create a console"
         await super().setup()
         self.cons = await AC_use(self, Console(self.cfg))
@@ -307,7 +307,7 @@ class Cmd(BaseCmd):
 
     doc_w = dict(_d="Write console data", _0="bytes: data")
 
-    async def cmd_w(self, data: bytes):
+    async def cmd_w(self, data: bytes) -> None:
         "write stdin"
         await self.cons.put_in(data)
 
@@ -318,13 +318,13 @@ class Cmd(BaseCmd):
         _o="bytes:from stdout+stderr",
     )
 
-    async def stream_rw(self, msg):
+    async def stream_rw(self, msg) -> None:
         "read/write the console stream"
         n = msg.get(0, 32)
         async with msg.stream() as st, TaskGroup() as tg:
 
             @tg.start_soon
-            async def rd():
+            async def rd() -> None:
                 while True:
                     try:
                         await st.send(await self.cmd_r(n))
@@ -338,7 +338,7 @@ class Cmd(BaseCmd):
 
     doc_rb = dict(_d="Read input buffer", _0="int:maxlength (default 32)")
 
-    async def stream_rb(self, msg: Msg):
+    async def stream_rb(self, msg: Msg) -> None:
         "read from stdin"
         buf = bytearray(msg.get(0, 32))
         if msg.can_stream:

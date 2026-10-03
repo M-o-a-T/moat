@@ -21,7 +21,7 @@ __all__ = [
 class ClientActor(Actor):
     "An actor that runs over a `ClientTranspport`"
 
-    def __init__(self, client, *a, topic, **kw):
+    def __init__(self, client, *a, topic, **kw) -> None:
         super().__init__(ClientTransport(client, topic), *a, **kw)
 
 
@@ -31,14 +31,14 @@ class ClientTransport(Transport):
     actor.
     """
 
-    def __init__(self, client, topic):
+    def __init__(self, client, topic) -> None:
         self.client = client
         self.topic = topic
 
     def monitor(self):
         return ClientMonitor(self)
 
-    async def send(self, payload):
+    async def send(self, payload) -> None:
         await self.client.msg_send(self.topic, payload)
 
 
@@ -70,10 +70,10 @@ class ClientMonitor(MonitorStream):
 class ActorState:
     """base class for states"""
 
-    def __init__(self, msg=None):
+    def __init__(self, msg=None) -> None:
         self.msg = msg
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}:{self.msg!r}>"
 
 

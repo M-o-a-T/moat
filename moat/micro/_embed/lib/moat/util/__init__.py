@@ -45,7 +45,7 @@ class CancelledError(Exception):
 class OptCtx:
     "optional context"
 
-    def __init__(self, obj=None):
+    def __init__(self, obj=None) -> None:
         self.obj = obj
 
     def __enter__(self):
@@ -75,16 +75,16 @@ class ValueEvent:
     event = None
     value = None
 
-    def __init__(self, scope=None):
+    def __init__(self, scope=None) -> None:
         self.event = Event()
         self.scope = scope
 
-    def set(self, value):
+    def set(self, value) -> None:
         """Set the result to return this value, and wake any waiting task."""
         self.value = value
         self.event.set()
 
-    def set_error(self, exc):
+    def set_error(self, exc) -> None:
         """Set the result to raise this exceptio, and wake any waiting task."""
         if isinstance(exc, type):
             exc = exc()
@@ -95,7 +95,7 @@ class ValueEvent:
         """Check whether the event has occurred."""
         return self.value is not None
 
-    def cancel(self):
+    def cancel(self) -> None:
         """Send a cancelation to the recipient.
 
         TODO: Trio can't do that cleanly.
@@ -104,7 +104,7 @@ class ValueEvent:
             self.scope.cancel()
         self.set_error(CancelledError())
 
-    async def wait(self):
+    async def wait(self) -> None:
         """Block until the value is set.
 
         If it's already set, then this method returns immediately.
@@ -144,13 +144,13 @@ class attrdict(dict):
                 raise AttributeError(k) from None
             return d
 
-    def __setattr__(self, k, v):
+    def __setattr__(self, k, v) -> None:
         if k[0] == "_" or k[-1] == "_":
             object.__setattr__(self, k, v)
         else:
             self[k] = v
 
-    def __delattr__(self, k):
+    def __delattr__(self, k) -> None:
         if k[0] == "_" or k[-1] == "_":
             object.__delattr__(self, k)
         else:
@@ -217,7 +217,7 @@ class Lockstep:
     Very simple, but works only for one reader and one write.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.q = Queue(0)
         self._get = Event()
         self._put = Event()
@@ -240,7 +240,7 @@ class Lockstep:
 
     get = __anext__
 
-    async def put(self, s):
+    async def put(self, s) -> None:
         """
         Write to the buffer.
 
@@ -322,7 +322,7 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
 # Merge.
 
 
-def _merge_dict(d, other, drop=False, replace=True):
+def _merge_dict(d, other, drop=False, replace=True) -> None:
     for key, value in other.items():
         if value is NotGiven:
             d.pop(key, None)
@@ -340,7 +340,7 @@ def _merge_dict(d, other, drop=False, replace=True):
             del d[k]
 
 
-def _merge_list(item, value, drop=False, replace=True):
+def _merge_list(item, value, drop=False, replace=True) -> None:
     off = 0
     if isinstance(value, (list, tuple)):
         # two lists
@@ -425,7 +425,7 @@ def merge(d, *others, drop=False, replace=True):
     return d
 
 
-def _add_obj(a, b):
+def _add_obj(a, b) -> None:
     """add attributes of B to A if they're missing"""
     for k in dir(b):
         if not hasattr(a, k):

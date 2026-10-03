@@ -30,6 +30,11 @@ from moat.util import (
 from moat.lib.config import CFG
 from moat.lib.path import Path, PathLongener
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Never
+
 __all__ = ["AttrClientEntry", "ClientEntry", "ClientRoot"]
 
 
@@ -41,7 +46,7 @@ class NamedRoot:
     Named children should call `_add_name` on this entry.
     """
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         self.__named = {}
         super().__init__(*a, **k)
 
@@ -52,7 +57,7 @@ class NamedRoot:
             raise TypeError("No string: " + repr(name))
         return self.__named.get(name)
 
-    def _add_name(self, obj):
+    def _add_name(self, obj) -> None:
         n = obj.name
         if n is None:
             return
@@ -60,7 +65,7 @@ class NamedRoot:
         self.__named[n] = obj
         obj.reg_del(self, "_del__name", obj, n)
 
-    def _del__name(self, obj, n):
+    def _del__name(self, obj, n) -> None:
         old = self.__named.pop(n)
         if old is None or old is obj:
             return
@@ -76,7 +81,7 @@ class ClientEntry:
     value = NotGiven
     chain = None
 
-    def __init__(self, parent, name=None):
+    def __init__(self, parent, name=None) -> None:
         self._init()
         self._path = parent._path + (name,)  # noqa:SLF001
         self._name = name
@@ -84,7 +89,7 @@ class ClientEntry:
         self._root = weakref.ref(parent.root)
         self.client = parent.client
 
-    def _init(self):
+    def _init(self) -> None:
         self._lock = anyio.Lock()  # for saving etc.
         self.chain = None
         self.value = NotGiven
@@ -237,7 +242,7 @@ class ClientEntry:
         """
         return self._children[name]
 
-    def __delitem__(self, name):
+    def __delitem__(self, name) -> None:
         del self._children[name]
 
     def get(self, name):  # noqa:D102
@@ -247,13 +252,13 @@ class ClientEntry:
         """Iterating an entry returns its children."""
         return iter(list(self._children.values()))
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self.value is not NotGiven or bool(self._children)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._children)
 
-    def __contains__(self, k):
+    def __contains__(self, k) -> bool:
         if isinstance(k, type(self)):
             k = k._name  # noqa:SLF001
         return k in self._children
@@ -294,7 +299,7 @@ class ClientEntry:
             self.chain = None
             return r
 
-    async def set_value(self, value):
+    async def set_value(self, value) -> None:
         """Callback to set the value when data has arrived.
 
         This method is strictly for overriding.
@@ -304,7 +309,7 @@ class ClientEntry:
         """
         self.value = value
 
-    async def seen_value(self):
+    async def seen_value(self) -> None:
         """The current value was seen (again).
 
         Useful for syncing.
@@ -313,7 +318,7 @@ class ClientEntry:
         """
         pass
 
-    def mark_inconsistent(self, r):
+    def mark_inconsistent(self, r) -> None:
         """There has been an inconsistent update.
 
         This call will immediately be followed by a call to
@@ -353,10 +358,10 @@ class AttrClientEntry(ClientEntry):
 
     ATTRS = ()
 
-    async def update(self, value, **kw):  # noqa: ARG002, D102
+    async def update(self, value, **kw) -> Never:  # noqa: ARG002, D102
         raise RuntimeError("Nope. Set attributes and call '.save()'.")
 
-    async def set_value(self, value):
+    async def set_value(self, value) -> None:
         """Callback to set the value when data has arrived.
 
         This method sets the actual attributes.
@@ -413,7 +418,7 @@ class MirrorRoot(ClientEntry):
 
     CFG = None  # You need to override this with a dict(prefix=('where','ever'))
 
-    def __init__(self, client, path, *, need_wait=False, cfg=None, require_client=True):
+    def __init__(self, client, path, *, need_wait=False, cfg=None, require_client=True) -> None:
         # pylint: disable=super-init-not-called
         self._init()
         self.client = client
@@ -514,11 +519,11 @@ class MirrorRoot(ClientEntry):
                     raise
                 return default
 
-    async def run_starting(self):
+    async def run_starting(self) -> None:
         """Hook for 'about to start reading'"""
         pass
 
-    async def running(self):
+    async def running(self) -> None:
         """Hook for 'done reading current state'"""
         self._loaded.set()
 
@@ -531,7 +536,7 @@ class MirrorRoot(ClientEntry):
         async with anyio.create_task_group() as tg:
             self._tg = tg
 
-            async def monitor(*, task_status):
+            async def monitor(*, task_status) -> None:
                 pl = PathLongener(())
                 await self.run_starting()
                 async with self.client._stream(  # noqa: SLF001
@@ -604,15 +609,15 @@ class MirrorRoot(ClientEntry):
                 tg.cancel_scope.cancel()
             pass  # end of 'run', closing taskgroup
 
-    async def cancel(self):
+    async def cancel(self) -> None:
         """Stop the monitor"""
         await self._tg.cancel_scope.cancel()
 
-    async def wait_loaded(self):
+    async def wait_loaded(self) -> None:
         """Wait for the tree to be loaded completely."""
         await self._loaded.wait()
 
-    async def wait_chain(self, chain):
+    async def wait_chain(self, chain) -> None:
         """Wait for a tree update containing this tick."""
         try:
             if chain.tick <= self._seen[chain.node]:
@@ -624,7 +629,7 @@ class MirrorRoot(ClientEntry):
         heapq.heappush(w, (chain.tick, e))
         await e.wait()
 
-    async def spawn(self, p, *a, **kw):
+    async def spawn(self, p, *a, **kw) -> None:
         p = partial(p, *a, **kw)
         self._tg.start_soon(p)
 
@@ -639,7 +644,7 @@ class ClientRoot(MirrorRoot):
 
     """
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:
         if self.CFG is None:
             raise TypeError(f"You need to override .CFG in {type(self).__name__}")
         super().__init__(*a, **kw)

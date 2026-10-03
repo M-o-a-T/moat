@@ -61,7 +61,7 @@ class BrokerException(Exception):  # noqa: D101
 class RetainedApplicationMessage:  # noqa: D101
     __slots__ = ("data", "qos", "source_session", "topic")
 
-    def __init__(self, source_session, topic, data, qos=None):
+    def __init__(self, source_session, topic, data, qos=None) -> None:
         self.source_session = source_session
         self.topic = topic
         self.data = data
@@ -69,7 +69,7 @@ class RetainedApplicationMessage:  # noqa: D101
 
 
 class Server:  # noqa: D101
-    def __init__(self, listener_name, server_instance, max_connections=-1, port=None):
+    def __init__(self, listener_name, server_instance, max_connections=-1, port=None) -> None:
         self.logger = logging.getLogger(__name__)
         self.instance = server_instance
         self.conn_count = 0
@@ -126,7 +126,7 @@ class Server:  # noqa: D101
                     self.conn_count,
                 )
 
-    async def close_instance(self):  # noqa: D102
+    async def close_instance(self) -> None:  # noqa: D102
         self.instance.cancel()
 
 
@@ -136,12 +136,12 @@ class BrokerContext(BaseContext):
     It act as an adapter to broker services from plugins developed for MoaT-MQTT broker
     """
 
-    def __init__(self, broker, config):
+    def __init__(self, broker, config) -> None:
         super().__init__()
         self._broker_instance = broker
         self.config = config
 
-    async def broadcast_message(self, topic, data, qos=None, retain=False):  # noqa: D102
+    async def broadcast_message(self, topic, data, qos=None, retain=False) -> None:  # noqa: D102
         await self._broker_instance.internal_message_broadcast(topic, data, qos, retain=retain)
 
     @property
@@ -223,7 +223,7 @@ class Broker:
         "stopped",
     ]
 
-    def __init__(self, tg: anyio.abc.TaskGroup, config=None, plugin_namespace=None):
+    def __init__(self, tg: anyio.abc.TaskGroup, config=None, plugin_namespace=None) -> None:
         self.logger = logging.getLogger(__name__)
         self.config = deepcopy(_defaults)
         if config is not None:
@@ -249,7 +249,7 @@ class Broker:
             namespace = "moat.mqtt.broker.plugins"
         self.plugins_manager = PluginManager(tg, namespace, context)
 
-    def _build_listeners_config(self, broker_config):
+    def _build_listeners_config(self, broker_config) -> None:
         self.listeners_config = dict()
         try:
             listeners_config = broker_config["listeners"]
@@ -263,7 +263,7 @@ class Broker:
         except KeyError as ke:
             raise BrokerException("Listener config not found or invalid") from ke
 
-    def _init_states(self):
+    def _init_states(self) -> None:
         self.transitions = Machine(states=Broker.states, initial="new")
         self.transitions.add_transition(trigger="start", source="new", dest="starting")
         self.transitions.add_transition(
@@ -302,7 +302,7 @@ class Broker:
             dest="stopped",
         )
 
-    async def start(self):
+    async def start(self) -> None:
         """
         Start the broker to serve with the given configuration
 
@@ -375,7 +375,7 @@ class Broker:
                             "Invalid port value in bind value: {listener['bind']}"
                         )
 
-                    async def server_task(evt, cb, address, port, ssl_context):
+                    async def server_task(evt, cb, address, port, ssl_context) -> None:
                         with anyio.CancelScope() as scope:
                             sock = await anyio.create_tcp_listener(
                                 local_port=port,
@@ -387,7 +387,7 @@ class Broker:
                             )
                             await evt.set((scope, bound_port))
 
-                            async def _maybe_wrap(conn):
+                            async def _maybe_wrap(conn) -> None:
                                 if ssl_context:
                                     conn = await anyio.streams.tls.TLSStream.wrap(
                                         conn,
@@ -447,7 +447,7 @@ class Broker:
             self.transitions.starting_fail()
             raise BrokerException("Broker instance can't be started") from e
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         """
         Stop broker instance.
 
@@ -489,10 +489,10 @@ class Broker:
     async def internal_message_broadcast(self, topic, data, qos=None, retain=None):  # noqa: D102
         return await self.broadcast_message(None, topic, data, qos=qos, retain=retain)
 
-    async def ws_connected(self, conn, listener_name):  # noqa: D102
+    async def ws_connected(self, conn, listener_name) -> None:  # noqa: D102
         from asyncwebsockets import create_websocket_server  # noqa: PLC0415
 
-        async def subpro(req):
+        async def subpro(req) -> str | bool:
             if "mqtt" not in req.subprotocols:
                 return False
             return "mqtt"
@@ -500,7 +500,7 @@ class Broker:
         websocket = await create_websocket_server(conn, filter=subpro)
         await self.client_connected(listener_name, WebSocketsAdapter(websocket))
 
-    async def stream_connected(self, conn, listener_name):  # noqa: D102
+    async def stream_connected(self, conn, listener_name) -> None:  # noqa: D102
         await self.client_connected(listener_name, StreamAdapter(conn))
 
     async def client_connected(self, listener_name, adapter: BaseAdapter):  # noqa: D102
@@ -511,7 +511,7 @@ class Broker:
         async with server._client_limit():  # noqa: SLF001
             return await self.client_connected_(listener_name, adapter)
 
-    async def client_connected_(self, listener_name, adapter: BaseAdapter):  # noqa: D102
+    async def client_connected_(self, listener_name, adapter: BaseAdapter) -> None:  # noqa: D102
         # Wait for connection available on listener
 
         remote_address, remote_port = adapter.get_peer_info()
@@ -621,7 +621,7 @@ class Broker:
         # Init and start loop for handling client messages (publish, subscribe/unsubscribe, disconnect)
         async with anyio.create_task_group() as tg:
 
-            async def handle_unsubscribe():
+            async def handle_unsubscribe() -> None:
                 while True:
                     unsubscription = await handler.get_next_pending_unsubscription()
                     self.logger.debug("%s handling unsubscription", client_session.client_id)
@@ -634,7 +634,7 @@ class Broker:
                         )
                     await handler.mqtt_acknowledge_unsubscription(unsubscription["packet_id"])
 
-            async def handle_subscribe():
+            async def handle_subscribe() -> None:
                 while True:
                     subscriptions = await handler.get_next_pending_subscription()
                     self.logger.debug("%s handling subscription", client_session.client_id)
@@ -701,7 +701,7 @@ class Broker:
 
         self.logger.debug("%s Client disconnected", client_session.client_id)
 
-    async def _stop_handler(self, handler):
+    async def _stop_handler(self, handler) -> None:
         """
         Stop a running handler and detach if from the session
         :param handler:
@@ -785,7 +785,7 @@ class Broker:
         # If all plugins returned True, authentication is success
         return topic_result
 
-    def retain_message(self, source_session, topic_name, data, qos=None):  # noqa: D102
+    def retain_message(self, source_session, topic_name, data, qos=None) -> None:  # noqa: D102
         if not self._do_retain:
             raise RuntimeError("Support for retained messages is turned off")
         if data is not None and data != b"":
@@ -863,7 +863,7 @@ class Broker:
             pass
         return deleted
 
-    def _del_all_subscriptions(self, session):
+    def _del_all_subscriptions(self, session) -> None:
         """
         Delete all topic subscriptions for a given session
         :param session:
@@ -877,7 +877,7 @@ class Broker:
             if not self._subscriptions[topic]:
                 del self._subscriptions[topic]
 
-    async def _broadcast_loop(self):
+    async def _broadcast_loop(self) -> None:
         async with anyio.create_task_group() as tg:
             while True:
                 broadcast = await self._broadcast_queue_r.receive()
@@ -940,7 +940,7 @@ class Broker:
         force_qos=None,
         qos=None,
         retain=False,
-    ):
+    ) -> None:
         if not isinstance(data, (bytes, bytearray)):
             self.logger.error("Not bytes %s:%r", topic, data)
             return
@@ -953,7 +953,7 @@ class Broker:
         if retain:
             self.retain_message(session, topic, data, force_qos or qos)
 
-    async def publish_session_retained_messages(self, session):  # noqa: D102
+    async def publish_session_retained_messages(self, session) -> None:  # noqa: D102
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(
                 "Publishing %d messages retained for session %s",
@@ -972,7 +972,7 @@ class Broker:
                     True,
                 )
 
-    async def publish_retained_messages_for_subscription(self, subscription, session):  # noqa: D102
+    async def publish_retained_messages_for_subscription(self, subscription, session) -> None:  # noqa: D102
         #       if self.logger.isEnabledFor(logging.DEBUG):
         #           self.logger.debug("Begin broadcasting messages retained due to subscription on '%s' from %s",
         #                             subscription[0], format_client_message(session=session))
@@ -999,7 +999,7 @@ class Broker:
                 format_client_message(session=session),
             )
 
-    async def delete_session(self, client_id):
+    async def delete_session(self, client_id) -> None:
         """
         Delete an existing session data, for example due to clean session set in CONNECT
         :param client_id:

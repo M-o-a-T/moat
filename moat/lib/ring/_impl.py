@@ -14,7 +14,7 @@ class RingBuffer:
     Old data are overwritten when the reader doesn't keep up.
     """
 
-    def __init__(self, length: int):
+    def __init__(self, length: int) -> None:
         """
         Args:
             length: Buffer length, *not* constrained to powers of two.
@@ -33,10 +33,10 @@ class RingBuffer:
         "bytes in buffer"
         return self._count
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._count
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Ring:{self._count}/{len(self._buf)}>"
 
     def write(self, buf: bytes, drop: bool = True) -> int:

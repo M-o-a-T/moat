@@ -15,14 +15,14 @@ ACL = set("rwdcxena")
 
 
 @click.group(cls=AliasedGroup)  # pylint: disable=undefined-variable
-async def cli():
+async def cli() -> None:
     """Manage ACLs. Usage: … acl …"""
     pass
 
 
 @cli.command("list")
 @click.pass_obj
-async def list_(obj):
+async def list_(obj) -> None:
     """List ACLs."""
     res = await obj.client._request(  # noqa:SLF001
         action="enum_internal",
@@ -45,7 +45,7 @@ async def list_(obj):
 @click.argument("name", nargs=1)
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def dump(obj, name, path, as_dict):
+async def dump(obj, name, path, as_dict) -> None:
     """Dump a complete (or partial) ACL."""
     path = P(path)
     await data_get(
@@ -57,7 +57,7 @@ async def dump(obj, name, path, as_dict):
 @click.argument("name", nargs=1)
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def get(obj, name, path):
+async def get(obj, name, path) -> None:
     """Read an ACL.
 
     This command does not test a path. Use "… acl test …" for that.
@@ -92,7 +92,7 @@ async def get(obj, name, path):
 @click.argument("name", nargs=1)
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def set_(obj, acl, name, path):
+async def set_(obj, acl, name, path) -> None:
     """Set or change an ACL."""
 
     path = P(path)
@@ -160,7 +160,7 @@ async def set_(obj, acl, name, path):
 @click.option("-a", "--acl", default=None, help="ACL to test. Default: current")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def test(obj, path, acl, mode):
+async def test(obj, path, acl, mode) -> None:
     """Test which ACL entry matches a path"""
     path = P(path)
     if not len(path):

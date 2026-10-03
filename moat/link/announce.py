@@ -112,7 +112,7 @@ class SetReady:
     up: bool = field(init=False, default=False, repr=False)
     _value: Any = field(kw_only=True, default=None)
 
-    def set(self):
+    def set(self) -> None:
         """
         We started up.
         """
@@ -121,7 +121,7 @@ class SetReady:
         self.up = True
         self.evt.set()
 
-    def started(self, value: Any = None):
+    def started(self, value: Any = None) -> None:
         """
         This mimics `TaskStatus.started`. The value, if any, is added to
         the announcement message as its ``value`` item.
@@ -135,12 +135,12 @@ class SetReady:
         return self._value
 
     @value.setter
-    def value(self, value: Any):
+    def value(self, value: Any) -> None:
         "Set the value to announce"
         self._value = value
         self.evt.set()
 
-    async def monitor(self, *, task_status):
+    async def monitor(self, *, task_status) -> None:
         """
         Watch for other announcements with a different ID.
         """
@@ -160,12 +160,12 @@ class SetReady:
                 if msg["id"] != self.link.id and await self.link.i_checkid(msg["id"]):
                     raise ServiceSupplanted(self.path)
 
-    async def wait_sr(self):
+    async def wait_sr(self) -> None:
         await anyio.sleep(5)
         if not self.up:
             logger.warning(f"{self.path} did not (yet?) start")
 
-    async def wait_evt(self, via: anyio.Event):
+    async def wait_evt(self, via: anyio.Event) -> None:
         await via.wait()
         self.set()
 
@@ -197,10 +197,10 @@ class SetReady:
 class FakeReady(TaskStatus):
     """A fake event/TaskStatus that doesn't do anything at all"""
 
-    def set(self):
+    def set(self) -> None:
         pass
 
-    def started(self, value: Any = None):
+    def started(self, value: Any = None) -> None:
         pass
 
 

@@ -29,22 +29,22 @@ class _KNXbase(ClientEntry):
             self._server = self.parent.server
         return self._server
 
-    async def set_value(self, value):
+    async def set_value(self, value) -> None:
         await super().set_value(value)
         if self.server is not None:
             await self._update_server()
 
-    async def update_server(self):
+    async def update_server(self) -> None:
         await self.parent.update_server()
 
-    async def _update_server(self, initial=False):
+    async def _update_server(self, initial=False) -> None:
         if not self.val_d(True, "present"):
             return
         await self.setup(initial=initial)
         for k in self:
             await k._update_server(initial=initial)  # noqa:SLF001
 
-    async def setup(self, initial=False):
+    async def setup(self, initial=False) -> None:
         pass
 
 
@@ -67,21 +67,21 @@ class _KNXnode(_KNXbase):
     def tg(self):
         return self.server.tg
 
-    async def setup(self, initial=False):  # noqa:ARG002
+    async def setup(self, initial=False) -> None:  # noqa:ARG002
         await super().setup()
         if self.server is None:
             self._task = None
             return
         await self._kill()
 
-    async def _kill(self):
+    async def _kill(self) -> None:
         if self._task is not None:
             await self._task.cancel()
             await self._task_done.wait()
             self._task = None
 
-    async def spawn(self, p, *a, **k):
-        async def _spawn(p, a, k, task_status=anyio.TASK_STATUS_IGNORED):
+    async def spawn(self, p, *a, **k) -> None:
+        async def _spawn(p, a, k, task_status=anyio.TASK_STATUS_IGNORED) -> None:
             await self._kill()
             with anyio.CancelScope() as sc:
                 self._task = sc
@@ -98,7 +98,7 @@ class _KNXnode(_KNXbase):
 class KNXnode(_KNXnode):
     """Describes one port, i.e. incoming value to be read."""
 
-    async def _task_in(self, evt, dest, initial=False):
+    async def _task_in(self, evt, dest, initial=False) -> None:
         try:
             idem = self.find_cfg("idem", default=True)
 
@@ -145,10 +145,10 @@ class KNXnode(_KNXnode):
         finally:
             evt.set()
 
-    def _cb(self, _dev):
+    def _cb(self, _dev) -> None:
         self.__evt.set()
 
-    async def _task_out(self, evt, src, initial=False):
+    async def _task_out(self, evt, src, initial=False) -> None:
         try:
             val = None
             idem = self.find_cfg("idem", default=True)
@@ -165,7 +165,7 @@ class KNXnode(_KNXnode):
             if mode == "binary":
                 device = Switch(**args)
 
-                async def set_val(dev, val):
+                async def set_val(dev, val) -> None:
                     if val:
                         await dev.set_on()
                     else:
@@ -191,7 +191,7 @@ class KNXnode(_KNXnode):
                 lock = anyio.Lock()
                 chain = None
 
-                async def _rdr(task_status=anyio.TASK_STATUS_IGNORED):
+                async def _rdr(task_status=anyio.TASK_STATUS_IGNORED) -> None:
                     # The "goal" value may also be set by the bus. Thus we monitor
                     # the device we send on, and set the value accordingly.
                     nonlocal val
@@ -238,7 +238,7 @@ class KNXnode(_KNXnode):
         finally:
             evt.set()
 
-    async def setup(self, initial=False):  # noqa:D102
+    async def setup(self, initial=False) -> None:  # noqa:D102
         await super().setup(initial=initial)
 
         if self.server is None:
@@ -292,7 +292,7 @@ class KNXg1(_KNXbaseNUM):  # noqa:D101
 
 
 class KNXserver(_KNXbase):  # noqa:D101
-    async def set_server(self, server, initial=False):  # noqa:D102
+    async def set_server(self, server, initial=False) -> None:  # noqa:D102
         await self.parent.set_server(server, initial=initial)
 
 
@@ -308,7 +308,7 @@ class KNXbus(_KNXbaseNUM):  # noqa:D101
             return KNXserver
         return super().child_type(name)
 
-    async def set_value(self, value):  # noqa:D102
+    async def set_value(self, value) -> None:  # noqa:D102
         await super().set_value(value)
         await self.update_server()
 
@@ -316,7 +316,7 @@ class KNXbus(_KNXbaseNUM):  # noqa:D101
     def server(self):  # noqa:D102
         return self._server
 
-    async def set_server(self, server, initial=False):  # noqa:D102
+    async def set_server(self, server, initial=False) -> None:  # noqa:D102
         self._server = server
         await self._update_server(initial=initial)
 
@@ -328,10 +328,10 @@ class KNXroot(_KNXbase, ClientRoot):  # noqa:D101
     err = None
 
     @property
-    def server(self):  # noqa:D102
+    def server(self) -> None:  # noqa:D102
         return None
 
-    async def run_starting(self, server=None):  # noqa:D102
+    async def run_starting(self, server=None) -> None:  # noqa:D102
         self._server = server
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
@@ -348,5 +348,5 @@ class KNXroot(_KNXbase, ClientRoot):  # noqa:D101
     def child_type(self, name):  # noqa:D102,ARG002
         return KNXbus
 
-    async def update_server(self):  # noqa:D102
+    async def update_server(self) -> None:  # noqa:D102
         await self._update_server()

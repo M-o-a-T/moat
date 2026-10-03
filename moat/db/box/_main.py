@@ -21,7 +21,7 @@ from .model import Box, BoxTyp
 
 @load_subgroup(prefix="moat.box", invoke_without_command=False)
 @click.pass_context
-def cli(ctx):
+def cli(ctx) -> None:
     """Boxes for storing things."""
     obj = ctx.obj
 
@@ -34,7 +34,7 @@ def cli(ctx):
 @cli.group(cls=AliasedGroup)
 @click.option("--name", "-n", type=str, help="Text on the label")
 @click.pass_obj
-def one(obj, name):
+def one(obj, name) -> None:
     """
     Manage boxes.
     """
@@ -44,7 +44,7 @@ def one(obj, name):
 
 @one.command(name="show")
 @click.pass_obj
-def show_(obj):
+def show_(obj) -> None:
     """
     Show box details / list all box types.
 
@@ -79,7 +79,7 @@ def opts(c):
 @one.command()
 @opts
 @click.pass_obj
-def add(obj, **kw):
+def add(obj, **kw) -> None:
     """
     Add a box.
     """
@@ -101,7 +101,7 @@ def add(obj, **kw):
 @one.command(epilog="Use '-in -' to drop the parent box, -x/-y/-z 0 to clear a position.")
 @opts
 @click.pass_obj
-def set(obj, **kw):  # noqa:A001
+def set(obj, **kw) -> None:  # noqa:A001
     """
     Modify a box.
     """
@@ -118,7 +118,7 @@ def set(obj, **kw):  # noqa:A001
 
 @one.command()
 @click.pass_obj
-def delete(obj):
+def delete(obj) -> None:
     """
     Remove a box.
     """
@@ -135,7 +135,7 @@ def delete(obj):
 @cli.group(name="typ", cls=AliasedGroup)
 @click.option("--name", "-n", type=str, help="Name of the box type")
 @click.pass_context
-def typ_(ctx, name):
+def typ_(ctx, name) -> None:
     """\
     Manage box types.
     """
@@ -145,7 +145,7 @@ def typ_(ctx, name):
 
 @typ_.command(name="show")
 @click.pass_obj
-def typ_show(obj):
+def typ_show(obj) -> None:
     """
     Show box details / list all box types.
 
@@ -189,7 +189,7 @@ def typopts(c):
 @typ_.command(name="add")
 @typopts
 @click.pass_obj
-def typ_add(obj, parent, **kw):
+def typ_add(obj, parent, **kw) -> None:
     """
     Add a box type.
     """
@@ -206,7 +206,7 @@ def typ_add(obj, parent, **kw):
 @typ_.command(name="set", epilog="Use '-i -NAME' to remove a containing box type.")
 @typopts
 @click.pass_obj
-def typ_set(obj, **kw):
+def typ_set(obj, **kw) -> None:
     """
     Modify a box type.
     """
@@ -219,7 +219,7 @@ def typ_set(obj, **kw):
 
 @typ_.command(name="delete")
 @click.pass_obj
-def typ_delete(obj):
+def typ_delete(obj) -> None:
     """
     Remove a box type.
     """

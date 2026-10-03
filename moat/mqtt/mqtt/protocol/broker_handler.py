@@ -34,24 +34,26 @@ if TYPE_CHECKING:
     from moat.mqtt.mqtt.unsubscribe import UnsubscribePacket
     from moat.mqtt.plugins.manager import PluginManager
 
+    from typing import Never
+
 logger = logging.getLogger(__name__)
 
 
 class BrokerProtocolHandler(ProtocolHandler):  # noqa: D101
     clean_disconnect = False
 
-    def __init__(self, plugins_manager: PluginManager, session: Session = None):
+    def __init__(self, plugins_manager: PluginManager, session: Session = None) -> None:
         super().__init__(plugins_manager, session)
         self._pending_subscriptions = create_queue(9999)
         self._pending_unsubscriptions = create_queue(9999)
 
-    async def handle_write_timeout(self):  # noqa: D102
+    async def handle_write_timeout(self) -> None:  # noqa: D102
         pass
 
-    async def handle_read_timeout(self):  # noqa: D102
+    async def handle_read_timeout(self) -> Never:  # noqa: D102
         raise TimeoutError
 
-    async def _handle_disconnect(self, disconnect, wait=True):  # pylint: disable=arguments-differ  # noqa: ARG002
+    async def _handle_disconnect(self, disconnect, wait=True) -> None:  # pylint: disable=arguments-differ  # noqa: ARG002
         self.logger.debug("Client disconnecting")
         self.clean_disconnect = False  # depending on 'disconnect' (if set)
         with anyio.fail_after(2, shield=True):
@@ -60,12 +62,12 @@ class BrokerProtocolHandler(ProtocolHandler):  # noqa: D101
                     await self._reader_stopped.wait()
             await self.stop()
 
-    async def handle_connection_closed(self):  # noqa: D102
+    async def handle_connection_closed(self) -> None:  # noqa: D102
         if not self._disconnecting:
             self._disconnecting = True
             await self._handle_disconnect(None, wait=False)
 
-    async def handle_connect(self, connect: ConnectPacket):  # noqa: ARG002, D102
+    async def handle_connect(self, connect: ConnectPacket) -> None:  # noqa: ARG002, D102
         # Broker handler shouldn't received CONNECT message during messages handling
         # as CONNECT messages are managed by the broker on client connection
         self.logger.error(
@@ -75,17 +77,17 @@ class BrokerProtocolHandler(ProtocolHandler):  # noqa: D101
         )
         await self.stop()
 
-    async def handle_pingreq(self, pingreq: PingReqPacket):  # noqa: ARG002, D102
+    async def handle_pingreq(self, pingreq: PingReqPacket) -> None:  # noqa: ARG002, D102
         await self._send_packet(PingRespPacket.build())
 
-    async def handle_subscribe(self, subscribe: SubscribePacket):  # noqa: D102
+    async def handle_subscribe(self, subscribe: SubscribePacket) -> None:  # noqa: D102
         subscription = {
             "packet_id": subscribe.variable_header.packet_id,
             "topics": subscribe.payload.topics,
         }
         await self._pending_subscriptions.put(subscription)
 
-    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):  # pylint: disable=arguments-differ  # noqa: D102
+    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket) -> None:  # pylint: disable=arguments-differ  # noqa: D102
         unsubscription = {
             "packet_id": unsubscribe.variable_header.packet_id,
             "topics": unsubscribe.payload.topics,
@@ -100,15 +102,15 @@ class BrokerProtocolHandler(ProtocolHandler):  # noqa: D101
         unsubscription = await self._pending_unsubscriptions.get()
         return unsubscription
 
-    async def mqtt_acknowledge_subscription(self, packet_id, return_codes):  # noqa: D102
+    async def mqtt_acknowledge_subscription(self, packet_id, return_codes) -> None:  # noqa: D102
         suback = SubackPacket.build(packet_id, return_codes)
         await self._send_packet(suback)
 
-    async def mqtt_acknowledge_unsubscription(self, packet_id):  # noqa: D102
+    async def mqtt_acknowledge_unsubscription(self, packet_id) -> None:  # noqa: D102
         unsuback = UnsubackPacket.build(packet_id)
         await self._send_packet(unsuback)
 
-    async def mqtt_connack_authorize(self, authorize: bool):  # noqa: D102
+    async def mqtt_connack_authorize(self, authorize: bool) -> None:  # noqa: D102
         if authorize:
             connack = ConnackPacket.build(self.session.parent, CONNECTION_ACCEPTED)
         else:

@@ -92,7 +92,7 @@ class ServerUserMaker(BaseServerAuthMaker):  # noqa:D101
         self.password = pwd
         return self
 
-    async def send(self, cmd):  # noqa:D102,ARG002
+    async def send(self, cmd) -> None:  # noqa:D102,ARG002
         return  # nothing to do, we don't share the hash
 
     @classmethod
@@ -115,7 +115,7 @@ class ServerUser(RootServerUser):  # noqa:D101
         self._name = data.name
         return self
 
-    async def auth(self, cmd: StreamCommand, data):
+    async def auth(self, cmd: StreamCommand, data) -> None:
         """Verify that @data authenticates this user."""
         await super().auth(cmd, data)
 
@@ -177,7 +177,7 @@ class ClientUserMaker(BaseClientAuthMaker):  # noqa:D101
             self._chain = m.chain
         return self
 
-    async def send(self, client: Client, _kind="user", **msg):  # pylint: disable=unused-argument,arguments-differ
+    async def send(self, client: Client, _kind="user", **msg) -> None:  # pylint: disable=unused-argument,arguments-differ
         """Send a record representing this user to the server."""
         if self._pass is not None:
             msg["password"] = await pack_pwd(client, self._pass, self._length)
@@ -223,7 +223,7 @@ class ClientUser(BaseClientAuth):  # noqa:D101
         self._pass = user["password"].encode("utf-8", errors="surrogateescape")
         return self
 
-    async def auth(self, client: Client, chroot=()):
+    async def auth(self, client: Client, chroot=()) -> None:
         """
         Authorizes this user with the server.
         """

@@ -18,6 +18,10 @@ from moat.kv.obj import AttrClientEntry, ClientEntry, ClientRoot, NamedRoot
 from moat.lib.path import P, Path
 
 from collections import deque
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Never
 
 logger = logging.getLogger(__name__)
 
@@ -29,18 +33,18 @@ class SkipNone:  # noqa:D101
 
 
 class Cleaner:  # noqa:D101
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         self._cleaner = []
         super().__init__(*a, **k)
 
-    def reg_del(self, p, m, o, *a, **k):  # noqa:D102
+    def reg_del(self, p, m, o, *a, **k) -> None:  # noqa:D102
         self._cleaner.append((ref(p), m, ref(o), a, k))
 
-    async def set_value(self, value=NotGiven):  # noqa:D102
+    async def set_value(self, value=NotGiven) -> None:  # noqa:D102
         await super().set_value(value)  # pylint: disable=no-member
         self._clean_up()
 
-    def _clean_up(self):
+    def _clean_up(self) -> None:
         d, self._cleaner = self._cleaner, []
         for p, m, o, a, k in d:
             p = p()  # noqa:PLW2901
@@ -57,7 +61,7 @@ class InventoryRoot(ClientRoot):  # noqa:D101
 
     host = net = cable = group = vlan = wire = None
 
-    async def run_starting(self):  # noqa:D102
+    async def run_starting(self) -> None:  # noqa:D102
         self.host = self.follow(P("host"), create=True)
         self.net = self.follow(P("net"), create=True)
         self.cable = self.follow(P("cable"), create=True)
@@ -70,7 +74,7 @@ class InventoryRoot(ClientRoot):  # noqa:D101
 
         await super().run_starting()
 
-    async def running(self):  # noqa:D102
+    async def running(self) -> None:  # noqa:D102
         await self.cable._running()  # noqa:SLF001
         await super().running()
 
@@ -113,18 +117,18 @@ class Vlan(Cleaner, SkipNone, AttrClientEntry):
     name = None
     desc = None
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         self._nets = {}
         super().__init__(*a, **k)
 
-    def _add_net(self, obj):
+    def _add_net(self, obj) -> None:
         n = obj.name
         if n is None:
             return
         self._nets[n] = obj
         obj.reg_del(self, "_del__net", obj, n)
 
-    def _del__net(self, obj, n):
+    def _del__net(self, obj, n) -> None:
         try:
             old = self._nets.pop(n)
         except KeyError:
@@ -138,7 +142,7 @@ class Vlan(Cleaner, SkipNone, AttrClientEntry):
     def vlan(self):  # noqa:D102
         return self._path[-1]
 
-    async def set_value(self, value=NotGiven):
+    async def set_value(self, value=NotGiven) -> None:
         """Called by the network to update my value."""
         await super().set_value(value)
 
@@ -154,10 +158,10 @@ class Vlan(Cleaner, SkipNone, AttrClientEntry):
         """Return the list of networks in this VLAN"""
         return self._nets.values()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"‹VLAN {self.name}:{self.vlan}›"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name}~{self.vlan}"
 
 
@@ -180,7 +184,7 @@ class VlanRoot(NamedRoot, ClientEntry):
                 res = self.get(int(name))
         return res
 
-    async def update(self, value, _locked=False):  # noqa:D102,ARG002
+    async def update(self, value, _locked=False) -> Never:  # noqa:D102,ARG002
         raise ValueError("No values here!")
 
 
@@ -221,7 +225,7 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
     _next_adr = 2
     _name = None
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:
         self._hosts = {}
         self._slaves = WeakSet()
         super().__init__(*a, **kw)
@@ -287,7 +291,7 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
         for s in self._slaves:
             yield from s.all_nets
 
-    def _add_slave(self, net):
+    def _add_slave(self, net) -> None:
         if net is self:
             raise RuntimeError("owch")
         if self in net.all_nets:
@@ -295,7 +299,7 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
         self._slaves.add(net)
         net.reg_del(self, "_del__slave", net)
 
-    def _del__slave(self, net):
+    def _del__slave(self, net) -> None:
         if net is None:
             return
         self._slaves.remove(net)
@@ -336,7 +340,7 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
             del res["virt"]
         return res
 
-    async def set_value(self, value=NotGiven):
+    async def set_value(self, value=NotGiven) -> None:
         """\
             Called by the network to update my value.
             """
@@ -361,7 +365,7 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
                 if p.net == self.name:
                     self._add_host(p)
 
-    async def save(self, *, wait=False):  # noqa:D102
+    async def save(self, *, wait=False) -> None:  # noqa:D102
         if self.name is not None and self.root.net.by_name(self.name) not in (
             self,
             None,
@@ -385,13 +389,13 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
                 return n.hosts
         return self._hosts.items()
 
-    def _add_host(self, host):
+    def _add_host(self, host) -> None:
         if not host.num:
             return
         self._hosts[host.num] = host
         host.reg_del(self, "_del__host", host, host.num)
 
-    def _del__host(self, host, n):
+    def _del__host(self, host, n) -> None:
         try:
             old = self._hosts.pop(n)
         except KeyError:
@@ -404,10 +408,10 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
     def by_num(self, num):  # noqa:D102
         return self._hosts[num]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"‹Net {self.name}:{self.net}›"
 
-    def __str__(self):
+    def __str__(self) -> str:
         j = {}
         j["vlan"] = self.vlan
         if self.dhcp:
@@ -428,7 +432,7 @@ class NetRootB(ClientEntry):
             return ClientEntry
         return Network
 
-    async def update(self, value, _locked=False):  # noqa:D102,ARG002
+    async def update(self, value, _locked=False) -> Never:  # noqa:D102,ARG002
         raise ValueError("No values here!")
 
     def get(self, val):  # noqa:D102
@@ -448,7 +452,7 @@ class NetRoot(NamedRoot, ClientEntry):
         Manage networks.
         """
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         self._nets = {}
         super().__init__(*a, **k)
 
@@ -507,7 +511,7 @@ class NetRoot(NamedRoot, ClientEntry):
             return super().__getitem__(net)
         return super().__getitem__(net.prefixlen)[net.network.value]
 
-    async def update(self, value, _locked=False):  # noqa:D102,ARG002
+    async def update(self, value, _locked=False) -> Never:  # noqa:D102,ARG002
         raise ValueError("No values here!")
 
 
@@ -522,7 +526,7 @@ class HostPort(Cleaner):  # noqa:D101
     mac = None
     force_vlan = False
 
-    def __init__(self, host, name, kv):
+    def __init__(self, host, name, kv) -> None:
         self.host = host
         self.name = name
 
@@ -576,11 +580,11 @@ class HostPort(Cleaner):  # noqa:D101
         return self.host.root.net.by_name(self.net)
 
     @network.setter
-    def network(self, net):
+    def network(self, net) -> None:
         self.net = net.name
 
     @network.deleter
-    def network(self):
+    def network(self) -> None:
         self.net = None
         self.num = None
 
@@ -594,7 +598,7 @@ class HostPort(Cleaner):  # noqa:D101
         return self.host.root.vlan.by_name(vlan)
 
     @vlan.setter
-    def vlan(self, vlan: None | bool | str | Vlan):
+    def vlan(self, vlan: bool | str | Vlan | None) -> None:
         if vlan is not None:
             if isinstance(vlan, bool):
                 pass
@@ -649,7 +653,7 @@ class HostPort(Cleaner):  # noqa:D101
             vseen.add(n)
         return vseen
 
-    async def rename(self, name):  # noqa:D102
+    async def rename(self, name) -> None:  # noqa:D102
         h = self.host
         if name in h.port:
             raise KeyError("Port exists", name)
@@ -666,14 +670,14 @@ class HostPort(Cleaner):  # noqa:D101
         if c is not None:
             await self.link(c, wait=True)
 
-    async def link(self, other, wait=True, force=False):  # noqa:D102
+    async def link(self, other, wait=True, force=False) -> None:  # noqa:D102
         await self.host.root.cable.link(self, other, wait=wait, force=force)
 
-    async def unlink(self):  # noqa:D102
+    async def unlink(self) -> None:  # noqa:D102
         await self.host.root.cable.unlink(self)
 
     @vlan.deleter
-    def vlan(self):
+    def vlan(self) -> None:
         self.attrs.pop("vlan", None)
 
     @property
@@ -693,13 +697,13 @@ class HostPort(Cleaner):  # noqa:D101
             res["mac"] = res["mac"].packed
         return res
 
-    async def set_value(self, _):  # noqa:D102
+    async def set_value(self, _) -> Never:  # noqa:D102
         raise RuntimeError("This does not work.")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Port {self.host.name}:{self.name}>"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.host.name}:{self.name}"
 
 
@@ -715,7 +719,7 @@ class Host(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
     loc = None
     groups = ()
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         self._ports = {}
         super().__init__(*a, **k)
 
@@ -734,13 +738,13 @@ class Host(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
         return self.root.net.by_name(self.net)
 
     @network.setter
-    def network(self, net):
+    def network(self, net) -> None:
         n = self.root.net[net]
         self.net = n.name
         self.num = net.value - n.net.value
 
     @network.deleter
-    def network(self):
+    def network(self) -> None:
         self.net = None
         self.num = None
 
@@ -751,7 +755,7 @@ class Host(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
             c = c.other_end(self)
         return c
 
-    def _clean_up(self):
+    def _clean_up(self) -> None:
         for p in self._ports.values():
             p._clean_up()  # noqa:SLF001
         super()._clean_up()
@@ -847,21 +851,21 @@ class Host(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
         self._ports[name] = p
         return p
 
-    async def delete_port(self, port, *, wait=False):  # noqa:D102
+    async def delete_port(self, port, *, wait=False) -> None:  # noqa:D102
         c = self.root.cable.cable_for(port)
         if c is not None:
             await c.delete()
         del self._ports[port.name]
         await self.save(wait=wait)
 
-    async def delete(self, *, wait=False):  # noqa:D102
+    async def delete(self, *, wait=False) -> None:  # noqa:D102
         for port in list(self._ports.values()):
             c = self.root.cable.cable_for(port)
             if c is not None:
                 await c.delete(wait=wait)
         await super().delete(wait=wait, recursive=True)
 
-    async def save(self, *, wait=False):  # noqa:D102
+    async def save(self, *, wait=False) -> None:  # noqa:D102
         if self.net is None:
             self.num = None
         for p in self._ports.values():
@@ -869,7 +873,7 @@ class Host(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
                 p.num = None
         await super().save(wait=wait)
 
-    async def set_value(self, value=NotGiven):
+    async def set_value(self, value=NotGiven) -> None:
         """\
             Called by the network to update my value.
             """
@@ -909,10 +913,10 @@ class Host(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
                 mm = (mm << 16) + m_
             self.mac = EUI(mm, len(m) * 16)
 
-    async def link(self, other, *, wait=True, force=False):  # noqa:D102
+    async def link(self, other, *, wait=True, force=False) -> None:  # noqa:D102
         await self.root.cable.link(self, other, wait=wait, force=force)
 
-    async def unlink(self, *, wait=False):  # noqa:D102
+    async def unlink(self, *, wait=False) -> None:  # noqa:D102
         await self.root.cable.unlink(self, wait=wait)
 
     def get_value(self):  # noqa:D102
@@ -934,10 +938,10 @@ class Host(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
     def domain(self):  # noqa:D102
         return ".".join(self.subpath[-1:0:-1])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Host {self.name}: {self.domain} {self.netaddr}>"
 
-    def __str__(self):
+    def __str__(self) -> str:
         j = {}
         if self.net:
             # j['adr'] = list(self.netaddrs)
@@ -951,7 +955,7 @@ class Host(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
 
 @InventoryRoot.register("host")
 class HostRoot(NamedRoot, ClientEntry):  # noqa:D101
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         self._hosts = {}
         super().__init__(*a, **k)
 
@@ -966,7 +970,7 @@ class HostRoot(NamedRoot, ClientEntry):  # noqa:D101
     def by_domain(self, name, create=None):  # noqa:D102
         return self.follow(Path.build(name.split(".")[::-1]), create=create)
 
-    async def update(self, value, _locked=False):  # noqa:D102,ARG002
+    async def update(self, value, _locked=False) -> Never:  # noqa:D102,ARG002
         raise ValueError("No values here!")
 
     def by_name(self, name):  # noqa:D102
@@ -994,11 +998,11 @@ class HostRoot(NamedRoot, ClientEntry):  # noqa:D101
 
 @InventoryRoot.register("cable")
 class CableRoot(ClientEntry):  # noqa:D101
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         self._port2cable = {}
         super().__init__(*a, **k)
 
-    async def _running(self):
+    async def _running(self) -> None:
         for c in self.all_children:
             if c.dest_a is None or c.dest_b is None:
                 await c._resolve()  # noqa:SLF001
@@ -1026,7 +1030,7 @@ class CableRoot(ClientEntry):  # noqa:D101
                 raise ValueError("Already exists", c)
         return c
 
-    async def link(self, obj_a, obj_b, *, wait=True, force=False):
+    async def link(self, obj_a, obj_b, *, wait=True, force=False) -> None:
         """\
             Link ``obj_a`` to ``obj_b``.
 
@@ -1048,7 +1052,7 @@ class CableRoot(ClientEntry):  # noqa:D101
         c = self.follow(Path.build((client.server_name, await client.get_tock())), create=True)
         await c.link(obj_a, obj_b, wait=wait)
 
-    async def unlink(self, dest, *, ignore=False, wait=False):  # noqa:D102
+    async def unlink(self, dest, *, ignore=False, wait=False) -> None:  # noqa:D102
         try:
             c = self.cable_for(dest)
         except KeyError:
@@ -1067,12 +1071,12 @@ class CableRoot(ClientEntry):  # noqa:D101
             p = dest.name
         return h, p
 
-    async def _add_cable(self, cable):
+    async def _add_cable(self, cable) -> None:
         """
         Add this link to the cache
         """
 
-        def aa(dest):
+        def aa(dest) -> None:
             h, p = self._hp(dest)
             c = self._port2cable.get(h)
             if c is None:
@@ -1091,7 +1095,7 @@ class CableRoot(ClientEntry):  # noqa:D101
         except Exception:
             self._del__cable(cable, ref(cable.dest_a))
 
-    def _del__cable(self, cable, dest):
+    def _del__cable(self, cable, dest) -> None:
         """
         Drop this link from the cache
         """
@@ -1106,7 +1110,7 @@ class CableRoot(ClientEntry):  # noqa:D101
         else:
             self._port2cable[h][p] = old
 
-    async def update(self, value, _locked=False):  # noqa:D102,ARG002
+    async def update(self, value, _locked=False) -> Never:  # noqa:D102,ARG002
         raise ValueError("No values here!")
 
 
@@ -1119,7 +1123,7 @@ class CableRootB(ClientEntry):
     def child_type(cls, name):  # noqa:D102,ARG003
         return Cable
 
-    async def update(self, value, _locked=False):  # noqa:D102,ARG002
+    async def update(self, value, _locked=False) -> Never:  # noqa:D102,ARG002
         raise ValueError("No values here!")
 
 
@@ -1133,7 +1137,7 @@ class Cable(Cleaner, AttrClientEntry):  # noqa:D101
     _dest_b = None
 
     @property
-    def vlan(self):  # noqa:D102
+    def vlan(self) -> None:  # noqa:D102
         return None
 
     @property
@@ -1160,14 +1164,14 @@ class Cable(Cleaner, AttrClientEntry):  # noqa:D101
             return self.dest_a
         raise KeyError(dest)
 
-    async def set_value(self, value=NotGiven):
+    async def set_value(self, value=NotGiven) -> None:
         """\
             Called by the network to update my value.
             """
         await super().set_value(value)
         await self._resolve()
 
-    async def _resolve(self):
+    async def _resolve(self) -> None:
         def res(dest):
             try:
                 d = self.root.follow(dest[0])
@@ -1190,7 +1194,7 @@ class Cable(Cleaner, AttrClientEntry):  # noqa:D101
             self.dest_b = res(self.value["b"])
             await self._ppar._add_cable(self)  # noqa:SLF001
 
-    async def link(self, dest_a, dest_b, *, wait=True):
+    async def link(self, dest_a, dest_b, *, wait=True) -> None:
         """\
             Tell this cable to record this link.
             """
@@ -1206,13 +1210,13 @@ class Cable(Cleaner, AttrClientEntry):  # noqa:D101
 
         await self.save(wait=wait)
 
-    async def unlink(self, *, wait=False):
+    async def unlink(self, *, wait=False) -> None:
         """\
             Tell this cable to not record this link.
             """
         await self.delete(wait=wait)
 
-    async def save(self, *, wait=False):  # noqa:D102
+    async def save(self, *, wait=False) -> None:  # noqa:D102
         if self.dest_a is None or self.dest_b is None:
             await self.delete()
         else:
@@ -1231,7 +1235,7 @@ class Cable(Cleaner, AttrClientEntry):  # noqa:D101
 
         return val
 
-    def __contains__(self, dest):
+    def __contains__(self, dest) -> bool:
         if self.dest_a is dest:
             return True
         if self.dest_b is dest:
@@ -1252,10 +1256,10 @@ class Cable(Cleaner, AttrClientEntry):  # noqa:D101
             return True
         return False
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Cable {self.dest_a!r} {self.dest_b!r}>"
 
-    def __str__(self):
+    def __str__(self) -> str:
         if hasattr(self.dest_a, "port"):
             a = self.dest_a.name
         else:
@@ -1272,7 +1276,7 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
     ATTRS = ("loc", "desc")
     AUX_ATTRS = ("ports",)
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         self._ports = {"a": HostPort(self, "a", {}), "b": HostPort(self, "b", {})}
         super().__init__(*a, **k)
 
@@ -1314,7 +1318,7 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
         self._ports[name] = p
         return p
 
-    async def set_value(self, value=NotGiven):
+    async def set_value(self, value=NotGiven) -> None:
         """\
             Called by the network to update my value.
             """
@@ -1335,13 +1339,13 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
         return super().get_value()
 
     @property
-    def vlan(self):  # noqa:D102
+    def vlan(self) -> None:  # noqa:D102
         return None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Wire {self.name}>"
 
-    def __str__(self):
+    def __str__(self) -> str:
         a = self.ports["a"]
         if a is None:
             a = "-"
@@ -1354,7 +1358,7 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):  # noqa:D101
 
 @InventoryRoot.register("wire")
 class WireRoot(NamedRoot, ClientEntry):  # noqa:D101
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         self._hosts = {}
         super().__init__(*a, **k)
 
@@ -1365,5 +1369,5 @@ class WireRoot(NamedRoot, ClientEntry):  # noqa:D101
     def by_domain(self, name, create=None):  # noqa:D102
         return self.follow(Path.build(name.split(".")[::-1]), create=create)
 
-    async def update(self, value, _locked=False):  # noqa:D102,ARG002
+    async def update(self, value, _locked=False) -> Never:  # noqa:D102,ARG002
         raise ValueError("No values here!")

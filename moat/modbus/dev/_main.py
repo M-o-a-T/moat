@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @click.group(cls=AliasedGroup)
-def cli():
+def cli() -> None:
     """Modbus device polling"""
     pass
 
@@ -29,7 +29,7 @@ def cli():
 @click.option("-r", "--raw", is_flag=True, help="don't postprocess")
 @click.option("-R", "--no-refs", is_flag=True, help="don't process references")
 @click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=FSPath))
-def dump(path, raw, no_refs):
+def dump(path, raw, no_refs) -> None:
     """Dump a postprocessed file"""
     path = FSPath(path)
     with path.open("r") as f:
@@ -42,7 +42,7 @@ def dump(path, raw, no_refs):
 @cli.command()
 @click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=FSPath))
 @click.pass_context
-async def poll(ctx, path):
+async def poll(ctx, path) -> None:
     """Poll Modbus devices as directed via YAML."""
     obj = ctx.obj
 

@@ -21,7 +21,7 @@ class RingBuffer(_RingBuf):
     _w_evt: Event | None = None
     _r_evt: Event | None = None
 
-    def __init__(self, length: int):
+    def __init__(self, length: int) -> None:
         super().__init__(length)
 
     async def write(self, buf: bytes) -> int:  # ty:ignore[invalid-method-override]

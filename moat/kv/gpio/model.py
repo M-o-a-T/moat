@@ -45,22 +45,22 @@ class _GPIObase(ClientEntry):
             self._chip = self.parent.chip
         return self._chip
 
-    async def set_value(self, val):  # pylint: disable=arguments-differ
+    async def set_value(self, val) -> None:  # pylint: disable=arguments-differ
         await super().set_value(val)
         if self.chip is not None:
             await self._update_chip()
 
-    async def update_chip(self):
+    async def update_chip(self) -> None:
         await self.parent.update_chip()
 
-    async def _update_chip(self):
+    async def _update_chip(self) -> None:
         if not self.val_d(True, "present"):
             return
         await self.setup()
         for k in self:
             await k._update_chip()  # noqa:SLF001
 
-    async def setup(self):
+    async def setup(self) -> None:
         pass
 
 
@@ -83,7 +83,7 @@ class _GPIOnode(_GPIObase):
     def task_group(self):
         return self.parent.task_group
 
-    async def setup(self):
+    async def setup(self) -> None:
         await super().setup()
         if self.chip is None:
             self._poll = None
@@ -101,23 +101,23 @@ class GPIOline(_GPIOnode):
     _task_scope = None
     _task_done = None
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         super().__init__(*a, **k)
         self.logger = logging.getLogger(".".join(("gpio", self._path[-2], str(self._path[-1]))))
 
-    async def set_value(self, value):  # noqa:D102
+    async def set_value(self, value) -> None:  # noqa:D102
         await super().set_value(value)
         if value is NotGiven:
             await self._kill_task()
 
-    async def _kill_task(self):
+    async def _kill_task(self) -> None:
         if self._task_scope is not None:
             self._task_scope.cancel()
             await self._task_done.wait()
             self._task_scope = None
             self._task_done = None
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         if self.chip is None:
             return
@@ -140,7 +140,7 @@ class GPIOline(_GPIOnode):
                 data={"path": self.subpath, "typ": typ},
             )
 
-    async def _task(self, p, *a, **k):
+    async def _task(self, p, *a, **k) -> None:
         await self._kill_task()
         try:
             with anyio.CancelScope() as sc:
@@ -153,7 +153,7 @@ class GPIOline(_GPIOnode):
 
     # Input #
 
-    async def _poll_task(self, evt, dest):
+    async def _poll_task(self, evt, dest) -> None:
         negate = self.find_cfg("low")
         change = self.find_cfg("change", default=None)
         skip = self.find_cfg("skip")
@@ -165,7 +165,7 @@ class GPIOline(_GPIOnode):
             with wire.monitor(gpio.Edge.BOTH) as mon:
                 old_value = mon.value
 
-                async def set_value(value):
+                async def set_value(value) -> None:
                     if negate:
                         value = not value
                     if change is None or value == change:
@@ -198,7 +198,7 @@ class GPIOline(_GPIOnode):
 
                     await self.root.err.record_working("gpio", self.subpath)
 
-    async def _button_task(self, evt, dest):
+    async def _button_task(self, evt, dest) -> None:
         negate = self.find_cfg("low")
         skip = self.find_cfg("skip")
         bounce = self.find_cfg("t_bounce")
@@ -224,7 +224,7 @@ class GPIOline(_GPIOnode):
                     b = b.timestamp
                     return a[0] - b[0] + (a[1] - b[1]) / 1000000000
 
-                def ts(a):
+                def ts(a) -> str:
                     a = a.timestamp
                     return f"{a[0] % 1000:03d}.{a[1] / 10000:05d}"
 
@@ -376,7 +376,7 @@ class GPIOline(_GPIOnode):
                     await self.root.err.record_working("gpio", self.subpath)
                     clear = True
 
-    async def _count_task(self, evt, dest):
+    async def _count_task(self, evt, dest) -> None:
         intv = self.find_cfg("interval")
         direc = self.find_cfg("count")
         bounce = self.find_cfg("t_bounce")
@@ -395,7 +395,7 @@ class GPIOline(_GPIOnode):
                     val = 0
                 return val, ch
 
-            async def set_value():
+            async def set_value() -> None:
                 nonlocal d, ch, val, t
                 self.logger.debug("SEND %d", d)
                 t = await anyio.current_time()
@@ -474,7 +474,7 @@ class GPIOline(_GPIOnode):
                     else:
                         debounce = True
 
-    async def _setup_input(self):
+    async def _setup_input(self) -> None:
         try:
             mode = self.find_cfg("mode")
             dest = self.find_cfg("dest")
@@ -509,7 +509,7 @@ class GPIOline(_GPIOnode):
 
     # Output #
 
-    async def with_output(self, evt, src, proc, *args):
+    async def with_output(self, evt, src, proc, *args) -> None:
         """
         Task that monitors one entry and writes its value to the GPIO controller.
 
@@ -570,7 +570,7 @@ class GPIOline(_GPIOnode):
                                 comment=f"Bad value: {val!r}",
                             )
 
-    async def _set_value(self, line, value, state, negate):
+    async def _set_value(self, line, value, state, negate) -> None:
         """
         Task that monitors one entry and writes its value to the GPIO controller.
 
@@ -588,7 +588,7 @@ class GPIOline(_GPIOnode):
         if state is not None:
             await self.client.set(state, value=value)
 
-    async def _oneshot_value(self, line, val, state, negate, t_on):  # pylint: disable=unused-argument
+    async def _oneshot_value(self, line, val, state, negate, t_on) -> None:  # pylint: disable=unused-argument
         """
         Task that monitors one entry. Its value is written to the
         controller but if it's = ``direc`` it's reverted autonomously after
@@ -600,7 +600,7 @@ class GPIOline(_GPIOnode):
 
         """
 
-        async def work_oneshot(evt):
+        async def work_oneshot(evt) -> None:
             nonlocal t_on
             if isinstance(t_on, (list, tuple)):
                 t_on = (await self.client.get(t_on)).value_or(None)
@@ -633,14 +633,14 @@ class GPIOline(_GPIOnode):
                 w.cancel()
                 await self._set_value(line, False, state, negate)
 
-    async def _pulse_value(self, line, val, state, negate, t_on, t_off):  # pylint: disable=unused-argument
+    async def _pulse_value(self, line, val, state, negate, t_on, t_off) -> None:  # pylint: disable=unused-argument
         """
         Pulse the value.
 
         The state records the cycle ratio.
         """
 
-        async def work_pulse(evt):
+        async def work_pulse(evt) -> None:
             nonlocal t_on
             nonlocal t_off
             if isinstance(t_on, (list, tuple)):
@@ -686,7 +686,7 @@ class GPIOline(_GPIOnode):
                 w.cancel()
             await self._set_value(line, False, state, negate)
 
-    async def _setup_output(self):
+    async def _setup_output(self) -> None:
         try:
             mode = self.find_cfg("mode")
             src = self.find_cfg("src")
@@ -786,14 +786,14 @@ class GPIOchip(_GPIObase):  # noqa:D101
             return None
         return GPIOline
 
-    async def update_chip(self):  # noqa:D102
+    async def update_chip(self) -> None:  # noqa:D102
         await self._update_chip()
 
-    async def set_chip(self, chip):  # noqa:D102
+    async def set_chip(self, chip) -> None:  # noqa:D102
         self._chip = chip
         await self._update_chip()
 
-    async def set_value(self, val):  # noqa:D102
+    async def set_value(self, val) -> None:  # noqa:D102
         await super().set_value(val)
         await self.update_chip()
 
@@ -808,7 +808,7 @@ class GPIOroot(ClientRoot):  # noqa:D101
     err = None
     _chip = None
 
-    async def run_starting(self):  # noqa:D102
+    async def run_starting(self) -> None:  # noqa:D102
         self._chip = None
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)

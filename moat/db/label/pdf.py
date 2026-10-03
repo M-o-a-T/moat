@@ -24,7 +24,7 @@ class Labels(FPDF):  # noqa: D101
         label: attrdict | None = None,
         current_x=0,
         current_y=0,
-    ):
+    ) -> None:
         super().__init__()
         self.__pr = printer
         self.__fo = format

@@ -8,7 +8,7 @@ from .json import Codec as _Codec
 class Codec(_Codec):
     "JSON codec with 'value' element"
 
-    def __init__(self, ext=None):
+    def __init__(self, ext=None) -> None:
         if ext is not None:
             raise ValueError("You can't extend the JSON codec")
         super().__init__()

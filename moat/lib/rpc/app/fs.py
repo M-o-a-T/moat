@@ -73,7 +73,7 @@ class Cmd(LockBaseCmd):
 
     doc = dict(_c=dict(_d="Local file system access", root="str:root path"))
 
-    def __init__(self, cfg: attrdict):
+    def __init__(self, cfg: attrdict) -> None:
         super().__init__(cfg)
         self._fd_cache = dict()
         try:
@@ -107,14 +107,14 @@ class Cmd(LockBaseCmd):
         # log(f"{fd}={repr(f)}")
         return fd
 
-    async def _del_f(self, fd: int):
+    async def _del_f(self, fd: int) -> None:
         f = self._fd_cache.pop(fd)
         # log(f"{fd}!{repr(f)}")
         await to_thread(f.close)
 
     doc_reset = dict(_d="close all", p="str:set new prefix")
 
-    async def cmd_reset(self, p: str | None = None):
+    async def cmd_reset(self, p: str | None = None) -> None:
         "close all"
         for v in self._fd_cache.values():
             await to_thread(v.close)
@@ -150,7 +150,7 @@ class Cmd(LockBaseCmd):
         fh.seek(o)
         return await to_thread(fh.read, n)
 
-    async def stream_rd(self, msg: Msg):
+    async def stream_rd(self, msg: Msg) -> None:
         """Stream the contents of file @f from offset @o in @n-byte chunks."""
         fh = self._fd(msg.get(0))
         off = msg.get(1, 0)
@@ -178,7 +178,7 @@ class Cmd(LockBaseCmd):
         fh.seek(o)
         return await to_thread(fh.write, d)
 
-    async def stream_wr(self, msg: Msg):
+    async def stream_wr(self, msg: Msg) -> None:
         """Stream data to file @f at offset @o."""
         fh = self._fd(msg.get(0))
         off = msg.get(1, 0)
@@ -191,7 +191,7 @@ class Cmd(LockBaseCmd):
 
     doc_cl = dict(_d="close file", _0="int:fileid")
 
-    async def cmd_cl(self, f):
+    async def cmd_cl(self, f) -> None:
         "close @f"
         await self._del_f(f)
 
@@ -238,7 +238,7 @@ class Cmd(LockBaseCmd):
 
     doc_mkdir = dict(_d="make dir", _0="str:path")
 
-    async def cmd_mkdir(self, p: str):
+    async def cmd_mkdir(self, p: str) -> None:
         "new dir at @p"
         p = self._fsp(p)
         await to_thread(_efix, os.mkdir, p)
@@ -304,7 +304,7 @@ class Cmd(LockBaseCmd):
         n="bool:dest must be new",
     )
 
-    async def cmd_mv(self, s: str, d: str, x: str | None = None, n: bool = False):
+    async def cmd_mv(self, s: str, d: str, x: str | None = None, n: bool = False) -> None:
         """
         move file @s to @d.
 
@@ -341,21 +341,21 @@ class Cmd(LockBaseCmd):
 
     doc_rm = dict(_d="remove file", _0="str:path")
 
-    async def cmd_rm(self, p: str):
+    async def cmd_rm(self, p: str) -> None:
         "unlink file @p"
         p = self._fsp(p)
         await to_thread(_efix, os.remove, p)
 
     doc_rmdir = dict(_d="remove dir", _0="str:path")
 
-    async def cmd_rmdir(self, p: str):
+    async def cmd_rmdir(self, p: str) -> None:
         "unlink dir @p"
         p = self._fsp(p)
         await to_thread(_efix, os.rmdir, p)
 
     doc_new = dict(_d="create file", _0="str:path")
 
-    async def cmd_new(self, p: str):
+    async def cmd_new(self, p: str) -> None:
         "new file @p"
         p = self._fsp(p)
         f = await to_thread(_efix, open, p, "wb")

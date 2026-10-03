@@ -39,7 +39,7 @@ except AttributeError:  # on Linux?
 
     C = ffi.open(None)
 
-    def _reset():
+    def _reset() -> None:
         C.func("i", "_exit", "i")(11)
 
 
@@ -59,7 +59,7 @@ class WDT:
     timeout = None
     _ping = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         self.cfg = cfg
         if cfg.get("hw", False):
             if M.WDT is not None:
@@ -67,7 +67,7 @@ class WDT:
             M.WDT = self
         self._ping = Event()
 
-    def setup(self):  # noqa:D102
+    def setup(self) -> None:  # noqa:D102
         cfg = self.cfg
         t = cfg.get("t", 0)
         if not t:
@@ -141,7 +141,7 @@ class WDT:
             self._ping.set()
         return t
 
-    def ping(self, force=False):
+    def ping(self, force=False) -> None:
         """
         Keepalive trigger for the watchdog.
 

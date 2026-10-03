@@ -24,8 +24,7 @@ from pyfuse3 import (  # pylint: disable=E0611
 from collections import defaultdict
 
 # Typing
-
-from typing import TYPE_CHECKING  # isort:skip
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyfuse3 import RequestContext, SetattrFields, StatvfsData
@@ -33,7 +32,7 @@ if TYPE_CHECKING:
     from moat.lib.rpc import SubMsgSender
 
     from collections.abc import AsyncIterator, Sequence
-    from typing import Any, NoReturn
+    from typing import Any, Never, NoReturn
 
 
 logger = logging.getLogger(__name__)
@@ -63,7 +62,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
     _link: SubMsgSender
     _last_inode: pyfuse3.InodeT = pyfuse3.ROOT_INODE
 
-    def __init__(self, link: SubMsgSender):
+    def __init__(self, link: SubMsgSender) -> None:
         # pylint: disable=I1101
         super().__init__()
         self._inode_path_map = {pyfuse3.ROOT_INODE: PurePosixPath("/")}
@@ -76,12 +75,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         self._link = link
 
-    def f_open(self, fd, inode):
+    def f_open(self, fd, inode) -> None:
         "remember opened file"
         self._fd_inode_map[fd] = inode
         self._inode_fd_map[inode] = fd
 
-    def f_close(self, fd):
+    def f_close(self, fd) -> None:
         "close opened file"
         i = self._fd_inode_map.pop(fd)
         del self._inode_fd_map[i]
@@ -272,7 +271,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         )
         raise FUSEError(errno.ENOSYS)
 
-    async def readlink(self, inode: int, ctx: RequestContext):
+    async def readlink(self, inode: int, ctx: RequestContext) -> Never:
         """Return target of symbolic link *inode*."""
 
         logger.warning("NotImpl: readlink: i=%r ctx=%r", inode, ctx)
@@ -589,7 +588,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
                 break
         return sent
 
-    async def flush(self, fh):
+    async def flush(self, fh) -> None:
         """Handle close() syscall.
 
         *fh* will by an integer filehandle returned by a prior `open` or
@@ -602,7 +601,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         # pylint: disable=unnecessary-pass
 
-    async def release(self, fh):
+    async def release(self, fh) -> None:
         """Release open file
 
         This method will be called when the last file descriptor of *fh* has
@@ -620,7 +619,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         self.f_close(fh)
         await self._link.cl(fh)
 
-    async def fsync(self, fh, datasync):
+    async def fsync(self, fh, datasync) -> None:
         """Flush buffers for open file *fh*
 
         If *datasync* is true, only the file contents should be
@@ -651,7 +650,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         self._dir_content[fh] = (inode, dc, ctx)
         return fh
 
-    async def readdir(self, fh, start_id, token):
+    async def readdir(self, fh, start_id, token) -> None:
         """Read entries in open directory *fh*.
 
         This method should list the contents of directory *fh* (as returned by a
@@ -700,7 +699,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             ):
                 break
 
-    async def releasedir(self, fh):
+    async def releasedir(self, fh) -> None:
         """Release open directory
 
         This method will be called exactly once for each `opendir` call. After
@@ -710,7 +709,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         del self._dir_content[fh]
 
-    async def fsyncdir(self, fh, datasync):
+    async def fsyncdir(self, fh, datasync) -> None:
         """Flush buffers for open directory *fh*
 
         If *datasync* is true, only the directory contents should be
@@ -727,7 +726,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         logger.warning("NotImpl: statfs: ctx=%r", ctx)
         raise FUSEError(errno.ENOSYS)
 
-    def stacktrace(self):
+    def stacktrace(self) -> None:
         """Asynchronous debugging
 
         This method will be called when the ``fuse_stacktrace`` extended
@@ -750,7 +749,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         logger.error("\n".join(code))
 
-    async def setxattr(self, inode, name, value, ctx: RequestContext):
+    async def setxattr(self, inode, name, value, ctx: RequestContext) -> Never:
         """Set extended attribute *name* of *inode* to *value*.
 
         The attribute may or may not exist already. Both *name* and *value* will
@@ -876,7 +875,7 @@ async def wrap(
     logger.debug("Entering main loop..")
     async with anyio.create_task_group() as tg:
 
-        async def fuse_main():
+        async def fuse_main() -> None:
             try:
                 await pyfuse3.main()
             except anyio.get_cancelled_exc_class():

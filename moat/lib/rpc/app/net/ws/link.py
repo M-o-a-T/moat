@@ -14,7 +14,7 @@ class Link(CmdMsg):
     An app that connects to a remote websocket.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         path = cfg.get("path", "/")
         if not path.startswith("/"):
             path = "/" + path

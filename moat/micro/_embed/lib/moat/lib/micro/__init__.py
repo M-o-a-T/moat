@@ -26,7 +26,7 @@ MutableSequence = list
 MutableMapping = dict
 
 
-def _l():
+def _l() -> bool:
     import os  # noqa: PLC0415
 
     try:
@@ -52,7 +52,7 @@ CancelledError = asyncio.CancelledError
 ObjSequence = (list, tuple)
 
 
-def breakpoint():  # noqa:A001
+def breakpoint() -> None:  # noqa:A001
     "does nothing on µPy"
     pass
 
@@ -90,14 +90,14 @@ def byte2utf8(buf):
     return buf.decode("utf-8")
 
 
-def print_exc(exc, file=None):
+def print_exc(exc, file=None) -> None:
     "forwards to sys.print_exception"
     if file is None:
         file = sys.stderr
     sys.print_exception(exc, file)
 
 
-def log(s, *x, err=None, write: bool = True):
+def log(s, *x, err=None, write: bool = True) -> None:
     """
     Basic logger.debug/error call (depends on @err).
 
@@ -123,12 +123,12 @@ def log(s, *x, err=None, write: bool = True):
         print_exc(err)
 
 
-def log_exc(e, s, *a):
+def log_exc(e, s, *a) -> None:
     "Log an exception"
     log(s + ": %r", *a, e, err=e)
 
 
-async def idle():
+async def idle() -> None:
     "sleep forever"
     while True:
         await sleep(60 * 60 * 12)  # half a day
@@ -151,7 +151,7 @@ def wait_for_ms(timeout, p, *a, **k):
 class _MsecIter:
     tt = None
 
-    def __init__(self, t, p, a, k):
+    def __init__(self, t, p, a, k) -> None:
         self.t = t
         self.p, self.a, self.k = p, a, k
 
@@ -226,7 +226,7 @@ class TaskGroup(_tg):
         else:
             return self.create_task(p(*a, **k))  # , name=_name)
 
-    def start_soon(self, p, *a, _name=None, **k):
+    def start_soon(self, p, *a, _name=None, **k) -> None:
         "Starts a task soon."
         if DEBUG:
             print("RUN", _name, p, a, k, file=sys.stderr)
@@ -323,7 +323,7 @@ async def _run_server(tg, s, cb):
 class Outcome:
     "a minimal stub for `outcome.Outcome`"
 
-    def __init__(self, val):
+    def __init__(self, val) -> None:
         self.val = val
 
 
@@ -341,7 +341,7 @@ class Value(Outcome):
 class Error(Outcome):
     "a wrapped exception"
 
-    def unwrap(self):
+    def unwrap(self) -> None:
         "unwrap and raise the exception"
         try:
             raise self.val
@@ -360,19 +360,19 @@ class ValueEvent:
     Note that the value can only be read once.
     """
 
-    def __init__(self, scope=None):
+    def __init__(self, scope=None) -> None:
         self.event = Event()
         self.value = None
         self.scope = scope
 
-    def set(self, value):
+    def set(self, value) -> None:
         """
         Set the result to return this value, and wake any waiting task.
         """
         self.value = Value(value)
         self.event.set()
 
-    def set_error(self, exc):
+    def set_error(self, exc) -> None:
         """
         Set the result to raise this exception, and wake any waiting task.
         """
@@ -385,7 +385,7 @@ class ValueEvent:
         """
         return self.value is not None
 
-    def cancel(self):
+    def cancel(self) -> None:
         """
         Send a cancelation to the recipient.
         """
@@ -408,7 +408,7 @@ class ValueEvent:
 class aclosing:
     """contextlib.aclosing"""
 
-    def __init__(self, thing):
+    def __init__(self, thing) -> None:
         self.thing = thing
 
     async def __aenter__(self):
@@ -525,14 +525,14 @@ def _wrq(s):  # async
     yield core._io_queue.queue_write(s)  # noqa:SLF001
 
 
-def is_async(obj):  # noqa: D103
+def is_async(obj) -> bool:  # noqa: D103
     if iscoroutine(obj) or hasattr(obj, "__iter__"):
         return True
     return False
 
 
 class _Thr:
-    def __init__(self, p, a, k):
+    def __init__(self, p, a, k) -> None:
         self.p = p
         self.a = a
         self.k = k
@@ -540,7 +540,7 @@ class _Thr:
         self.res = None
         self.err = None
 
-    def run(self):
+    def run(self) -> None:
         try:
             self.res = self.p(*self.a, **self.k)
         except BaseException as exc:

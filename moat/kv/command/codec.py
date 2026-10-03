@@ -9,7 +9,7 @@ from moat.lib.run import AliasedGroup
 
 
 @click.group(cls=AliasedGroup)  # pylint: disable=undefined-variable
-async def cli():
+async def cli() -> None:
     """Manage codecs and converters. Usage: … codec …"""
     pass
 
@@ -20,7 +20,7 @@ async def cli():
 @click.option("-s", "--script", type=click.File(mode="w", lazy=True), help="Save the data here")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def get(obj, path, script, encode, decode):
+async def get(obj, path, script, encode, decode) -> None:
     """Read type information"""
     path = P(path)
     if not len(path):
@@ -44,7 +44,7 @@ async def get(obj, path, script, encode, decode):
 @cli.command(name="list")
 @click.pass_obj
 @click.argument("path", nargs=1)
-async def list_(obj, path):
+async def list_(obj, path) -> None:
     """List type information entries"""
     res = await obj.client._request(  # noqa:SLF001
         action="get_tree_internal",
@@ -66,7 +66,7 @@ async def list_(obj, path):
 @click.option("-o", "--out", nargs=2, multiple=True, help="Encoding sample")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def set_(obj, path, encode, decode, data, in_, out):
+async def set_(obj, path, encode, decode, data, in_, out) -> None:
     """Save codec information"""
     path = P(path)
     if not len(path):
@@ -130,7 +130,7 @@ async def set_(obj, path, encode, decode, data, in_, out):
 @click.argument("name", nargs=1)
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def convert(obj, path, codec, name, delete, list_):
+async def convert(obj, path, codec, name, delete, list_) -> None:
     """Match a codec to a path (read, if no codec given)"""
     path = P(path)
     if delete and list_:

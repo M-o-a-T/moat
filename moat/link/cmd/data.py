@@ -167,7 +167,7 @@ async def _load_data(obj, infile: str, force: bool) -> None:
 @click.option("-m", "--meta", is_flag=True, help="include metadata")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def cli(ctx, path, meta):
+async def cli(ctx, path, meta) -> None:
     """
     This subcommand accesses the data stored in the MoaT-Link server.
     """
@@ -210,7 +210,7 @@ async def cli(ctx, path, meta):
 @click.option("-R", "--raw", is_flag=True, help="Print string values without quotes etc.")
 @click.option("-D", "--add-date", is_flag=True, help="Add *_date entries")
 @click.pass_obj
-async def get(obj, **k):
+async def get(obj, **k) -> None:
     """
     Read a MoaT-Link value.
 
@@ -245,7 +245,7 @@ async def get(obj, **k):
     help="Starting depth. Default: 1 (single layer).",
 )
 @click.pass_obj
-async def list_(obj, **k):
+async def list_(obj, **k) -> None:
     """
     List MoaT-Link values.
 
@@ -269,7 +269,7 @@ async def list_(obj, **k):
 @click.option("-o", "--one-shot", "one", is_flag=True, help="Do not retain the result")
 @click.option("-y", "--yaml", is_flag=True, help="read YAML data from stdin")
 @click.pass_obj
-async def set_(obj, yaml, one, retain, force, **kw):
+async def set_(obj, yaml, one, retain, force, **kw) -> None:
     """
     Store a value at some MoaT-Link position.
 
@@ -295,7 +295,7 @@ async def set_(obj, yaml, one, retain, force, **kw):
 @click.option("-y", "--yes", is_flag=True, help="Save without asking")
 @click.option("-e", "--editor", type=str, default=None, help="Editor (default: $EDITOR or vi)")
 @click.pass_obj
-async def edit(obj, yes, editor):
+async def edit(obj, yes, editor) -> None:
     """
     Edit a MoaT-Link value interactively.
 
@@ -371,7 +371,7 @@ async def edit(obj, yes, editor):
 )
 @click.option("-m", "--mqtt", is_flag=True, help="Delete via MQTT message")
 @click.pass_obj
-async def delete(obj, before, recursive, sub, mqtt):
+async def delete(obj, before, recursive, sub, mqtt) -> None:
     """
     Delete an entry, or a subtree.
 
@@ -433,7 +433,7 @@ async def monitor(
     maxdepth,
     maxage,
     timeout,
-):
+) -> None:
     """Monitor a MoaT-Link subtree.
 
     MODE can be:
@@ -457,7 +457,7 @@ async def monitor(
     if mark and state is not None:
         raise click.UsageError("You can only add a mark in Stream mode")
 
-    def pm(p):
+    def pm(p) -> bool:
         for ip in ignore:
             if len(p) >= len(ip) and p[: len(ip)] == ip:
                 return True
@@ -504,7 +504,7 @@ async def monitor(
 @cli.command()
 @click.option("-d", "--dict", "as_dict", is_flag=True, help="Write dict-based dump docs.")
 @click.pass_obj
-async def dump(obj, as_dict):
+async def dump(obj, as_dict) -> None:
     """
     Dump one subtree as YAML docs.
 
@@ -518,7 +518,7 @@ async def dump(obj, as_dict):
 @click.option("-i", "--infile", type=click.Path(), default="-", help="File to read.")
 @click.option("-f", "--force", is_flag=True, help="Overwrite entries regardless of timestamp.")
 @click.pass_obj
-async def load(obj, infile, force):
+async def load(obj, infile, force) -> None:
     """
     Load path+data+metadata tuples from YAML docs into a subtree.
     """
@@ -662,7 +662,7 @@ async def import_(obj, infile: str, legacy: bool, as_dict: str | None) -> None:
 @click.option("-i", "--infile", type=click.Path(), help="File to read.")
 @click.option("-C", "--codec", type=str, default="yaml", help="Codec to use (default: yaml).")
 @click.pass_obj
-async def update(obj, infile, codec):
+async def update(obj, infile, codec) -> None:
     """
     Copy a list of updates from a file to a MoaT-Link subtree
     """

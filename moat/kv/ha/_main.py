@@ -76,7 +76,7 @@ _DEV_CLS = {
 @click.group(cls=AliasedGroup, short_help="Manage Home Assistant.")
 @click.option("-t", "--test", is_flag=True, help="Use test data.")
 @click.pass_obj
-async def cli(obj, test):
+async def cli(obj, test) -> None:
     """
     Manage Home Assistant integration.
     """
@@ -90,7 +90,7 @@ async def cli(obj, test):
 @cli.command("conv")
 @click.option("-u", "--user", help="The user name used for HASS.", default="hassco")
 @click.pass_obj
-async def conv_(obj, user):
+async def conv_(obj, user) -> None:
     """Update stored converters."""
     chg = await setup_conv(obj, user)
     if not chg:
@@ -130,7 +130,7 @@ async def setup_conv(obj, user):
 
 
 class _S:
-    def __init__(self, *k):
+    def __init__(self, *k) -> None:
         self._d = set()
         for v in k:
             self._d.add(v)
@@ -268,7 +268,7 @@ Known types: {}
 )
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
-async def set_(obj, typ, path, list_options, force, plus, **kw):
+async def set_(obj, typ, path, list_options, force, plus, **kw) -> None:
     path = P(path)
     if typ == "-":
         t = None
@@ -401,7 +401,7 @@ set_.__doc__ = """
 @click.option("-c", "--cmd", is_flag=True, help="Use command-line names")
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
-async def get(obj, typ, path, cmd):
+async def get(obj, typ, path, cmd) -> None:
     path = P(path)
     if typ == "-":
         res = await obj.client._request(action="enumerate", path=obj.hass_name, empty=True)  # noqa:SLF001
@@ -454,7 +454,7 @@ get.__doc__ = """
 @click.pass_obj
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
-async def delete(obj, typ, path):
+async def delete(obj, typ, path) -> None:
     """Delete a device."""
 
     path = P(path)

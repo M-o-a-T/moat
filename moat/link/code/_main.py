@@ -86,7 +86,7 @@ def _info_line(data: Mapping[str, Any]) -> str:
     return "<code>"
 
 
-async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
+async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short) -> None:
     """List code entries in a subtree."""
     if (full or as_dict) and short:
         raise click.UsageError("'-f'/'-d' and '-s' are incompatible.")
@@ -137,7 +137,7 @@ async def _list_entries(obj, as_dict, maxdepth, mindepth, full, short):
 @click.option("-m", "--meta", is_flag=True, help="Include metadata")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def cli(ctx, path, meta):
+async def cli(ctx, path, meta) -> None:
     """
     Manage code snippets stored in MoaT-Link.
     """
@@ -157,7 +157,7 @@ async def cli(ctx, path, meta):
 @click.option("-S", "--script", type=click.File(mode="w", lazy=True), help="Save the code here")
 @click.option("-r", "--recursive", is_flag=True, help="Include the test cases")
 @click.pass_obj
-async def get(obj, script, recursive):
+async def get(obj, script, recursive) -> None:
     """
     Read a code entry.
 
@@ -194,7 +194,7 @@ async def get(obj, script, recursive):
 @click.option("-d", "--data", type=click.File(mode="r"), help="Load the metadata (YAML)")
 @attr_args
 @click.pass_obj
-async def set_(obj, thread, script, data, use_async, use_sync, info, **kw):
+async def set_(obj, thread, script, data, use_async, use_sync, info, **kw) -> None:
     """
     Save Python code.
     """
@@ -236,7 +236,7 @@ async def set_(obj, thread, script, data, use_async, use_sync, info, **kw):
 @cli.command("import")
 @click.argument("files", type=click.Path(exists=True, dir_okay=False), nargs=-1, required=True)
 @click.pass_obj
-async def import_(obj, files):
+async def import_(obj, files) -> None:
     """
     Store snippets with their test cases.
 
@@ -270,7 +270,7 @@ async def import_(obj, files):
 @click.option("-f", "--full", is_flag=True, help="Print complete entries.")
 @click.option("-s", "--short", is_flag=True, help="Print shortened entries.")
 @click.pass_obj
-async def list_(obj, as_dict, maxdepth, mindepth, full, short):
+async def list_(obj, as_dict, maxdepth, mindepth, full, short) -> None:
     """
     List code entries.
     """
@@ -279,7 +279,7 @@ async def list_(obj, as_dict, maxdepth, mindepth, full, short):
 
 @cli.command()
 @click.pass_obj
-async def delete(obj):
+async def delete(obj) -> None:
     """
     Remove a code entry.
     """
@@ -299,7 +299,7 @@ async def delete(obj):
 @cli.command(short_help="Edit an entry interactively")
 @click.option("-e", "--editor", type=str, default=None, help="Editor (default: $EDITOR or vi)")
 @click.pass_obj
-async def edit(obj, editor):
+async def edit(obj, editor) -> None:
     """
     Edit a code entry interactively.
 
@@ -400,7 +400,7 @@ def _print_outcome(name: Any, out, stream, *, verbose: bool = False, keep: bool 
 @cli.group("test", cls=AliasedGroup, invoke_without_command=True)
 @click.argument("case", type=str, required=False)
 @click.pass_context
-async def cmd_test(ctx, case):
+async def cmd_test(ctx, case) -> None:
     """
     Manage the snippet's test cases.
 
@@ -428,7 +428,7 @@ def _one_case(obj) -> Path:
 @cmd_test.command("get")
 @click.option("-e", "--editor-format", is_flag=True, help="Print in the editor's format")
 @click.pass_obj
-async def case_get(obj, editor_format):
+async def case_get(obj, editor_format) -> None:
     """
     Print a test case.
     """
@@ -445,7 +445,7 @@ async def case_get(obj, editor_format):
 )
 @click.option("-e", "--editor-format", is_flag=True, help="The file uses the editor's format")
 @click.pass_obj
-async def case_set(obj, data, editor_format):
+async def case_set(obj, data, editor_format) -> None:
     """
     Store a test case.
     """
@@ -459,7 +459,7 @@ async def case_set(obj, data, editor_format):
 
 @cmd_test.command("delete")
 @click.pass_obj
-async def case_delete(obj):
+async def case_delete(obj) -> None:
     """
     Delete a test case.
     """
@@ -476,7 +476,7 @@ async def case_delete(obj):
 @cmd_test.command("edit")
 @click.option("-e", "--editor", type=str, default=None, help="Editor (default: $EDITOR or vi)")
 @click.pass_obj
-async def case_edit(obj, editor):
+async def case_edit(obj, editor) -> None:
     """
     Edit a test case.
 
@@ -524,7 +524,7 @@ async def case_edit(obj, editor):
 @click.option("-v", "--verbose", is_flag=True, help="Show the test's log")
 @click.option("-j", "--jobs", type=int, default=None, help="Run at most N tests at a time")
 @click.pass_obj
-async def case_run(obj, keep, verbose, jobs):
+async def case_run(obj, keep, verbose, jobs) -> None:
     """
     Run a test case, or all of them ('-').
 
@@ -554,7 +554,7 @@ async def case_run(obj, keep, verbose, jobs):
 @click.option("-j", "--jobs", type=int, default=None, help="Run at most N tests at a time")
 @click.option("-v", "--verbose", is_flag=True, help="Show every test's outcome")
 @click.pass_obj
-async def cmd_test_all(obj, jobs, verbose):
+async def cmd_test_all(obj, jobs, verbose) -> None:
     """
     Run the tests of every snippet below PATH.
 

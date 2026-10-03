@@ -83,7 +83,7 @@ class SignalClient:
         account: str,
         auth: tuple[str, str] | None = None,
         **kw: Any,
-    ):
+    ) -> None:
         """
         SignalClient
 

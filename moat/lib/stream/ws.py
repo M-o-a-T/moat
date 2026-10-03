@@ -59,7 +59,7 @@ class WsLink(BaseBlk):
         *,
         subprotocols: list[str] | None = None,
         **kw,
-    ):
+    ) -> None:
         self.url = url
         if retry is None:
             retry = {}
@@ -112,7 +112,7 @@ class WsLink(BaseBlk):
             log("Fail: %s, %r", self.url, er)
             raise
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
 
         self._crd_buf = bytearray()
@@ -129,7 +129,7 @@ class WsLink(BaseBlk):
         await AC_use(self, self._tg.cancel_scope.cancel)
         self._tg.start_soon(self._reader)
 
-    async def _reader(self):
+    async def _reader(self) -> None:
         from httpx_ws import WebSocketDisconnect, WebSocketNetworkError  # noqa:PLC0415
 
         ws = cast("AsyncWebSocketSession", self.s)
@@ -228,7 +228,7 @@ class SingleWsBlk(BaseBlk):
         path: str | None = None,
         *,
         subprotocols: list[str] | None = None,
-    ):
+    ) -> None:
         self._stream = stream
         self.path = path
         self.subprotocols = subprotocols
@@ -237,7 +237,7 @@ class SingleWsBlk(BaseBlk):
     async def stream(self):  # noqa:D102
         return await AC_use(self, self._stream)
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         self._ws = wsproto.WSConnection(ConnectionType.SERVER)
         self._crd_buf = bytearray()
@@ -300,7 +300,7 @@ class SingleWsBlk(BaseBlk):
             if closed:
                 raise EOFError
 
-    async def _reader(self):
+    async def _reader(self) -> None:
         ws = self._ws
         if ws is None:
             return
@@ -377,7 +377,7 @@ class SingleWsBlk(BaseBlk):
         self._crd_buf = self._crd_buf[n:]
         return n
 
-    async def teardown(self):  # noqa:D102
+    async def teardown(self) -> None:  # noqa:D102
         if self._ws is not None:
             with suppress(Exception):
                 await self._send_raw(self._ws.send(CloseConnection(code=1000, reason="bye")))

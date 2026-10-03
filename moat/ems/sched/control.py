@@ -44,7 +44,7 @@ async def generate_data(cfg: attrdict, t: float):
         yield val
 
 
-def add_piecewise(solver, x, y, points: list[tuple[int, int]], name):
+def add_piecewise(solver, x, y, points: list[tuple[int, int]], name) -> None:
     """
     Add a piecewise-linear constraint on y=a*x+b.
 
@@ -118,7 +118,7 @@ class Model:
     objective: Any | None = None  # ortools Objective
     solver: Any | None = None  # ortools Solver
 
-    def __init__(self, cfg: attrdict, t: float | None = None):
+    def __init__(self, cfg: attrdict, t: float | None = None) -> None:
         if t is None:
             t_slot = 3600 / cfg.steps
             t_now = mtime.time()
@@ -134,7 +134,7 @@ class Model:
         self.cfg = cfg
         self.t = t
 
-    async def _setup(self):
+    async def _setup(self) -> None:
         cfg = self.cfg
         data = generate_data(cfg, self.t)
         per_hour = self.cfg.steps

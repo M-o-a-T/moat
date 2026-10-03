@@ -193,7 +193,7 @@ class BaseClientAuth(_AuthLoaded):
 
     schema = null_schema
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         jsonschema.validate(instance=data, schema=type(self).schema)
         for k, v in data.items():
             setattr(self, k, v)
@@ -206,13 +206,13 @@ class BaseClientAuth(_AuthLoaded):
         return cls(**user)
 
     @property
-    def ident(self):
+    def ident(self) -> str:
         """Some user identifier.
         Required so that the server can actually find the record.
         """
         return "*"
 
-    async def auth(self, client: Client, chroot=()):
+    async def auth(self, client: Client, chroot=()) -> None:
         """
         Authorizes this record with the server.
         """
@@ -249,7 +249,7 @@ class BaseClientAuthMaker(_AuthLoaded):
     mod_schema = null_schema
     _chain = None
 
-    def __init__(self, _initial=True, **data):
+    def __init__(self, _initial=True, **data) -> None:
         if _initial:
             jsonschema.validate(instance=data, schema=type(self).gen_schema)
         else:
@@ -269,7 +269,7 @@ class BaseClientAuthMaker(_AuthLoaded):
         return {}  # pragma: no cover
 
     @property
-    def ident(self):
+    def ident(self) -> str:
         """The identifier for this user.
 
         Required so that the server can actually find the record.
@@ -294,7 +294,7 @@ class BaseClientAuthMaker(_AuthLoaded):
         self._chain = res.chain
         return self
 
-    async def send(self, client: Client, _kind="user"):
+    async def send(self, client: Client, _kind="user") -> None:
         """Send this user to the server."""
         with contextlib.suppress(NoData):
             await client._request(  # noqa:SLF001
@@ -326,7 +326,7 @@ class BaseServerAuth(_AuthLoaded):
     can_auth_read = False
     can_auth_write = False
 
-    def __init__(self, data: dict = {}):  # noqa:B006
+    def __init__(self, data: dict = {}) -> None:  # noqa:B006
         if data:
             for k, v in data.items():
                 setattr(self, k, v)
@@ -336,7 +336,7 @@ class BaseServerAuth(_AuthLoaded):
         """Create a ServerAuth object from existing stored data"""
         return cls(data.data)
 
-    async def auth(self, cmd: StreamCommand, data):  # noqa:ARG002
+    async def auth(self, cmd: StreamCommand, data) -> None:  # noqa:ARG002
         """Verify that @data authenticates this user."""
         d = data.get("data", {})
         if not isinstance(d, dict):
@@ -408,7 +408,7 @@ class BaseServerAuthMaker(_AuthLoaded):
     schema = null_schema
     aux_schemas = None  # set by the loader
 
-    def __init__(self, chain=None, data=None):
+    def __init__(self, chain=None, data=None) -> None:
         if data is not None and data is not NotGiven:
             for k, v in data.items():
                 setattr(self, k, v)
@@ -432,7 +432,7 @@ class BaseServerAuthMaker(_AuthLoaded):
         return self
 
     @property
-    def ident(self):
+    def ident(self) -> str:
         """The record to store this user under."""
         return "*"
 

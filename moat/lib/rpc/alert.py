@@ -35,7 +35,7 @@ __all__ = [
 class Alert(Exception):
     """Alert wrapper. The path isn't stored in it."""
 
-    def __init__(self, data):
+    def __init__(self, data) -> None:
         self.data = data
 
 
@@ -43,7 +43,7 @@ class AlertIter:
     q: Queue
     xal: Iterator[tuple[tuple[type[Alert], Path], Alert]]
 
-    def __init__(self, ah: AlertHandler, s: bool | None):
+    def __init__(self, ah: AlertHandler, s: bool | None) -> None:
         self.ah = ah
         self.s = s
 
@@ -117,7 +117,7 @@ class AlertHandler(BaseCmd):
     q: set[Queue]
     tg: _TaskGroupProto
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self.alarms: dict[tuple[type[Alert], Path], Alert] = {}
         self.q = set()
@@ -209,7 +209,7 @@ class AlertHandler(BaseCmd):
 
     doc_cl = dict(_d="close iters")
 
-    async def cmd_cl(self):
+    async def cmd_cl(self) -> None:
         """
         Close all iterators of this alert handler.
 

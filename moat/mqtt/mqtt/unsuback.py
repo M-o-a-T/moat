@@ -17,7 +17,7 @@ class UnsubackPacket(MQTTPacket):  # noqa: D101
         fixed: MQTTFixedHeader = None,
         variable_header: PacketIdVariableHeader = None,
         payload=None,
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(UNSUBACK, 0x00)
         else:

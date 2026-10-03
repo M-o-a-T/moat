@@ -223,7 +223,7 @@ class CFG_:
         delattr(_get_current_cfg_attr(k), k)
 
     @staticmethod
-    def set_env_(key: str | Path, value: Any):
+    def set_env_(key: str | Path, value: Any) -> None:
         """
         Update an environment value.
 

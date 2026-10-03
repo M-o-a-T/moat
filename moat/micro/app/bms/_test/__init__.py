@@ -20,7 +20,7 @@ class _CellSim(BaseCmd):
     ctrl = None
     cell = None
 
-    async def task(self):
+    async def task(self) -> None:
         while True:
             msg = await self.ctrl.xrb()
             hdr, msg = PacketHeader.decode(msg)
@@ -50,12 +50,12 @@ class CellSim(_CellSim):
     analyzes them, and replies according to the cell app at @cell.
     """
 
-    async def setup(self):
+    async def setup(self) -> None:
         await super().setup()
         self.cell = self.root.sub_at(self.cfg["cell"])
         self.ctrl = self.root.sub_at(self.cfg["ctrl"])
 
-    async def task(self):
+    async def task(self) -> None:
         # Wait for the ctrl link to be ready
         ctrl_name = self.cfg["ctrl"][0]
         await self.root.sub[ctrl_name].wait_ready()
@@ -68,7 +68,7 @@ class _SingleCellSim(_CellSim):
     Interface for a cell in a series, configured via CellsSim.
     """
 
-    def __init__(self, cell, ctrl):
+    def __init__(self, cell, ctrl) -> None:
         from moat.util import attrdict  # noqa:PLC0415
 
         super().__init__(attrdict())
@@ -86,15 +86,15 @@ class CellsSim(_CellSim):
         cell: path to the array of Cell objects this app shall control
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self.n_cells = cfg["n"]
 
-    async def setup(self):
+    async def setup(self) -> None:
         await super().setup()
         self.ctrl = self.root.sub_at(self.cfg["ctrl"])
 
-    async def task(self):
+    async def task(self) -> None:
         # Wait for the ctrl link to be ready
         ctrl_name = self.cfg["ctrl"][0]
         await self.root.sub[ctrl_name].wait_ready()

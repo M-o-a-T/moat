@@ -57,7 +57,7 @@ class StepSyntaxError(ValueError):
     ``line`` is the 1-based line number in the text, if known.
     """
 
-    def __init__(self, msg: str, line: int | None = None):
+    def __init__(self, msg: str, line: int | None = None) -> None:
         self.msg = msg
         self.line = line
         super().__init__(msg if line is None else f"line {line}: {msg}")
@@ -249,7 +249,7 @@ def _p_none(verb, text):
     return [verb]
 
 
-def _f_none(verb, args):
+def _f_none(verb, args) -> str:
     _nargs(verb, args, 0)
     return ""
 
@@ -271,7 +271,7 @@ def _p_set(verb, text):
     return [verb, _parse_path(a[0]), parse_value(a[1])]
 
 
-def _f_set(verb, args):
+def _f_set(verb, args) -> str:
     _nargs(verb, args, 2)
     return f"{_format_path(args[0])} {format_value(args[1])}"
 

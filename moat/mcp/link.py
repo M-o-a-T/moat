@@ -74,7 +74,7 @@ class LinkMCP:
     run background watch tasks.
     """
 
-    def __init__(self, link: LinkSender, tg: TaskGroup, queue_len: int = 100):
+    def __init__(self, link: LinkSender, tg: TaskGroup, queue_len: int = 100) -> None:
         self._link = link
         self._tg = tg
         self._queue_len = queue_len
@@ -249,7 +249,7 @@ class LinkService(_Service):
     name = "link"
     backend: LinkMCP
 
-    def __init__(self, cfg: attrdict, tg: TaskGroup):
+    def __init__(self, cfg: attrdict, tg: TaskGroup) -> None:
         super().__init__(cfg, tg)
         self._queue_len = int(cfg.get("queue_len", 100))
 

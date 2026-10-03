@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
-    def __init__(self, plugins_manager: PluginManager, session: Session = None):
+    def __init__(self, plugins_manager: PluginManager, session: Session = None) -> None:
         super().__init__(plugins_manager, session)
         self._ping_task = None
         self._pingresp_queue = create_queue(9999)
@@ -35,7 +35,7 @@ class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
         self._unsubscriptions_waiter = dict()
         self._disconnect_waiter = None
 
-    async def stop(self):  # noqa: D102
+    async def stop(self) -> None:  # noqa: D102
         try:
             await super().stop()
         finally:
@@ -87,7 +87,7 @@ class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
         )
         return connack.return_code
 
-    async def handle_write_timeout(self):  # noqa: D102
+    async def handle_write_timeout(self) -> None:  # noqa: D102
         try:
             if self.session is not None and not self._ping_task:
                 self.logger.debug("Scheduling Ping")
@@ -98,7 +98,7 @@ class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
             self.logger.debug("Exception in ping task: %r", be)
             raise
 
-    async def handle_read_timeout(self):  # noqa: D102
+    async def handle_read_timeout(self) -> None:  # noqa: D102
         pass
 
     async def mqtt_subscribe(self, topics, packet_id):
@@ -121,7 +121,7 @@ class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
             del self._subscriptions_waiter[packet_id]
         return return_codes
 
-    async def handle_suback(self, suback: SubackPacket):  # noqa: D102
+    async def handle_suback(self, suback: SubackPacket) -> None:  # noqa: D102
         packet_id = suback.variable_header.packet_id
         try:
             waiter = self._subscriptions_waiter.get(packet_id)
@@ -133,7 +133,7 @@ class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
                 packet_id,
             )
 
-    async def mqtt_unsubscribe(self, topics, packet_id):
+    async def mqtt_unsubscribe(self, topics, packet_id) -> None:
         """
 
         :param topics: array of topics ['/a/b', ...]
@@ -149,7 +149,7 @@ class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
         finally:
             del self._unsubscriptions_waiter[packet_id]
 
-    async def handle_unsuback(self, unsuback: UnsubackPacket):  # noqa: D102
+    async def handle_unsuback(self, unsuback: UnsubackPacket) -> None:  # noqa: D102
         packet_id = unsuback.variable_header.packet_id
         try:
             waiter = self._unsubscriptions_waiter.get(packet_id)
@@ -161,7 +161,7 @@ class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
                 packet_id,
             )
 
-    async def mqtt_disconnect(self):  # noqa: D102
+    async def mqtt_disconnect(self) -> None:  # noqa: D102
         disconnect_packet = DisconnectPacket()
         await self._send_packet(disconnect_packet)
 
@@ -179,10 +179,10 @@ class ClientProtocolHandler(ProtocolHandler):  # noqa: D101
             finally:
                 self._ping_task = None
 
-    async def handle_pingresp(self, pingresp: PingRespPacket):  # noqa: D102
+    async def handle_pingresp(self, pingresp: PingRespPacket) -> None:  # noqa: D102
         await self._pingresp_queue.put(pingresp)
 
-    async def handle_connection_closed(self):  # noqa: D102
+    async def handle_connection_closed(self) -> None:  # noqa: D102
         self.logger.debug("Broker closed connection")
         if self._disconnect_waiter:
             self._disconnect_waiter.set()

@@ -28,7 +28,7 @@ class SubStore:
 
     cfg: dict | None = None
 
-    def __init__(self, sd):
+    def __init__(self, sd) -> None:
         self.__sd = sd
 
     async def __aenter__(self):
@@ -62,7 +62,7 @@ class CfgStore(SubStore):
     similar class that exposes ``r``, ``w`` and possibly ``x`` commands.
     """
 
-    def __init__(self, dispatch, path: Path):
+    def __init__(self, dispatch, path: Path) -> None:
         self.sd = dispatch.sub_at(path)
         super().__init__(self.sd.r)
 
@@ -74,7 +74,9 @@ class CfgStore(SubStore):
         self.cfg = cfg
         return cfg
 
-    async def set(self, cfg: dict, sync: bool = True, replace: bool = False, keep: bool = False):
+    async def set(
+        self, cfg: dict, sync: bool = True, replace: bool = False, keep: bool = False
+    ) -> None:
         """
         Update the client's configuration data.
 
@@ -84,7 +86,7 @@ class CfgStore(SubStore):
             replace: delete existing config
         """
 
-        async def _set(p, c, empty: bool = False):
+        async def _set(p, c, empty: bool = False) -> None:
             # current client cfg
             if not empty:
                 try:

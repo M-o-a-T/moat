@@ -32,7 +32,7 @@ __all__ = ["Session", "alembic_cfg", "database", "dispose", "load", "load_schema
 
 
 @event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
+def set_sqlite_pragma(dbapi_connection, connection_record) -> None:
     connection_record  # noqa:B018
     if "sqlite" not in dbapi_connection.__class__.__module__:
         return
@@ -117,7 +117,7 @@ def load(cfg: attrdict) -> MetaData:
 
 
 class Mgr:
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         self.__session = session
 
     def __getattr__(self, k):

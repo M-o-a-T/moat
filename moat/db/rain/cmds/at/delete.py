@@ -10,7 +10,7 @@ from moat.db.rain.model import Site
 
 @click.command()
 @click.pass_obj
-async def cli(obj):
+async def cli(obj) -> None:
     """Delete an irrigation site and everything below it."""
     site = get_one(obj, Site, "site", name=obj.site_name)
     obj.session.delete(site)

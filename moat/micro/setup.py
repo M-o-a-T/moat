@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 all = ["setup", "install", "do_update", "do_copy"]  # noqa: A001
 
 
-async def do_update(dst, root, cross, hfn, arch: str | None = None):  # noqa: D103
+async def do_update(dst, root, cross, hfn, arch: str | None = None) -> None:  # noqa: D103
     from moat.micro.files import APath, copytree  # noqa: PLC0415
 
     await run_update(dst / "lib", cross=cross, arch=arch, hash_fn=hfn)
@@ -53,7 +53,7 @@ async def do_copy(
     cross: str | anyio.Path | None,
     arch: str | None = None,
     wdst: anyio.Path | None = None,
-):
+) -> None:
     """
     Copy from source to @dst/@dest.
 
@@ -101,7 +101,7 @@ async def setup(
     watch: bool = False,
     main: str | anyio.Path | bool | None = False,
     config_file: str = "moat.cfg",
-):
+) -> None:
     """
     Given the serial link to a MicroPython board,
     teach it to run the MoaT loop.
@@ -162,7 +162,7 @@ async def setup(
     # the whole stack. Fixing this, i.e. making individual apps fault
     # tolerant, is somewhere on the TODO list.
 
-    async def part_two():
+    async def part_two() -> None:
         nonlocal need_run
         if run or watch:
             if run and not reset:
@@ -330,7 +330,7 @@ def _port_arch(device: str, board: str | None = None) -> str | None:
     return arch
 
 
-async def install_(cfg, dest: str | anyio.Path | None = None):
+async def install_(cfg, dest: str | anyio.Path | None = None) -> None:
     """
     Install our version of MicroPython to a device.
     """

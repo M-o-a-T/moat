@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @click.group(cls=AliasedGroup, short_help="MQTT client and broker")
-async def cli():
+async def cli() -> None:
     """
     Run MQTT commands.
 
@@ -32,7 +32,7 @@ async def cli():
 
 @cli.command()
 @click.pass_obj
-async def broker(obj):
+async def broker(obj) -> None:
     """
     A basic MQTT broker that supports plug-ins and can use MoaT-KV as backend.
     """
@@ -49,7 +49,7 @@ async def broker(obj):
         await anyio.sleep_forever()
 
 
-def _gen_client_id():
+def _gen_client_id() -> str:
     pid = os.getpid()
     hostname = socket.gethostname()
     return "moat_mqtt_pub/%d-%s" % (pid, hostname)
@@ -92,7 +92,7 @@ def _get_message(args):
         yield codec.encode(eval(message))  # pylint: disable=eval-used
 
 
-async def do_pub(client, args, cfg):
+async def do_pub(client, args, cfg) -> None:
     logger.info("%s Connecting to broker", client.client_id)
     uri = args["uri"] or cfg.uri
 
@@ -125,7 +125,7 @@ async def do_pub(client, args, cfg):
             await client.disconnect()
 
 
-def fix_will(args, cfg):
+def fix_will(args, cfg) -> None:
     if args["will_topic"] and args["will_message"]:
         will = attrdict()
         will.topic = args["will_topic"]
@@ -191,7 +191,7 @@ def fix_will(args, cfg):
 @click.option("--will-retain", is_flag=True, help="Retain Will message?")
 @click.option("--extra-headers", type=click.File("r"), help="File to read extra MQTT headers from")
 @click.pass_obj
-async def pub(obj, **args):
+async def pub(obj, **args) -> None:
     """Publish one or more MQTT messages"""
     if args["msg_stdin"] + args["msg_stdin_lines"] + args["msg_stdin_eval"] > 1:
         raise click.UsageError("You can only read from stdin once")
@@ -208,7 +208,7 @@ async def pub(obj, **args):
         await do_pub(C, args, cfg)
 
 
-async def do_sub(client, args, cfg):
+async def do_sub(client, args, cfg) -> None:
     try:
         await client.connect(
             uri=cfg.uri,
@@ -231,7 +231,7 @@ async def do_sub(client, args, cfg):
             await client.disconnect()
 
 
-async def run_sub(client, topic, args, cfg):
+async def run_sub(client, topic, args, cfg) -> None:
     qos = _get_qos(args, cfg)
     max_count = args["n_msg"]
     count = 0
@@ -293,7 +293,7 @@ async def run_sub(client, topic, args, cfg):
 @click.option("--will-retain", is_flag=True, help="Retain Will message?")
 @click.option("--extra-headers", type=click.File("r"), help="File to read extra MQTT headers from")
 @click.pass_obj
-async def sub(obj, uri, **args):
+async def sub(obj, uri, **args) -> None:
     """Subscribe to one or more MQTT topics"""
     cfg = obj.cfg.mqtt.client
     if uri is not None:

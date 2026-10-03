@@ -30,7 +30,7 @@ class TcpIter(BaseConnIter):
         :attr:`~moat.lib.rpc.conn.util.BaseConnIter.port` after startup.
     """
 
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int) -> None:
         super().__init__()
         self.host = host
         self.port = port
@@ -47,5 +47,5 @@ class TcpIter(BaseConnIter):
             await li.serve(self._handle)
         raise RuntimeError("listener stopped")
 
-    async def _handle(self, client):
+    async def _handle(self, client) -> None:
         await self.add_conn(SingleAnyioBuf(client))

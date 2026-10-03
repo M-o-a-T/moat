@@ -89,7 +89,7 @@ async def _stdtest(ocfg: attrdict, n=1, run=True, ssl=False, tocks=20, **kw):
         except RuntimeError:
             return otm()
 
-    async def mock_set_tock(self, old):
+    async def mock_set_tock(self, old) -> None:
         assert self._tock < tocks, "Test didn't terminate. Limit:" + str(tocks)
         await old()
 
@@ -103,7 +103,7 @@ async def _stdtest(ocfg: attrdict, n=1, run=True, ssl=False, tocks=20, **kw):
             ex.enter_context(mock.patch("time.monotonic", new=tm))
             logging._startTime = tm()  # noqa:SLF001
 
-            async def run_broker(cfg):
+            async def run_broker(cfg) -> None:
                 async with create_broker(config=cfg) as srv:
                     # NB: some services use "async with await …"
                     scope.register(srv)

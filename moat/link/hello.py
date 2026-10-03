@@ -34,14 +34,14 @@ class NotAuthorized(RuntimeError):  # noqa: D101
 class _RPCRoot:
     "Minimal object exposing ``.sender`` for the RPC auth helper."
 
-    def __init__(self, sender):
+    def __init__(self, sender) -> None:
         self.sender = sender
 
 
 class _RPCShim:
     "Adapter exposing the subset of BaseCmdMsg used by moat.lib.rpc.auth."
 
-    def __init__(self, hello: Hello, sender, auth_data: dict[str, Any]):
+    def __init__(self, hello: Hello, sender, auth_data: dict[str, Any]) -> None:
         self.hello = hello
         self._sender = sender
         self.auth = attrdict(auth_data)
@@ -54,7 +54,7 @@ class _RPCShim:
         "Name presented to the RPC auth helper."
         return self.hello.me
 
-    async def wait_ready(self, wait: bool = True):
+    async def wait_ready(self, wait: bool = True) -> bool:
         "The live RPC stream is already running."
         wait  # noqa:B018
         return False
@@ -308,6 +308,6 @@ class Hello(CmdCommon):
             return await self._rpc_in.handle(msg, rcmd)
         raise KeyError(rcmd)
 
-    async def wait_done(self):
+    async def wait_done(self) -> None:
         "wait until done"
         await self._done.wait()

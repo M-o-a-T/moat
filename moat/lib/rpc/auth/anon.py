@@ -14,7 +14,7 @@ class SubAuth(_SubAuth):
     Auth method for anonymous login.
     """
 
-    async def task(self):
+    async def task(self) -> None:
         """We want(client) / accept(server) anon auth."""
         if L:
             self.set_ready()
@@ -25,6 +25,6 @@ class SubAuth(_SubAuth):
             await self.remote()
         self.accept()
 
-    async def cmd(self):
+    async def cmd(self) -> None:
         """Do nothing."""
         self._seen_evt.set()

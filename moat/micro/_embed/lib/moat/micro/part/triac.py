@@ -84,7 +84,7 @@ class Triac(BaseCmd):
         ],
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self._gate = Pin(cfg["pin"], Pin.OUT, value=0)
         self._invert = cfg.get("invert", False)
@@ -118,14 +118,14 @@ class Triac(BaseCmd):
         # Whether the gate is currently held on (100 % mode).
         self._held = False
 
-    async def reload(self):
+    async def reload(self) -> None:
         """Reload config."""
         # Pin/timer allocation is permanent; only update tunables.
         self._pulse = self.cfg.get("pulse", 100)
         self._invert = self.cfg.get("invert", False)
         await super().reload()
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         self.tg = await AC_use(self, TaskGroup())
         # Set initial gate state.
@@ -133,7 +133,7 @@ class Triac(BaseCmd):
         # Enable ZC interrupt.
         self._zc_pin.irq(self._zc_isr, self._zc_flags)
 
-    async def task(self):  # noqa:D102
+    async def task(self) -> None:  # noqa:D102
         self.set_ready()
         try:
             while True:

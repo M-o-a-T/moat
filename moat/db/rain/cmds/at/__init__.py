@@ -27,7 +27,7 @@ from moat.lib.run import load_subgroup
 )
 @click.argument("site", type=str, nargs=1)
 @click.pass_context
-async def cli(ctx, site):
+async def cli(ctx, site) -> None:
     """Site-specific irrigation management.
 
     Manage one irrigation site's controllers, valves, feeds, sensors,

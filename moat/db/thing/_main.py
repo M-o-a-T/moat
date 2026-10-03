@@ -22,7 +22,7 @@ from .model import Thing, ThingTyp
 @load_subgroup(prefix="moat.thing", invoke_without_command=False)
 @click.pass_context
 @click.option("--name", "-n", type=str, help="Name of the thing type")
-def cli(ctx, name):
+def cli(ctx, name) -> None:
     """Manage a lot of things."""
     obj = ctx.obj
 
@@ -36,7 +36,7 @@ def cli(ctx, name):
 @cli.group(cls=AliasedGroup)
 @click.option("--name", "-n", type=str, help="Text on the label")
 @click.pass_obj
-def one(obj, name):
+def one(obj, name) -> None:
     """
     Manage actual things.
     """
@@ -47,7 +47,7 @@ def one(obj, name):
 @one.command(name="show")
 @click.option("--type", "-t", "type_", type=str, help="Type of thing to list")
 @click.pass_obj
-def show_(obj, type_):
+def show_(obj, type_) -> None:
     """
     Show thing details / list all things of a type.
 
@@ -88,7 +88,7 @@ def opts(c):
 @one.command()
 @opts
 @click.pass_obj
-def add(obj, **kw):
+def add(obj, **kw) -> None:
     """
     Add a thing.
     """
@@ -110,7 +110,7 @@ def add(obj, **kw):
 @one.command(epilog="Use '-x/-y/-z 0' to clear a position, '--in -' to remove the location.")
 @opts
 @click.pass_obj
-def set(obj, **kw):  # noqa: A001
+def set(obj, **kw) -> None:  # noqa: A001
     """
     Modify a thing.
     """
@@ -127,7 +127,7 @@ def set(obj, **kw):  # noqa: A001
 
 @one.command()
 @click.pass_obj
-def delete(obj):
+def delete(obj) -> None:
     """
     Permanently remove a thing.
     """
@@ -144,7 +144,7 @@ def delete(obj):
 @cli.group(name="typ", cls=AliasedGroup)
 @click.option("--name", "-n", type=str, help="Name of the type")
 @click.pass_context
-def typ_(ctx, name):
+def typ_(ctx, name) -> None:
     """\
     Manage a hierarchy of types of things.
     """
@@ -156,7 +156,7 @@ def typ_(ctx, name):
 
 @typ_.command(name="show")
 @click.pass_obj
-def typ_show(obj):
+def typ_show(obj) -> None:
     """
     Show thing details / list all thing types.
 
@@ -195,7 +195,7 @@ def typopts(c):
 @typ_.command(name="add")
 @typopts
 @click.pass_obj
-def typ_add(obj, **kw):
+def typ_add(obj, **kw) -> None:
     """
     Add a thing type.
     """
@@ -210,7 +210,7 @@ def typ_add(obj, **kw):
 @typ_.command(name="set", epilog="Use '-i -NAME' to remove a containing thing type.")
 @typopts
 @click.pass_obj
-def typ_set(obj, **kw):
+def typ_set(obj, **kw) -> None:
     """
     Modify a thing type.
     """
@@ -223,7 +223,7 @@ def typ_set(obj, **kw):
 
 @typ_.command(name="delete")
 @click.pass_obj
-def typ_delete(obj):
+def typ_delete(obj) -> None:
     """
     Remove a thing type.
     """

@@ -8,7 +8,7 @@ from moat.lib.run import AliasedGroup
 
 
 @click.group(cls=AliasedGroup, short_help="Manage logging.")  # pylint: disable=undefined-variable
-async def cli():
+async def cli() -> None:
     """
     This subcommand controls a server's logging.
     """
@@ -19,7 +19,7 @@ async def cli():
 @click.option("-i", "--incremental", is_flag=True, help="Don't write the initial state")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def dest(obj, path, incremental):
+async def dest(obj, path, incremental) -> None:
     """
     Log changes to a file.
 
@@ -35,7 +35,7 @@ async def dest(obj, path, incremental):
 @click.option("-f", "--full", is_flag=1, help="Also dump internal state")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def save(obj, path, full):
+async def save(obj, path, full) -> None:
     """
     Write the server's current state to a file.
     """
@@ -46,7 +46,7 @@ async def save(obj, path, full):
 
 @cli.command()
 @click.pass_obj
-async def stop(obj):
+async def stop(obj) -> None:
     """
     Stop logging changes.
     """

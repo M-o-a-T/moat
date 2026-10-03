@@ -22,11 +22,11 @@ class BBMCmd(Base):
     Generic base for *Cmd.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self.cmd = cfg._moat_cmd  # noqa:SLF001
 
-    async def setup(self):
+    async def setup(self) -> None:
         await Base.setup(self)
         # not using super() because {Msg,Buf,Base}Cmd pull in inheritance
         # from BaseConn which calls ``.stream`` which we don't have, or want

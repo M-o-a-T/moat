@@ -21,7 +21,7 @@ log = logging.getLogger()
 
 
 @click.group(cls=AliasedGroup)
-async def main():
+async def main() -> None:
     """Modbus client / server"""
 
     FORMAT = (
@@ -60,7 +60,7 @@ Types:
 """
 
 
-async def _server(host, port, debug, args):
+async def _server(host, port, debug, args) -> None:
     """
     Basic Modbus server, for static tests.
     """
@@ -146,7 +146,9 @@ def flint(v):
         return float(v)
 
 
-async def _client(host, port, unit, kind, start, num, type_, values, debug, interval, maxlen):
+async def _client(
+    host, port, unit, kind, start, num, type_, values, debug, interval, maxlen
+) -> None:
     """
     Basic Modbus-TCP client.
     """
@@ -246,7 +248,7 @@ async def _serclient(
     values,
     debug,
     maxlen,
-):
+) -> None:
     """
     Basic Modbus-RTU client.
     """

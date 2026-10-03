@@ -36,7 +36,7 @@ RESERVED_15 = 0x0F
 class MQTTFixedHeader:  # noqa: D101
     __slots__ = ("flags", "packet_type", "remaining_length")
 
-    def __init__(self, packet_type, flags=0, length=0):
+    def __init__(self, packet_type, flags=0, length=0) -> None:
         self.packet_type = packet_type
         self.remaining_length = length
         self.flags = flags
@@ -69,7 +69,7 @@ class MQTTFixedHeader:  # noqa: D101
 
         return out
 
-    async def to_stream(self, writer: StreamAdapter):  # noqa: D102
+    async def to_stream(self, writer: StreamAdapter) -> None:  # noqa: D102
         await writer.write(self.to_bytes())
 
     @property
@@ -116,15 +116,15 @@ class MQTTFixedHeader:  # noqa: D101
         except NoDataException:
             return None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return type(self).__name__ + f"(length={self.remaining_length}, flags={hex(self.flags)})"
 
 
 class MQTTVariableHeader:  # noqa: D101
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    async def to_stream(self, writer: anyio.abc.ByteStream):  # noqa: D102
+    async def to_stream(self, writer: anyio.abc.ByteStream) -> None:  # noqa: D102
         await writer.write(self.to_bytes())
 
     def to_bytes(self) -> bytes:
@@ -138,14 +138,14 @@ class MQTTVariableHeader:  # noqa: D101
         return len(self.to_bytes())
 
     @classmethod
-    async def from_stream(cls, reader: StreamAdapter, fixed_header: MQTTFixedHeader):  # noqa: D102
+    async def from_stream(cls, reader: StreamAdapter, fixed_header: MQTTFixedHeader) -> None:  # noqa: D102
         pass
 
 
 class PacketIdVariableHeader(MQTTVariableHeader):  # noqa: D101
     __slots__ = ("packet_id",)
 
-    def __init__(self, packet_id):
+    def __init__(self, packet_id) -> None:
         super().__init__()
         self.packet_id = packet_id
 
@@ -159,12 +159,12 @@ class PacketIdVariableHeader(MQTTVariableHeader):  # noqa: D101
         packet_id = await decode_packet_id(reader)
         return cls(packet_id)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return type(self).__name__ + f"(packet_id={self.packet_id})"
 
 
 class MQTTPayload:  # noqa: D101
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):  # noqa: D102
@@ -176,7 +176,7 @@ class MQTTPayload:  # noqa: D101
         reader: anyio.abc.ByteStream,
         fixed_header: MQTTFixedHeader,
         variable_header: MQTTVariableHeader,
-    ):
+    ) -> None:
         pass
 
 
@@ -192,13 +192,13 @@ class MQTTPacket:  # noqa: D101
         fixed: MQTTFixedHeader,
         variable_header: MQTTVariableHeader = None,
         payload: MQTTPayload = None,
-    ):
+    ) -> None:
         self.fixed_header = fixed
         self.variable_header = variable_header
         self.payload = payload
         self.protocol_ts = None
 
-    async def to_stream(self, writer: anyio.abc.ByteStream):  # noqa: D102
+    async def to_stream(self, writer: anyio.abc.ByteStream) -> None:  # noqa: D102
         await writer.write(self.to_bytes())
         self.protocol_ts = datetime.now(tz=UTC)
 
@@ -241,7 +241,7 @@ class MQTTPacket:  # noqa: D101
     def bytes_length(self):  # noqa: D102
         return len(self.to_bytes())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             type(
                 self,

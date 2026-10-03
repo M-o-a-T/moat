@@ -34,7 +34,7 @@ from moat.db.rain.engine import recalculate
 @click.option("--save/--no-save", default=True, help="Persist the recalculated levels")
 @click.option("--verbose", "-v", is_flag=True, default=False, help="Narrate every correction")
 @click.pass_obj
-async def cli(obj, controller, valve, age_days, save, verbose):
+async def cli(obj, controller, valve, age_days, save, verbose) -> None:
     """Recalculate water levels for this site's valves from history."""
     age = timedelta(days=age_days) if age_days is not None else None
     res = recalculate(

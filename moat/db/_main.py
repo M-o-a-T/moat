@@ -21,7 +21,7 @@ from .util import alembic_cfg, database, load
 @load_subgroup(prefix="moat.db", invoke_without_command=False)
 @click.option("-v", "--verbose", is_flag=True, help="Log database commands")
 @click.pass_obj
-def cli(obj, verbose):
+def cli(obj, verbose) -> None:
     """Database support"""
     cfg = obj.cfg.db
     cfg.verbose = verbose
@@ -29,7 +29,7 @@ def cli(obj, verbose):
 
 @cli.command(name="init")
 @click.pass_obj
-def init_(obj):
+def init_(obj) -> None:
     """\
     Initialize the database.
     """
@@ -46,7 +46,7 @@ def init_(obj):
 @cli.command()
 @click.argument("args", nargs=-1)
 @click.pass_obj
-def get(obj, args):
+def get(obj, args) -> None:
     """
     Read data.
     """
@@ -69,7 +69,7 @@ def get(obj, args):
 
 
 @cli.group(name="migrate", cls=AliasedGroup)
-def mig():
+def mig() -> None:
     """\
     Database migration commands. Development only!
     """
@@ -77,7 +77,7 @@ def mig():
 
 @mig.command()
 @click.pass_obj
-def update(obj):
+def update(obj) -> None:
     """
     Migrate the database.
     """
@@ -91,7 +91,7 @@ def update(obj):
 
 @mig.command(name="init")
 @click.pass_obj
-def mig_init(obj):
+def mig_init(obj) -> None:
     """
     Initialize the database migration.
 
@@ -109,7 +109,7 @@ def mig_init(obj):
 @mig.command(name="rev")
 @click.pass_obj
 @click.argument("message", nargs=-1, type=str)
-def mig_rev(obj, message):
+def mig_rev(obj, message) -> None:
     """
     Create a new revision.
     """
@@ -130,7 +130,7 @@ def mig_rev(obj, message):
 
 @mig.command(name="check")
 @click.pass_obj
-def mig_check(obj):
+def mig_check(obj) -> None:
     """
     Check if a new revision is required.
     """
@@ -178,7 +178,7 @@ def mig_check(obj):
 @mig.command()
 @click.pass_obj
 @click.argument("revision", type=str)
-def to(obj, revision):
+def to(obj, revision) -> None:
     """
     Up/downgrade the database to a specific version.
     """
@@ -196,7 +196,7 @@ def to(obj, revision):
 
 @mig.command()
 @click.pass_obj
-def history(obj):
+def history(obj) -> None:
     """
     Show version history.
     """
@@ -211,7 +211,7 @@ def history(obj):
 
 @mig.command()
 @click.pass_obj
-def show(obj):
+def show(obj) -> None:
     """
     Show current version.
     """

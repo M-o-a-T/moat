@@ -45,7 +45,7 @@ class Notifier(BaseNotifier):  # noqa:D101
         prio: str | None = None,
         tags: Sequence[str] = (),
         **kw,  # noqa: ARG002
-    ):
+    ) -> None:
         "Forward a message to NTFY"
 
         if "topic" in self.cfg:

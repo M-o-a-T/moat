@@ -56,7 +56,7 @@ if TYPE_CHECKING:
 __all__ = ["HandlerStream", "StreamLink", "i_f2wire", "wire2i_f"]
 
 
-def B_FL_NAME(flag):
+def B_FL_NAME(flag) -> str:
     "stringify message flags"
     if flag & B_ERROR:
         return ".W" if flag & B_STREAM else ".E"
@@ -135,7 +135,7 @@ class HandlerStream(MsgHandler):
     _dly_q: Queue[tuple[int, int]]
     _id = 0
 
-    def __init__(self, sender: BaseMsgHandler | None, logger: object | None = None):
+    def __init__(self, sender: BaseMsgHandler | None, logger: object | None = None) -> None:
         self._msgs: dict[int, StreamLink] = {}
         # Flow-control notices that arrived before the link's opening command.
         # The protocol allows the initial credit to precede the open; we buffer
@@ -389,7 +389,7 @@ class HandlerStream(MsgHandler):
             else:
                 self._id3.add(mid)
 
-    async def _dly(self):
+    async def _dly(self) -> None:
         "Delay for message IDs because we don't want to re-use them immediately."
         while True:
             mid, t = await self._dly_q.get()
@@ -476,7 +476,7 @@ class HandlerStream(MsgHandler):
             await AC_exit(self, type(exc), exc, None)
             raise
 
-    async def _run_read(self, evt: Event):
+    async def _run_read(self, evt: Event) -> None:
         try:
             if self.reader_done.is_set():
                 self.reader_done = Event()
@@ -486,7 +486,7 @@ class HandlerStream(MsgHandler):
             self.reader_done.set()
             self._read_task = None
 
-    async def _run_write(self, evt: Event):
+    async def _run_write(self, evt: Event) -> None:
         try:
             if self.writer_done.is_set():
                 self.writer_done = Event()
@@ -539,7 +539,7 @@ class HandlerStream(MsgHandler):
 class StreamLink(MsgLink):
     """This is the handler for messages that forwards them to the stream."""
 
-    def __init__(self, stream: HandlerStream, id: int):
+    def __init__(self, stream: HandlerStream, id: int) -> None:
         super().__init__()
         self.__stream: HandlerStream | None = stream
         self.id = id

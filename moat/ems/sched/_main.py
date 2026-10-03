@@ -35,7 +35,7 @@ def dedent(s):
     type=click.Path(dir_okay=False, readable=True),
 )
 @attr_args(with_path=False, with_proxy=False)
-async def cli(obj, config, **attrs):
+async def cli(obj, config, **attrs) -> None:
     """Battery Manager: Scheduling"""
 
     cfg = obj.cfg.ems.sched
@@ -48,7 +48,7 @@ async def cli(obj, config, **attrs):
 
 @cli.command()
 @click.pass_obj
-def dump(obj):
+def dump(obj) -> None:
     """
     Dump the current configuration as YAML
     """
@@ -57,7 +57,7 @@ def dump(obj):
 
 @cli.command()
 @click.argument("name", nargs=-1)
-def modes(name):
+def modes(name) -> None:
     """List known modes / help text for a mode"""
     static = dict(
         T="""\
@@ -130,7 +130,7 @@ Goal: minimize cost.
     help="emit all outputs (default: first interval)",
 )
 @click.option("-f", "--force", is_flag=True, help="Run even if we're not close to the timeslot")
-async def analyze(obj, all_, force):
+async def analyze(obj, all_, force) -> None:
     """
     Analyze future data.
     """

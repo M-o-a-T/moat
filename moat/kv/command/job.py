@@ -20,7 +20,7 @@ from moat.lib.run import AliasedGroup, attr_args, process_args
 @click.option("-n", "--node", help="node to run this code on. Empty: any one node, '-': all nodes")
 @click.option("-g", "--group", help="group to run this code on. Empty: default")
 @click.pass_context
-async def cli(ctx, node, group):
+async def cli(ctx, node, group) -> None:
     """Run code stored in MoaT-KV.
 
     \b
@@ -62,7 +62,7 @@ async def cli(ctx, node, group):
 )
 @click.argument("path", nargs=1, type=P)
 @click.pass_context
-async def at_cli(ctx, path):
+async def at_cli(ctx, path) -> None:
     """
     Add, list, modify, delete jobs at/under this path.
     """
@@ -79,7 +79,7 @@ async def at_cli(ctx, path):
 
 @cli.command("info")
 @click.pass_obj
-async def info_(obj):
+async def info_(obj) -> None:
     """
     List available groups for the node in question.
 
@@ -97,7 +97,7 @@ async def info_(obj):
 
 @at_cli.command("path")
 @click.pass_obj
-async def path__(obj):
+async def path__(obj) -> None:
     """
     Emit the full path leading to the specified runner object.
 
@@ -122,7 +122,7 @@ async def path__(obj):
     help="Size of the group (not for single-node runners)",
 )
 @click.pass_obj
-async def run(obj, nodes):
+async def run(obj, nodes) -> None:
     """
     Run code that needs to run.
 
@@ -189,7 +189,7 @@ async def _state_fix(obj, state, state_only, path, r):
     "for values. Default: return as list",
 )
 @click.pass_obj
-async def list_(obj, state, state_only, table, as_dict):
+async def list_(obj, state, state_only, table, as_dict) -> None:
     """List run entries."""
     if table and state:
         raise click.UsageError("'--table' and '--state' are mutually exclusive")
@@ -246,7 +246,7 @@ async def list_(obj, state, state_only, table, as_dict):
 @at_cli.command("state")
 @click.option("-r", "--result", is_flag=True, help="Just print the actual result.")
 @click.pass_obj
-async def state_(obj, result):
+async def state_(obj, result) -> None:
     """Get the status of a runner entry."""
     path = obj.jobpath
 
@@ -273,7 +273,7 @@ async def state_(obj, result):
 @at_cli.command()
 @click.option("-s", "--state", is_flag=True, help="Add state data")
 @click.pass_obj
-async def get(obj, state):
+async def get(obj, state) -> None:
     """Read a runner entry"""
     path = obj.jobpath
     if obj.subpath[-1] == "-":
@@ -303,7 +303,7 @@ async def get(obj, state):
 @at_cli.command()
 @click.option("-f", "--force", is_flag=True, help="Force deletion even if messy")
 @click.pass_obj
-async def delete(obj, force):
+async def delete(obj, force) -> None:
     """Remove a runner entry"""
     path = obj.jobpath
 
@@ -353,7 +353,7 @@ async def delete(obj, force):
 @click.option("-i", "--info", help="Short human-readable information")
 @attr_args
 @click.pass_obj
-async def set_(obj, code, tm, info, ok, repeat, delay, backoff, copy, **kw):
+async def set_(obj, code, tm, info, ok, repeat, delay, backoff, copy, **kw) -> None:
     """Add or modify a runner.
 
     Code typically requires some input parameters.
@@ -415,7 +415,7 @@ async def set_(obj, code, tm, info, ok, repeat, delay, backoff, copy, **kw):
 
 @cli.command(short_help="Show runners' keepalive messages")
 @click.pass_obj
-async def monitor(obj):
+async def monitor(obj) -> None:
     """
     Runners periodically send a keepalive message. Show them.
     """

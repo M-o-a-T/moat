@@ -63,7 +63,7 @@ class ErrorMirror:
     cfg: attrdict
     notify_vecs: Node | None
 
-    def __init__(self, cfg: attrdict):
+    def __init__(self, cfg: attrdict) -> None:
         """Set up the mirror.
 
         Args:
@@ -202,11 +202,11 @@ class Notify:
 
     link: Link
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         self.cfg = cfg
         self.dropped: PrioMap[Notifier, float] = PrioMap()
 
-    async def run(self, link: Link, evt: anyio.Event | None = None):
+    async def run(self, link: Link, evt: anyio.Event | None = None) -> None:
         """
         Task that reads notifications from MoaT-Link and posts them.
         """
@@ -381,7 +381,7 @@ def get_backend(name: str, link: Link, cfg: dict) -> Notifier:
 class Notifier(CtxObj, metaclass=ABCMeta):
     "Base class for notification backends"
 
-    def __init__(self, link: Link, cfg: attrdict):
+    def __init__(self, link: Link, cfg: attrdict) -> None:
         self.cfg = cfg
         self.link = link
 

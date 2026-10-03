@@ -19,7 +19,7 @@ class TcpLink(AIOBuf):
     A channel that connects to a remote TCP socket.
     """
 
-    def __init__(self, host: str, port: int, retry={}):  # noqa:B006
+    def __init__(self, host: str, port: int, retry={}) -> None:  # noqa:B006
         self.host = host
         self.port = port
         self.retry = retry  # not changed by us

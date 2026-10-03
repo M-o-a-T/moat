@@ -21,13 +21,13 @@ class RTC(RTCBase):
     is_FS = False
     is_ASYNC = False
 
-    def __init__(self, cfg=None):
+    def __init__(self, cfg=None) -> None:
         if cfg is None:
             cfg = {}
         super().__init__(cfg)
         self._d = {}
 
-    def reload(self):
+    def reload(self) -> None:
         """Reload is a no-op for the fake backend."""
         pass
 

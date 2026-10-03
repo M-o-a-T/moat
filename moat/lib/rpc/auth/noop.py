@@ -14,7 +14,7 @@ class SubAuth(_SubAuth):
     Auth method for no login.
     """
 
-    async def task(self):
+    async def task(self) -> None:
         """Simply accept."""
         if L:
             self.set_ready()

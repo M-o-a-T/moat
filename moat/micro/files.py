@@ -38,13 +38,13 @@ class ABytes(io.BytesIO):
     An async-IO-mimicing version of `io.BytesIO`.
     """
 
-    def __init__(self, name, data):
+    def __init__(self, name, data) -> None:
         super().__init__()
         self.name = name
         self.write(data)
         self.suffix = Path(name).suffix
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.name)
 
     async def open(self, mode):  # noqa:ARG002 pylint: disable=unused-argument
@@ -72,15 +72,15 @@ class ABytes(io.BytesIO):
         _h.update(self.getbuffer())
         return _h.digest()
 
-    def close(self):
+    def close(self) -> None:
         "does nothing"
         # pylint:disable=unnecessary-pass
 
-    async def is_dir(self):
+    async def is_dir(self) -> bool:
         "returns False"
         return False
 
-    async def is_file(self):
+    async def is_file(self) -> bool:
         "returns True"
         return True
 
@@ -288,7 +288,7 @@ class MoatDevPath(MoatPath):
             self._stat_cache = os.stat_result(st)
         return self._stat_cache
 
-    async def exists(self):
+    async def exists(self) -> bool:
         """Return True if target exists"""
         try:
             await self.stat()
@@ -311,7 +311,7 @@ class MoatDevPath(MoatPath):
         except FileNotFoundError:
             return False
 
-    async def unlink(self, missing_ok=False):
+    async def unlink(self, missing_ok=False) -> None:
         """
         :raises FileNotFoundError:
 
@@ -370,7 +370,7 @@ class MoatDevPath(MoatPath):
             else:
                 raise
 
-    async def rmdir(self):
+    async def rmdir(self) -> None:
         """
         :raises FileNotFoundError:
 
@@ -558,7 +558,7 @@ class MoatFSPath(MoatPath):
             self._stat_cache = os.stat_result(st["d"])
         return self._stat_cache
 
-    async def exists(self):
+    async def exists(self) -> bool:
         """Return True if target exists"""
         try:
             await self.stat()
@@ -581,7 +581,7 @@ class MoatFSPath(MoatPath):
         except FileNotFoundError:
             return False
 
-    async def unlink(self, missing_ok=False):
+    async def unlink(self, missing_ok=False) -> None:
         """
         :raises FileNotFoundError:
 

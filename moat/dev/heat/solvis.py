@@ -491,7 +491,7 @@ class APID(CPID):
         self.data = data
         self.name = name
 
-    async def setpoint(self, setpoint: float) -> None:
+    async def setpoint(self, setpoint: float) -> None:  # ty:ignore[invalid-method-override]
         """Communicate the setpoint."""
         if self.state.get("setpoint", None) == setpoint:
             return

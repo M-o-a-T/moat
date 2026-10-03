@@ -41,7 +41,7 @@ import typing
 
 
 @load_subgroup(sub_pre="moat.modbus")
-async def cli():
+async def cli() -> None:
     """Modbus tools"""
     pass
 
@@ -58,7 +58,7 @@ server = mk_server(cli)
 _MONITOR_INTER_FRAME_TIMEOUT = 0.2
 
 
-def print_exc(exc, **kw):  # pylint: disable=missing-function-docstring
+def print_exc(exc, **kw) -> None:  # pylint: disable=missing-function-docstring
     traceback.print_exception(type(exc), exc, exc.__traceback__, **kw)
 
 
@@ -229,7 +229,7 @@ async def _sniff_line(
     help="Error if no data (seconds)",
 )
 @click.pass_context
-async def monitor(ctx, timeout, timeout1, **params):
+async def monitor(ctx, timeout, timeout1, **params) -> None:
     """
     A basic Modbus RTU monitor.
 
@@ -263,7 +263,7 @@ async def monitor(ctx, timeout, timeout1, **params):
 @add_serial_cfg
 @click.option("-r", "--retry", type=int, help="Delay between restarts in case of errors")
 @click.pass_obj
-async def to(obj, retry, **params):
+async def to(obj, retry, **params) -> None:
     """
     This subcommand describes the ModBus interface of the client(s).
 
@@ -275,7 +275,7 @@ async def to(obj, retry, **params):
     class Server(RelayServer, SerialModbusServer):
         """A time-out-ing serial Modbus relay"""
 
-        def __init__(self, *a, **kw):
+        def __init__(self, *a, **kw) -> None:
             self.__evt = anyio.Event()
             super().__init__(*a, **kw)
 
@@ -293,7 +293,7 @@ async def to(obj, retry, **params):
             self.__evt.set()
             return response
 
-        async def watch(self, t2, t1):
+        async def watch(self, t2, t1) -> None:
             "Timeout manager"
             t = t1
             while True:

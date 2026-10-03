@@ -74,7 +74,7 @@ async def open_client(_main_name="moat.kv.client", **cfg):
         yield await client_scope(**cfg)
 
 
-async def _scoped_client(_name=None, **cfg):
+async def _scoped_client(_name=None, **cfg) -> None:
     """
     AsyncScope service for a client connection.
     """
@@ -128,7 +128,7 @@ class StreamedRequest:
     qr = None
     dw = None
 
-    def __init__(self, client, seq, stream: bool = False, report_start: bool = False):
+    def __init__(self, client, seq, stream: bool = False, report_start: bool = False) -> None:
         self._stream = stream
         self._client = client
         self.seq = seq
@@ -149,12 +149,12 @@ class StreamedRequest:
     def _get_seq(msg):
         return msg.pop("wseq", 0)
 
-    async def _send_ack(self, seq):
+    async def _send_ack(self, seq) -> None:
         msg = dict(seq=self.seq, state="ack", ack=seq)
         self._client.logger.debug("Send %s", msg)
         await self._client._send(**msg)  # noqa:SLF001
 
-    async def set(self, msg):
+    async def set(self, msg) -> bool | None:
         """Called by the read loop to process a command's result"""
         self.n_msg += 1
         if "error" in msg:
@@ -237,7 +237,7 @@ class StreamedRequest:
         self._path_long(res)
         return res
 
-    async def send(self, **msg):  # noqa:D102
+    async def send(self, **msg) -> None:  # noqa:D102
         # self._client.logger.debug("Send %s", msg)
         if not self._open:
             if self._stream:
@@ -255,7 +255,7 @@ class StreamedRequest:
     async def recv(self):  # noqa:D102
         return await self.__anext__()
 
-    async def cancel(self):  # noqa:D102
+    async def cancel(self) -> None:  # noqa:D102
         try:
             await self.qr.put_error(ClientCancelledError())
         except (anyio.BrokenResourceError, anyio.ClosedResourceError, EOFError):
@@ -264,10 +264,10 @@ class StreamedRequest:
             with suppress(ServerClosedError):
                 await self.aclose()
 
-    async def wait_started(self):  # noqa:D102
+    async def wait_started(self) -> None:  # noqa:D102
         await self._started.wait()
 
-    async def aclose(self):  # noqa:D102
+    async def aclose(self) -> None:  # noqa:D102
         try:
             if self._stream:
                 msg = dict(seq=self.seq, state="end")
@@ -291,7 +291,7 @@ class _SingleReply:
     arrives.
     """
 
-    def __init__(self, conn, seq, params):
+    def __init__(self, conn, seq, params) -> None:
         self._conn = conn
         self.seq = seq
         self.q = ValueEvent()
@@ -319,7 +319,7 @@ class _SingleReply:
         """
         return await self.q.get()
 
-    async def cancel(self):
+    async def cancel(self) -> None:
         pass
 
 
@@ -328,10 +328,10 @@ class ClientConfig:
 
     _changed = None  # pylint
 
-    def __init__(self, client, *a, **k):  # noqa:ARG002
+    def __init__(self, client, *a, **k) -> None:  # noqa:ARG002
         self._init(client)
 
-    def _init(self, client):
+    def _init(self, client) -> None:
         self._client = client
         self._current = {}
         self._changed = anyio.Event()
@@ -347,10 +347,10 @@ class ClientConfig:
                 raise AttributeError(k) from None
         return v
 
-    def __contains__(self, k):
+    def __contains__(self, k) -> bool:
         return k in self._current or k in self._client._cfg  # noqa:SLF001
 
-    async def _update(self, k, v):
+    async def _update(self, k, v) -> None:
         """
         Update this config entry. The new data is combined with the static
         configuration; the old data is discarded.
@@ -390,7 +390,7 @@ class Client:
     client_name = None
     qlen: int = 0
 
-    def __init__(self, cfg: dict):
+    def __init__(self, cfg: dict) -> None:
         self._cfg = combine_dict(cfg, CFG.moat.kv, cls=attrdict)
         self.config = ClientConfig(self)
         self.codec = get_codec("std-msgpack")
@@ -420,14 +420,14 @@ class Client:
         Run a (single) async context manager as a service.
         """
 
-        async def with_factory(f):
+        async def with_factory(f) -> None:
             async with f() as r:
                 scope.register(r)
                 await scope.no_more_dependents()
 
         return await scope.service(name, with_factory, factory)
 
-    async def _handle_msg(self, msg):
+    async def _handle_msg(self, msg) -> None:
         try:
             seq = msg.seq
         except AttributeError:
@@ -470,7 +470,7 @@ class Client:
             self._dh_key = num2byte(k.shared_secret)[0:32]
         return self._dh_key
 
-    async def _send(self, **params):
+    async def _send(self, **params) -> None:
         async with self._send_lock:
             sock = self._socket
             if sock is None:
@@ -482,7 +482,7 @@ class Client:
                 raise ValueError(f"Unable to pack: {params!r}") from e
             await sock.send(p)
 
-    async def _reader(self, *, evt=None):
+    async def _reader(self, *, evt=None) -> None:
         """Main loop for reading"""
         with anyio.CancelScope():
             # XXX store the scope so that the redaer may get cancelled?
@@ -645,7 +645,7 @@ class Client:
             with anyio.fail_after(2, shield=True), suppress(anyio.ClosedResourceError):
                 await res.aclose()
 
-    async def _run_auth(self, auth=None):
+    async def _run_auth(self, auth=None) -> None:
         """
         As the name implies: process authorization.
         """

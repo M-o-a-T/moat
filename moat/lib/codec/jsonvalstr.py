@@ -10,7 +10,7 @@ from .jsonvalue import Codec as _Codec
 class Codec(_Codec):
     "JSON+Value using a stringified element"
 
-    def __init__(self, ext=None):
+    def __init__(self, ext=None) -> None:
         if ext is not None:
             raise ValueError("You can't extend the JSON codec")
         super().__init__()

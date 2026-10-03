@@ -46,7 +46,7 @@ class Event:  # noqa: D101
     data: str
     raw: bytes = b""
 
-    def __init__(self, evt: str, data: str | None = None, raw: bytes = b""):
+    def __init__(self, evt: str, data: str | None = None, raw: bytes = b"") -> None:
         self.evt = evt
         self.data = data or ""
         self.raw = raw
@@ -70,7 +70,7 @@ class Console(ABC):  # noqa: D101
     def __init__(
         self,
         encoding: str = "",
-    ):
+    ) -> None:
         self.encoding = encoding or sys.getdefaultencoding()
 
     @abstractmethod
@@ -172,10 +172,10 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
         super().__init__(locals=locals, filename=filename, local_exit=local_exit)  # ty: ignore[unknown-argument]  # Python 3.13+
         self.can_colorize = _colorize.can_colorize()
 
-    def showsyntaxerror(self, filename=None, **kwargs):  # noqa: D102
+    def showsyntaxerror(self, filename=None, **kwargs) -> None:  # noqa: D102
         super().showsyntaxerror(filename=filename, **kwargs)
 
-    def _excepthook(self, typ, value, tb):
+    def _excepthook(self, typ, value, tb) -> None:
         import traceback  # noqa: PLC0415
 
         lines = traceback.format_exception(  # ty:ignore[no-matching-overload,attr-defined]
@@ -197,7 +197,7 @@ class InteractiveColoredConsole(code.InteractiveConsole):  # noqa: D101
             return self.STATEMENT_FAILED
         return None
 
-    def runsource(self, source, filename="<input>", symbol="single"):  # noqa: D102
+    def runsource(self, source, filename="<input>", symbol="single") -> bool:  # noqa: D102
         try:
             tree = self.compile.compiler(
                 source,
@@ -275,7 +275,7 @@ class Readline:
         ps2: str | None = None,
         ps3: str | None = None,
         ps4: str | None = None,
-    ):
+    ) -> None:
         """Initialize with a console and optional prompt/multiline settings."""
         self.console = console
         self.prompt = prompt

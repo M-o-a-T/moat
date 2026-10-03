@@ -27,7 +27,7 @@ MOCK_TM = 0
 class Backend(_Backend):
     """The VictoriaMetrics backend driver."""
 
-    def __init__(self, cfg: dict, name: str):
+    def __init__(self, cfg: dict, name: str) -> None:
         """
         Initialize VictoriaMetrics backend.
 

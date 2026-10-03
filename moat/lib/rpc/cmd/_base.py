@@ -107,13 +107,13 @@ class BaseCmd(MsgHandler):
         _ready: Event | None = None
     _stopped: Event | None = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         cfg._moat_cmd = self  # noqa:SLF001
         super().__init__(cfg)
         # self.cfg = cfg
         self.init_events()
 
-    def init_events(self):
+    def init_events(self) -> None:
         "Setup events for startup, stopping, and readiness"
         if self._stopped is None:
             if L:
@@ -121,13 +121,13 @@ class BaseCmd(MsgHandler):
                 self._ready = Event()
             self._stopped = Event()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         try:
             return f"<{self.cfg_name}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
         except (AttributeError, RuntimeError):
             return f"<{self.cfg_name}: ?path {(id(self) >> 4) & 0xFFF:03x}>"
 
-    async def setup(self):
+    async def setup(self) -> None:
         """
         Start up this command.
 
@@ -144,14 +144,14 @@ class BaseCmd(MsgHandler):
             self._starting.set()
             self._starting = None
 
-    async def reload(self):
+    async def reload(self) -> None:
         """
         Reload from updated config.
 
         The default does nothing, which is probably the wrong thing to do.
         """
 
-    def set_stopped(self):
+    def set_stopped(self) -> None:
         """
         The command has ended.
         """
@@ -169,7 +169,7 @@ class BaseCmd(MsgHandler):
                 self._ready.set()
                 self._ready = None
 
-    async def run(self):
+    async def run(self) -> None:
         """
         Task handler to run this command.
 
@@ -178,7 +178,7 @@ class BaseCmd(MsgHandler):
         async with self:
             await self.task()
 
-    async def task(self):
+    async def task(self) -> None:
         """
         The app's task. Runs after ``setup`` has completed. By default does nothing.
 
@@ -191,7 +191,7 @@ class BaseCmd(MsgHandler):
 
     if L:
 
-        def set_ready(self):
+        def set_ready(self) -> None:
             """
             This command is now ready.
 
@@ -206,7 +206,7 @@ class BaseCmd(MsgHandler):
                 self._ready.set()
                 self._ready = None
 
-    async def stop(self):
+    async def stop(self) -> None:
         "Stop this subcommand"
         p_task = self.p_task
         if p_task is None:
@@ -221,7 +221,7 @@ class BaseCmd(MsgHandler):
 
     if L:
 
-        async def wait_started(self):
+        async def wait_started(self) -> None:
             """
             Wait for the command's setup procedure to commence.
             """
@@ -245,7 +245,7 @@ class BaseCmd(MsgHandler):
                 await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
             return None
 
-    async def wait_stopped(self):
+    async def wait_stopped(self) -> None:
         "wait until this is no longer running"
         if self._stopped is not None:
             await self._stopped.wait()
@@ -282,7 +282,7 @@ class BaseCmd(MsgHandler):
         """
         return enc_part(get_part(self.cfg, p))
 
-    def attached(self, parent: BaseSuperCmd, name: str | None):
+    def attached(self, parent: BaseSuperCmd, name: str | None) -> None:
         "Tell this Cmd it's attached under this parent, with this name."
         if self._parent is not None:
             raise RuntimeError(f"already {'.'.join(self.path)}")
@@ -303,7 +303,7 @@ class LockBaseCmd(BaseCmd):
     A BaseCmd that blocks concurrent requests.
     """
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:
         super().__init__(*a, **kw)
         self._lock = Lock()
 
@@ -329,7 +329,7 @@ class LoadCmd(BaseCmd):
 
         return imp(cfg["app"])(cfg, **kw)
 
-    def __init__(self, cfg, **kw):
+    def __init__(self, cfg, **kw) -> None:
         pass
 
 
@@ -342,7 +342,7 @@ class RootCmd(Base):
 
     tg: object | None = None
 
-    def __init__(self, cfg, i=None):
+    def __init__(self, cfg, i=None) -> None:
         self.i = i
         self._sender = MsgSender(cast("MsgRoot", self))
         self.cfg = cfg
@@ -352,12 +352,12 @@ class RootCmd(Base):
         self.app.attached(cast("BaseSuperCmd", self), None)
         self._updates = {}
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.__class__ is RootCmd:
             return f"<{self.__class__.__name__}>"
         return f"<Root:{self.__class__.__name__}>"
 
-    async def setup(self):
+    async def setup(self) -> None:
         await super().setup()
         tg = await AC_use(self, cast("AbstractAsyncContextManager[object]", TaskGroup()))
         self.tg = tg
@@ -368,11 +368,11 @@ class RootCmd(Base):
         if L:
             await self.wait_ready()
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         self.tg = None
         await super().teardown()
 
-    async def task(self):
+    async def task(self) -> None:
         """
         Background task. May be overridden.
         """
@@ -425,7 +425,7 @@ class RootCmd(Base):
         "config subcommand resolver"
         return self._sender.cfg_at
 
-    async def reload(self):
+    async def reload(self) -> None:
         "Reload me."
         await self.app.reload()
         self._process_updates()
@@ -434,7 +434,7 @@ class RootCmd(Base):
         """Drain pending config-update markers and notify tagged subtrees."""
         upd, self._updates = self._updates, {}
 
-        def _upd(val):
+        def _upd(val) -> None:
             if hasattr(val, "updated_"):
                 val.updated_()
             if isinstance(val, ObjSequence):
@@ -473,10 +473,10 @@ class RootCmd(Base):
             self._process_updates()
         return ok
 
-    def cfg_updated(self, cfg):
+    def cfg_updated(self, cfg) -> None:
         "Mark TODO for update"
         self._updates[id(cfg)] = cfg
 
-    def cfg_reloaded(self, cfg):
+    def cfg_reloaded(self, cfg) -> None:
         "Remove TODO for update"
         self._updates.pop(id(cfg), None)

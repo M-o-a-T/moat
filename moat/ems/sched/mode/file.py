@@ -87,7 +87,7 @@ class Loader(BaseLoader):
             return float(x)
 
     @staticmethod
-    async def result(cfg, **kw):
+    async def result(cfg, **kw) -> None:
         """
         Send the result data to a file.
 
@@ -126,7 +126,7 @@ class Loader(BaseLoader):
             sys.exit(1)
 
     @staticmethod
-    async def results(cfg, it):
+    async def results(cfg, it) -> None:
         """
         Send the resulting data to a file, as a sequence.
 

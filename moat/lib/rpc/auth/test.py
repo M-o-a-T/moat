@@ -18,7 +18,7 @@ class SubAuth(_SubAuth):
     True/False/None means Accept/Deny/Ignore. Ignore is the default.
     """
 
-    async def task(self):
+    async def task(self) -> None:
         """Handle this auth method."""
         if L:
             self.set_ready()

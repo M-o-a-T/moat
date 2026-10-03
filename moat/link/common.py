@@ -28,7 +28,7 @@ class _Sub_i(MsgHandler):
     Namespace for internal ``i.*`` commands.
     """
 
-    def __init__(self, parent: CmdCommon):
+    def __init__(self, parent: CmdCommon) -> None:
         super().__init__(parent.cfg)
 
     doc_backend = dict(_d="Return backend configuration", _r="dict:backend config")
@@ -140,11 +140,11 @@ class CmdCommon(MsgHandler):
     This includes the 'i' subcommand.
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self._sub_i = _Sub_i(self)
 
-    async def setup(self):
+    async def setup(self) -> None:
         "Attach delegated command handlers."
         await super().setup()
         await AC_use(self, self.delegate(P("i"), self._sub_i))

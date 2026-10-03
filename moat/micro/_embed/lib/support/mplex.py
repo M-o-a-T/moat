@@ -35,7 +35,7 @@ class Multiplex:
     Inputs or outputs may be empty.
     """
 
-    def __init__(self, cfg, timer=None):
+    def __init__(self, cfg, timer=None) -> None:
         merge(cfg, DEFAULT, replace=False)
         self.cfg = cfg
         inv = cfg["inv"]
@@ -95,7 +95,7 @@ class Multiplex:
             mask >>= 1
             btn -= 1
 
-    def start(self):
+    def start(self) -> None:
         "Start the multiplexer"
         if self.this is not None:
             raise RuntimeError("already running")
@@ -106,7 +106,7 @@ class Multiplex:
             mode=Timer.PERIODIC, period=self.cfg["msec"], callback=self.step, hard=False
         )
 
-    def stop(self):
+    def stop(self) -> None:
         "Stop the multiplexer, de-assert all pins"
         self.timer.deinit()
         self.this = None
@@ -119,7 +119,7 @@ class Multiplex:
         for pin in self.scan:
             pin(v)
 
-    def step(self, _timer=None):
+    def step(self, _timer=None) -> None:
         """Run one pass of the multiplexer"""
         vs = self.inv[SCAN]
         vi = self.inv[INPUT]

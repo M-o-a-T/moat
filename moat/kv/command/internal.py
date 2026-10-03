@@ -14,7 +14,7 @@ from collections.abc import Mapping
 
 
 @click.group(cls=AliasedGroup, short_help="Control internal state.")  # pylint: disable=undefined-variable
-async def cli():
+async def cli() -> None:
     """
     This subcommand queries and controls the server's internal state.
     """
@@ -39,7 +39,7 @@ async def cli():
 @click.option("-k", "--known", hidden=True, is_flag=True, help="Get superseded-data status.")
 @click.option("-a", "--all", is_flag=True, help="All available data.")
 @click.pass_obj
-async def state(obj, **flags):
+async def state(obj, **flags) -> None:
     """
     Dump the server's state.
     """
@@ -72,7 +72,7 @@ async def state(obj, **flags):
 @click.argument("node", nargs=1)
 @click.argument("items", type=int, nargs=-1)
 @click.pass_obj
-async def mark(obj, deleted, source, node, items, broadcast):
+async def mark(obj, deleted, source, node, items, broadcast) -> None:
     """
     Fix internal state. Use no items to fetch the current list from the
     server's ``missing`` state. Use an empty node name to add the whole
@@ -109,7 +109,7 @@ async def mark(obj, deleted, source, node, items, broadcast):
 @click.option("-d", "--delete", is_flag=True, help="Remove these nodes")
 @click.argument("nodes", nargs=-1)
 @click.pass_obj
-async def deleter(obj, delete, nodes):
+async def deleter(obj, delete, nodes) -> None:
     """
     Manage the Deleter list
 
@@ -162,7 +162,7 @@ async def deleter(obj, delete, nodes):
 @cli.command()
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def dump(obj, path):
+async def dump(obj, path) -> None:
     """
     Dump internal state.
 
@@ -187,7 +187,7 @@ async def dump(obj, path):
 @click.argument("node", nargs=1)
 @click.argument("tick", type=int, nargs=1)
 @click.pass_obj
-async def get(obj, node, tick):
+async def get(obj, node, tick) -> None:
     """
     Fetch data by node+tick.
 
@@ -206,7 +206,7 @@ async def get(obj, node, tick):
 @click.option("-C", "--copy", is_flag=True, help="Create an no-op change")
 @click.argument("node", nargs=1)
 @click.pass_obj
-async def enum(obj, node, num, current, copy):
+async def enum(obj, node, num, current, copy) -> None:
     """
     List IDs of live data by a specific node.
 
@@ -239,7 +239,7 @@ async def enum(obj, node, num, current, copy):
 @cli.command()
 @click.argument("node", nargs=1)
 @click.pass_obj
-async def kill(obj, node):
+async def kill(obj, node) -> None:
     """
     Remove a node from the node list.
 

@@ -81,7 +81,7 @@ TOperationException = TypeVar("TOperationException", bound=MQTTOperationFailed)
 
 
 class MQTTWebsocketStream(ByteStream):  # noqa: D101
-    def __init__(self, session: AsyncWebSocketSession):
+    def __init__(self, session: AsyncWebSocketSession) -> None:
         self._session: AsyncWebSocketSession | None = session
 
     async def send_eof(self) -> None:  # noqa: D102
@@ -177,17 +177,17 @@ class MQTTQoS0PublishOperation(MQTTOperation[None]):  # noqa: D101
 
 
 class MQTTQoS1PublishOperation(MQTTOperation[MQTTPublishAckPacket]):  # noqa: D101
-    def __init__(self, packet_id: int):
+    def __init__(self, packet_id: int) -> None:
         super().__init__(packet_id, exception_class=MQTTPublishFailed)
 
 
 class MQTTQoS2PublishOperation(MQTTOperation[MQTTPublishCompletePacket]):  # noqa: D101
-    def __init__(self, packet_id: int):
+    def __init__(self, packet_id: int) -> None:
         super().__init__(packet_id, exception_class=MQTTPublishFailed)
 
 
 class MQTTSubscribeOperation(MQTTOperation[MQTTSubscribeAckPacket]):  # noqa: D101
-    def __init__(self, packet_id: int):
+    def __init__(self, packet_id: int) -> None:
         super().__init__(
             packet_id,
             exception_class=MQTTSubscribeFailed,
@@ -200,7 +200,7 @@ class MQTTSubscribeOperation(MQTTOperation[MQTTSubscribeAckPacket]):  # noqa: D1
 
 
 class MQTTUnsubscribeOperation(MQTTOperation[MQTTUnsubscribeAckPacket]):  # noqa: D101
-    def __init__(self, packet_id: int):
+    def __init__(self, packet_id: int) -> None:
         super().__init__(packet_id, exception_class=MQTTUnsubscribeFailed)
 
 

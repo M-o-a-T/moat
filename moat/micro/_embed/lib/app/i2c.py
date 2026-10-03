@@ -45,20 +45,20 @@ class Cmd(BaseCmd):
         dx="dict:dta hw init",
     )
 
-    async def setup(self):
+    async def setup(self) -> None:
         """
         Open a bus.
         """
         await super().setup()
         self._setup()
 
-    async def reload(self):
+    async def reload(self) -> None:
         "reconfigured"
         self._teardown()
         self._setup()
         await super().reload()
 
-    def _setup(self):
+    def _setup(self) -> None:
         cfg = self.cfg
         c = machine.Pin(cfg["c"], **cfg.get("cx", {}))
         d = machine.Pin(cfg["d"], **cfg.get("dx", {}))
@@ -71,12 +71,12 @@ class Cmd(BaseCmd):
         self._bus = cls(scl=c, sda=d, freq=f, timeout=t)
         self.lock = Lock()
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         "shutdown"
         self._teardown()
         await super().teardown()
 
-    def _teardown(self):
+    def _teardown(self) -> None:
         b, self._bus = self._bus, None
         if b is not None:
             with contextlib.suppress(AttributeError):

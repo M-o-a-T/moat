@@ -59,7 +59,7 @@ class BaseLoader:
         raise NotImplementedError("You need to add a static 'result' method")
 
     @staticmethod
-    async def results(cfg, it):
+    async def results(cfg, it) -> None:
         """
         Accepts an iterator for intended results over all periods.
 

@@ -26,7 +26,7 @@ from ._util import absent, get_one, list_global, lookup_errors, require_name
 @click.group(name="dayrange", cls=AliasedGroup, short_help="Manage day ranges (global)")
 @click.option("--name", "-n", type=str, default=None, help="Day-range name")
 @click.pass_obj
-async def cli(obj, name):
+async def cli(obj, name) -> None:
     """Manage global day ranges."""
     obj.name = name
 
@@ -54,7 +54,7 @@ def _day_names(day_add, day_rm) -> list[str]:
 
 @cli.command(name="show")
 @click.pass_obj
-async def show_(obj):
+async def show_(obj) -> None:
     """Show one day range, or list all day ranges."""
     if obj.name is None:
         seen = False
@@ -72,7 +72,7 @@ async def show_(obj):
 @opts
 @day_opts
 @click.pass_obj
-async def add(obj, day_add, day_rm, **kw):
+async def add(obj, day_add, day_rm, **kw) -> None:
     """Add a day range, optionally linking days."""
     name = require_name(obj, "day range")
     absent(obj, DayRange, "day range", name=name)
@@ -88,7 +88,7 @@ async def add(obj, day_add, day_rm, **kw):
 @opts
 @day_opts
 @click.pass_obj
-async def set_(obj, day_add, day_rm, **kw):
+async def set_(obj, day_add, day_rm, **kw) -> None:
     """Modify a day range (rename, comment, day links)."""
     name = require_name(obj, "day range")
     dr = get_one(obj, DayRange, "day range", name=name)
@@ -100,7 +100,7 @@ async def set_(obj, day_add, day_rm, **kw):
 
 @cli.command(name="delete")
 @click.pass_obj
-async def delete_(obj):
+async def delete_(obj) -> None:
     """Remove a day range (groups referencing it lose the link)."""
     name = require_name(obj, "day range")
     dr = get_one(obj, DayRange, "day range", name=name)

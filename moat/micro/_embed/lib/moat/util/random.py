@@ -8,7 +8,7 @@ from __future__ import annotations
 class Random:
     "simplified random number generator"
 
-    def __init__(self, c_seed=0):
+    def __init__(self, c_seed=0) -> None:
         # MT19937 except with a smaller period
         (self.w, self.n, self.m, self.r) = (32, 624, 397, 31)
         self.n = 32  ## reduce memory usage
@@ -27,7 +27,7 @@ class Random:
         self.c_seed = c_seed
         self.seed(c_seed)
 
-    def seed(self, num):
+    def seed(self, num) -> None:
         """initialize the generator from a seed"""
         self.MT[0] = num
         self.index = self.n
@@ -35,7 +35,7 @@ class Random:
             temp = self.f * (self.MT[i - 1] ^ (self.MT[i - 1] >> (self.w - 2))) + i
             self.MT[i] = temp & 0xFFFFFFFF
 
-    def twist(self):
+    def twist(self) -> None:
         """Generate the next n values from the series x_i"""
         for i in range(self.n):
             x = (self.MT[i] & self.upper_mask) + (self.MT[(i + 1) % self.n] & self.lower_mask)

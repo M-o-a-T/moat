@@ -40,19 +40,19 @@ class OWFSattr(ClientEntry):  # noqa: D101
     def attr(self):  # noqa: D102
         return self.subpath[2:]  # without the device code
 
-    async def set_value(self, val):  # pylint: disable=arguments-differ
+    async def set_value(self, val) -> None:  # pylint: disable=arguments-differ
         """
         Some attribute has been updated.
         """
         await super().set_value(val)
         await self._sync(False)
 
-    async def sync(self, force: bool):  # noqa: D102
+    async def sync(self, force: bool) -> None:  # noqa: D102
         for k in self:
             await k.sync(force)
         await self._sync(force)
 
-    async def _sync(self, force: bool):
+    async def _sync(self, force: bool) -> None:
         val = combine_dict(self.value_or({}, Mapping), self.node.val)
         dev = self.node.dev
         if dev is None or dev.bus is None:
@@ -101,7 +101,7 @@ class OWFSattr(ClientEntry):  # noqa: D101
                 await self.root.err.record_error("owfs", self.subpath + ("read",), exc=exc)
         self.watch_dest_chain = None
 
-    async def dest_value(self, val):
+    async def dest_value(self, val) -> None:
         """
         Called by the task to update a polled value
         """
@@ -135,7 +135,7 @@ class OWFSattr(ClientEntry):  # noqa: D101
         else:
             await self.root.err.record_working("owfs", self.subpath + ("read",))
 
-    async def _watch_src(self, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _watch_src(self, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """
         Task that monitors one entry and writes its value to the 1wire
         device.
@@ -200,7 +200,7 @@ class OWFSattr(ClientEntry):  # noqa: D101
 class OWFSnode(ClientEntry):  # noqa: D101
     dev = None
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         super().__init__(*a, **k)
         self.val = {}
 
@@ -216,11 +216,11 @@ class OWFSnode(ClientEntry):  # noqa: D101
     def family(self):  # noqa: D102
         return self._path[-2]
 
-    async def sync(self, force: bool = False):  # noqa: D102
+    async def sync(self, force: bool = False) -> None:  # noqa: D102
         for k in self:
             await k.sync(force)
 
-    async def with_device(self, dev):
+    async def with_device(self, dev) -> None:
         """
         Called by the OWFS monitor, noting that the device is now visible
         on a bus (or not, if ``None``).
@@ -229,7 +229,7 @@ class OWFSnode(ClientEntry):  # noqa: D101
         await self._update_value()
         await self.sync(True)
 
-    async def set_value(self, val):  # pylint: disable=arguments-differ
+    async def set_value(self, val) -> None:  # pylint: disable=arguments-differ
         """
         Some attribute has been updated.
         """
@@ -237,7 +237,7 @@ class OWFSnode(ClientEntry):  # noqa: D101
         await self._update_value()
         await self.sync(False)
 
-    async def _update_value(self):
+    async def _update_value(self) -> None:
         """
         Synpollers, watchers and attributes.
         """
@@ -259,7 +259,7 @@ class OWFSfamily(ClientEntry):  # noqa: D101
             return ClientEntry
         return cls.cls
 
-    async def set_value(self, val):  # noqa: D102
+    async def set_value(self, val) -> None:  # noqa: D102
         await super().set_value(val)
         for c in self:
             await c._update_value()  # noqa: SLF001
@@ -285,7 +285,7 @@ class OWFSroot(ClientRoot):  # noqa: D101
     CFG = "ow"
     err = None
 
-    async def run_starting(self):  # noqa: D102
+    async def run_starting(self) -> None:  # noqa: D102
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()

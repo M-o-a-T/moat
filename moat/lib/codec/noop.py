@@ -8,7 +8,7 @@ from ._base import Codec as _Codec
 class Codec(_Codec):
     "no-op codec"
 
-    def __init__(self, ext=None):
+    def __init__(self, ext=None) -> None:
         if ext is not None:
             raise ValueError("You can't extend the Null codec")
         super().__init__()
@@ -26,7 +26,7 @@ class Codec(_Codec):
         "no-op decode"
         return data
 
-    def feed(self, data):
+    def feed(self, data) -> None:
         "no-op feed"
         self._buf += data
 

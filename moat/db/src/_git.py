@@ -182,7 +182,7 @@ def _pick_default_remote(names: list[str]) -> str | None:
         return None
     if "origin" in names:
         return "origin"
-    return sorted(names)[0]
+    return min(names)
 
 
 async def import_repo(

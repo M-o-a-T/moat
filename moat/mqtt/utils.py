@@ -13,7 +13,7 @@ from .errors import InvalidStateError
 logger = logging.getLogger(__name__)
 
 
-def format_client_message(session=None, address=None, port=None):  # noqa: D103
+def format_client_message(session=None, address=None, port=None) -> str:  # noqa: D103
     if session:
         return f"(client id={session.client_id})"
     elif address is not None and port is not None:
@@ -59,14 +59,14 @@ class Future:
     event = attr.ib(factory=anyio.Event, init=False)
     value = attr.ib(default=None, init=False)
 
-    async def set(self, value):
+    async def set(self, value) -> None:
         """Set the result to return this value, and wake any waiting task."""
         if self.event.is_set():
             raise InvalidStateError("Value already set")
         self.value = value
         self.event.set()
 
-    async def set_error(self, exc):
+    async def set_error(self, exc) -> None:
         """Set the result to raise this exceptio, and wake any waiting task."""
         if self.event.is_set():
             raise InvalidStateError("Value already set")
@@ -77,7 +77,7 @@ class Future:
         """Check whether the event has occurred."""
         return self.value is not None
 
-    async def cancel(self):
+    async def cancel(self) -> None:
         """Send a cancelation to the recipient."""
         await self.set_error(CancelledError())
 
@@ -98,7 +98,7 @@ class Future:
         return self.event.is_set()
 
 
-def match_topic(topic, subscription):
+def match_topic(topic, subscription) -> bool:
     """
     Match @topic to @subscription. Both must be lists/tuples.
     """

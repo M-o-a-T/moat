@@ -25,7 +25,7 @@ KINDS = ["rain", "temp", "wind", "sun"]
 @click.option("--kind", "-k", type=click.Choice(KINDS), default=None, help="Sensor kind")
 @click.option("--name", "-n", type=str, default=None, help="Sensor name")
 @click.pass_obj
-async def cli(obj, kind, name):
+async def cli(obj, kind, name) -> None:
     """Manage irrigation sensors (rain/temp/wind/sun meters)."""
     obj.kind = kind
     obj.name = name
@@ -51,7 +51,7 @@ def _require_kind(obj) -> str:
 
 @cli.command(name="show")
 @click.pass_obj
-async def show_(obj):
+async def show_(obj) -> None:
     """Show one sensor, or list all sensors in this site."""
     site = site_of(obj)
     if obj.name is None:
@@ -74,7 +74,7 @@ async def show_(obj):
 @cli.command()
 @opts
 @click.pass_obj
-async def add(obj, **kw):
+async def add(obj, **kw) -> None:
     """Add a sensor to this site."""
     name = require_name(obj, "sensor")
     kind = _require_kind(obj)
@@ -91,7 +91,7 @@ async def add(obj, **kw):
 @cli.command(name="set")
 @opts
 @click.pass_obj
-async def set_(obj, **kw):
+async def set_(obj, **kw) -> None:
     """Modify a sensor (its kind is immutable)."""
     name = require_name(obj, "sensor")
     kind = _require_kind(obj)
@@ -103,7 +103,7 @@ async def set_(obj, **kw):
 
 @cli.command(name="delete")
 @click.pass_obj
-async def delete_(obj):
+async def delete_(obj) -> None:
     """Remove a sensor."""
     name = require_name(obj, "sensor")
     kind = _require_kind(obj)

@@ -48,7 +48,7 @@ class Cmd(BaseCmd):
         )
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self._ping = Event()
         if cfg.get("hw", False) and M.WDT is not None:
@@ -56,20 +56,20 @@ class Cmd(BaseCmd):
         else:
             self.wdt = WDT(cfg)
 
-    async def task(self):  # noqa:D102
+    async def task(self) -> None:  # noqa:D102
         self.wdt.setup()
         if L:
             self.set_ready()
         await self.wdt.run()
 
-    async def reload(self):  # noqa:D102
+    async def reload(self) -> None:  # noqa:D102
         await super().reload()
         self.wdt.setup()
         self.wdt.ping()
 
     doc_x = dict(_d="feed watchdog", f="bool:force")
 
-    async def cmd_x(self, f=False, n: Any = None):
+    async def cmd_x(self, f=False, n: Any = None) -> None:
         """
         External keepalive.
 

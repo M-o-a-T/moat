@@ -26,17 +26,17 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def task(client, cfg, server: WAGOserver, evt=None):  # noqa: D103
+async def task(client, cfg, server: WAGOserver, evt=None) -> None:  # noqa: D103
     client  # noqa:B018
 
     cfg = combine_dict(server.value_or({}, Mapping).get("server", {}), cfg["server_default"])
 
-    async def present(s, p):
+    async def present(s, p) -> None:
         # Set the "present" attribute
         if s.val_d(None, "present") is not p:
             await s.update(s.value_or(attrdict(), Mapping)._update(["present"], value=p))  # noqa: SLF001
 
-    async def merge_ports(s_card, r):
+    async def merge_ports(s_card, r) -> None:
         r = set(range(1, r + 1))
         for k in r:
             try:
@@ -49,7 +49,7 @@ async def task(client, cfg, server: WAGOserver, evt=None):  # noqa: D103
             if s_port._name not in r:  # noqa: SLF001
                 await present(s_port, False)
 
-    async def merge_cards(s_type, r):
+    async def merge_cards(s_type, r) -> None:
         for k, v in r.items():
             try:
                 s_card = s_type[k]
@@ -62,7 +62,7 @@ async def task(client, cfg, server: WAGOserver, evt=None):  # noqa: D103
             if s_card._name not in r:  # noqa: SLF001
                 await present(s_card, False)
 
-    async def merge_types(server, r):
+    async def merge_types(server, r) -> None:
         for k, v in r.items():
             try:
                 s_type = server[k]

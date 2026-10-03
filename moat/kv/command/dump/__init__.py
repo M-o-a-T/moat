@@ -22,7 +22,7 @@ from collections.abc import Mapping
 
 
 @load_subgroup(short_help="Local data mangling", sub_pre="dump")
-async def cli():
+async def cli() -> None:
     """
     Low-level tools that don't depend on a running MoaT-KV server.
     """
@@ -32,7 +32,7 @@ async def cli():
 @cli.command()
 @click.argument("node", nargs=1)
 @click.argument("file", type=click.Path(), nargs=1)
-async def init(node, file):
+async def init(node, file) -> None:
     """Write an initial preload file.
 
     Usage: moat kv dump init <node> <outfile>
@@ -57,7 +57,7 @@ async def init(node, file):
 @cli.command("msg")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def msg_(obj, path):
+async def msg_(obj, path) -> None:
     """
     Monitor the server-to-sever message stream.
 
@@ -76,7 +76,7 @@ async def msg_(obj, path):
     import moat.kv.server  # noqa: PLC0415
 
     class _Unpack:
-        def __init__(self):
+        def __init__(self) -> None:
             self._part_cache = dict()
 
     cfg = obj.cfg.kv
@@ -125,7 +125,7 @@ async def msg_(obj, path):
 @cli.command("post")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def post_(obj, path):
+async def post_(obj, path) -> None:
     """
     Send a msgpack-encoded message (or several) to a specific MQTT topic.
 

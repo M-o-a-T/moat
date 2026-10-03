@@ -27,7 +27,7 @@ class Register(BaseRegister):
     One possibly-complex Modbus register that's mirrored from and/or to MoaT-Link
     """
 
-    def __init__(self, *a, link: Link, tg: TaskGroup, is_server: bool = False, **kw):
+    def __init__(self, *a, link: Link, tg: TaskGroup, is_server: bool = False, **kw) -> None:
         super().__init__(*a, **kw)
         self._link = link
         self.tg = tg
@@ -41,7 +41,7 @@ class Register(BaseRegister):
                     logger.warning("%s:%s: no source/destination", self.unit, self.path)
             return
 
-    async def start(self):  # noqa: D102
+    async def start(self) -> None:  # noqa: D102
         await super().start()
 
         # logger.info("%s:%s: Polling", self.unit, self.path)
@@ -107,7 +107,7 @@ class Register(BaseRegister):
     def set(self, val: float | None, idem: bool = False) -> None:  # noqa: D102
         self.reg.set(val, idem=idem)
 
-    async def _watch_datablock_changes(self):
+    async def _watch_datablock_changes(self) -> None:
         """Wait on DataBlock.changed event and notify if this register changed."""
         # The register must have been added to a DataBlock before this watcher
         # is started (see ServerDevice.add_registers).
@@ -121,7 +121,7 @@ class Register(BaseRegister):
                 self.reg._changed = False  # noqa: SLF001
                 self.mqtt_event.set()
 
-    async def to_link(self, dest):
+    async def to_link(self, dest) -> None:
         """Copy a Modbus value to MoaT-Link when notified by slot."""
         # Read current MQTT value on startup
         try:
@@ -141,7 +141,7 @@ class Register(BaseRegister):
                 await self._link.d_set(dest, val, retain="idle" not in self.data)
                 self.last_sent_value = val
 
-    async def from_link(self, mon, *, task_status):
+    async def from_link(self, mon, *, task_status) -> None:
         """Copy an MQTT value to Modbus (sets write value, triggers bus update)"""
         async with mon as mon_:
             if task_status is not None:
@@ -162,7 +162,7 @@ class Register(BaseRegister):
                 logger.debug("%s W %r", self.path, val)
                 await self._set(val)
 
-    async def from_link_const(self, mon, *, task_status):
+    async def from_link_const(self, mon, *, task_status) -> None:
         """Copy an MQTT value to Modbus for const: !P (sets read value only, no bus update)"""
         async with mon as mon_:
             if task_status is not None:
@@ -184,12 +184,12 @@ class Register(BaseRegister):
                 # but doesn't trigger a write back to the remote device
                 self.reg._value = val  # noqa: SLF001
 
-    async def from_link_p(self, mon, slot):
+    async def from_link_p(self, mon, slot) -> None:
         """Copy an MQTT value to Modbus, with periodic refresh"""
         evt = anyio.Event()
         val = NotGiven
 
-        async def per():
+        async def per() -> None:
             nonlocal evt, val
             while True:
                 if val is NotGiven:
@@ -223,7 +223,7 @@ class Register(BaseRegister):
                 evt.set()
                 evt = anyio.Event()
 
-    async def _set(self, value):
+    async def _set(self, value) -> None:
         self.value = value
 
         if (dest := self.dest) is not None and self.data.get("mirror", False):

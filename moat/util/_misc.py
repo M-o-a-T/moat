@@ -24,7 +24,7 @@ class OutOfData(EOFError):
     pass
 
 
-async def wait_complain(s: str, i: int, p: Callable, *a, **k):
+async def wait_complain(s: str, i: int, p: Callable, *a, **k) -> None:
     """
     Wait for a callable to complete, complaining if it takes too long.
 

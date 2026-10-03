@@ -25,7 +25,7 @@ CLIENT_ERROR = 0x7F
 class ConnackVariableHeader(MQTTVariableHeader):  # noqa: D101
     __slots__ = ("return_code", "session_parent")
 
-    def __init__(self, session_parent=None, return_code=None):
+    def __init__(self, session_parent=None, return_code=None) -> None:
         super().__init__()
         self.session_parent = session_parent
         self.return_code = return_code
@@ -49,7 +49,7 @@ class ConnackVariableHeader(MQTTVariableHeader):  # noqa: D101
 
         return out
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             type(self).__name__
             + f"(session_parent={hex(self.session_parent)}, return_code={hex(self.return_code)})"
@@ -65,7 +65,7 @@ class ConnackPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.return_code
 
     @return_code.setter
-    def return_code(self, return_code):
+    def return_code(self, return_code) -> None:
         self.variable_header.return_code = return_code
 
     @property
@@ -73,7 +73,7 @@ class ConnackPacket(MQTTPacket):  # noqa: D101
         return self.variable_header.session_parent
 
     @session_parent.setter
-    def session_parent(self, session_parent):
+    def session_parent(self, session_parent) -> None:
         self.variable_header.session_parent = session_parent
 
     def __init__(
@@ -81,7 +81,7 @@ class ConnackPacket(MQTTPacket):  # noqa: D101
         fixed: MQTTFixedHeader = None,
         variable_header: ConnackVariableHeader = None,
         payload=None,  # noqa: ARG002
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(CONNACK, 0x00)
         else:

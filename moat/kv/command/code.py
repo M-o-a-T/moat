@@ -21,7 +21,7 @@ from moat.lib.run import AliasedGroup, attr_args, process_args
 @click.group(cls=AliasedGroup, invoke_without_command=True)  # pylint: disable=undefined-variable
 @click.argument("path", nargs=1, type=P)
 @click.pass_context
-async def cli(ctx, path):
+async def cli(ctx, path) -> None:
     """Manage code stored in MoaT-KV."""
     obj = ctx.obj
     obj.path = obj.cfg["kv"]["codes"]["prefix"] + path
@@ -37,7 +37,7 @@ async def cli(ctx, path):
 @cli.command()
 @click.option("-S", "--script", type=click.File(mode="w", lazy=True), help="Save the code here")
 @click.pass_obj
-async def get(obj, script):
+async def get(obj, script) -> None:
     """Read a code entry"""
     if not len(obj.codepath):
         raise click.UsageError("You need a non-empty path.")
@@ -71,7 +71,7 @@ async def get(obj, script):
 @click.option("-d", "--data", type=click.File(mode="r"), help="load the metadata (YAML)")
 @attr_args
 @click.pass_obj
-async def set_(obj, thread, script, data, async_, info, **kw):
+async def set_(obj, thread, script, data, async_, info, **kw) -> None:
     """Save Python code.
 
     The code may have inputs. You specify the inputs and their default
@@ -129,7 +129,7 @@ async def set_(obj, thread, script, data, async_, info, **kw):
 
 # disabled for now
 @cli.group("module", hidden=True, cls=AliasedGroup)
-async def mod():
+async def mod() -> None:
     """
     Change the code of a module stored in MoaT-KV
     """
@@ -139,7 +139,7 @@ async def mod():
 @click.option("-s", "--script", type=click.File(mode="w", lazy=True), help="Save the code here")
 @click.argument("path", nargs=1)
 @click.pass_obj  # pylint: disable=function-redefined
-async def get_mod(obj, path, script):
+async def get_mod(obj, path, script) -> None:
     """Read a module entry"""
     path = P(path)
     if not len(path):
@@ -169,7 +169,7 @@ async def get_mod(obj, path, script):
 @click.option("-d", "--data", type=click.File(mode="r"), help="load the metadata (YAML)")
 @click.argument("path", nargs=1)  # pylint: disable=function-redefined
 @click.pass_obj
-async def set_mod(obj, path, script, data):
+async def set_mod(obj, path, script, data) -> None:
     """Save a Python module to MoaT-KV."""
     path = P(path)
     if not len(path):
@@ -229,7 +229,7 @@ async def set_mod(obj, path, script, data):
 @click.option("-f", "--full", is_flag=True, help="print complete entries.")
 @click.option("-s", "--short", is_flag=True, help="print shortened entries.")
 @click.pass_obj
-async def list_(obj, as_dict, maxdepth, mindepth, full, short):
+async def list_(obj, as_dict, maxdepth, mindepth, full, short) -> None:
     """
     List code entries.
 
@@ -280,7 +280,7 @@ async def list_(obj, as_dict, maxdepth, mindepth, full, short):
 
 @cli.command()
 @click.pass_obj
-async def delete(obj):
+async def delete(obj) -> None:
     """Remove a code entry"""
     res = await obj.client.get(obj.path, nchain=3)
     if "value" not in res:

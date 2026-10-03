@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 class SubscribePayload(MQTTPayload):  # noqa: D101
     __slots__ = ("topics",)
 
-    def __init__(self, topics=()):
+    def __init__(self, topics=()) -> None:
         super().__init__()
         self.topics = topics
 
@@ -62,7 +62,7 @@ class SubscribePayload(MQTTPayload):  # noqa: D101
                 break
         return cls(topics)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return type(self).__name__ + f"(topics={self.topics!r})"
 
 
@@ -75,7 +75,7 @@ class SubscribePacket(MQTTPacket):  # noqa: D101
         fixed: MQTTFixedHeader = None,
         variable_header: PacketIdVariableHeader = None,
         payload=None,
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(SUBSCRIBE, 0x02)  # [MQTT-3.8.1-1]
         else:

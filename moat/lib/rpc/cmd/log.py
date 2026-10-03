@@ -14,11 +14,13 @@ if TYPE_CHECKING:
     from moat.lib.path import PathElem
     from moat.lib.rpc import BaseMsgHandler
 
+    from typing import Never
+
 
 class _LogStream(HandlerStream):
     other: _LogStream
 
-    async def read_stream(self):
+    async def read_stream(self) -> None:
         """
         Stream reader.
         """
@@ -30,7 +32,7 @@ class _LogStream(HandlerStream):
                 return
             await self.other.msg_in(msg)
 
-    async def write_stream(self):
+    async def write_stream(self) -> Never:
         """
         Stream writer. No-op.
         """
@@ -45,7 +47,7 @@ class Logger(BaseFwdCmd):
 
     doc = dict(_c=dict(_d="Subcommand logging", prefix="str:log prefix (default Msg)"))
 
-    def __init__(self, cfg: attrdict):
+    def __init__(self, cfg: attrdict) -> None:
         super().__init__(cfg)
         self.prefix = cfg.get("prefix", "Msg")
 
@@ -57,7 +59,7 @@ class Logger(BaseFwdCmd):
     def sender(self):  # noqa:D102
         return self._sender
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         app = self.app
         if app is None:
@@ -74,9 +76,9 @@ class Logger(BaseFwdCmd):
         "Forward"
         await self.s1.handle(msg, rcmd)
 
-    def _log(self, m: str, *a: object):
+    def _log(self, m: str, *a: object) -> None:
         log(f"{self.prefix}:{m}", *a)
 
-    def cfg_reloaded(self, cfg: attrdict):
+    def cfg_reloaded(self, cfg: attrdict) -> None:
         "Forward to real root"
         self.real_root.cfg_reloaded(cfg)

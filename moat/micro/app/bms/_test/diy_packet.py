@@ -53,22 +53,22 @@ class PacketHeader(P.PacketHeader):
 
 
 class ReplyIdentify(P.ReplyIdentify):
-    def to_bytes(self):
+    def to_bytes(self) -> bytes:
         return b""
 
 
 class RequestTiming(P.RequestTiming):
-    async def to_cell(self, _cell):
+    async def to_cell(self, _cell) -> None:
         _cell._dp_t = self.timer  # noqa: SLF001
 
 
 class ReplyTiming(P.ReplyTiming):
-    async def from_cell(self, _cell):
+    async def from_cell(self, _cell) -> None:
         self.timer = _cell._dp_t  # noqa: SLF001
 
 
 class ReplyReadSettings(P.ReplyReadSettings):
-    async def from_cell(self, cell):
+    async def from_cell(self, cell) -> None:
         bc_i, bc_e = await cell.b_coeff()
         s = await cell.settings()
         self.BCoeffInternal = bc_i
@@ -103,7 +103,7 @@ class ReplyVoltages(P.ReplyVoltages):
     def to_bytes(self):
         return self.S.pack(self.voltRaw, self.bypassRaw)
 
-    async def from_cell(self, cell):
+    async def from_cell(self, cell) -> None:
         u = await cell.u()
         bal = await cell.bal()
 
@@ -119,7 +119,7 @@ class ReplyVoltages(P.ReplyVoltages):
 
 
 class ReplyTemperature(P.ReplyTemperature):
-    async def from_cell(self, cell):
+    async def from_cell(self, cell) -> None:
         t = await cell.t()
         tb = await cell.tb()
         bc_i, bc_e = await cell.b_coeff()

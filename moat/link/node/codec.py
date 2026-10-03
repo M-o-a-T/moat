@@ -42,7 +42,7 @@ class CodecNode(Node):
             value = self._dec(value=value, entry=entry, data=self._data, **kv)
         return value
 
-    def set_(self, path: Path, data: Any, meta: MsgMeta):  # noqa: D102
+    def set_(self, path: Path, data: Any, meta: MsgMeta) -> None:  # noqa: D102
         super().set_(path, data, meta)
 
         enc = None

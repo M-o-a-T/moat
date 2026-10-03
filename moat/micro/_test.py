@@ -32,7 +32,7 @@ required = [
 ]
 
 
-def rlink(s, d):
+def rlink(s, d) -> None:
     "recursive linking"
     if s.is_file():
         with suppress(FileExistsError):
@@ -54,7 +54,7 @@ class MpyBuf(ProcessBuf):
                        does not support writing to stderr …
     """
 
-    async def setup(self):
+    async def setup(self) -> None:
         codec = get_codec("std-cbor")
         dupterm = self.cfg.get("dupterm", False)
         pre = Path(__file__).parents[2]
@@ -129,13 +129,13 @@ machine = attrdict()
 
 
 class FakeI2C:
-    def __init__(self, c, d, **_):
+    def __init__(self, c, d, **_) -> None:
         self._c = c
         self._d = d
 
 
 class FakePin:
-    def __init__(self, pin, **_):
+    def __init__(self, pin, **_) -> None:
         self._pin = pin
 
 

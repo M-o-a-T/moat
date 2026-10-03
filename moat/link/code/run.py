@@ -116,7 +116,7 @@ class Code:
     _is_async: bool | None = None
     _data: Mapping[str, Any] | Any = NotGiven
 
-    def __init__(self, link: LinkSender, path: Path):
+    def __init__(self, link: LinkSender, path: Path) -> None:
         self.link = link
         self.path = Path.build(path)
 

@@ -20,7 +20,7 @@ class TcpIter(BaseConnIter):
     A connection iterator for TCP sockets
     """
 
-    def __init__(self, host, port):
+    def __init__(self, host, port) -> None:
         super().__init__()
         self.host = host
         self.port = port
@@ -29,7 +29,7 @@ class TcpIter(BaseConnIter):
         async with TaskGroup() as tgx:
             evt = Event()
 
-            async def rdy(evt):
+            async def rdy(evt) -> None:
                 await evt.wait()
                 if L:
                     self.set_ready()
@@ -38,7 +38,7 @@ class TcpIter(BaseConnIter):
 
             if self.port == 0:
 
-                def port_cb(p):
+                def port_cb(p) -> None:
                     self.port = p
                     self._port_assigned()
 
@@ -47,5 +47,5 @@ class TcpIter(BaseConnIter):
 
             await run_server(self._handle, self.host, self.port, evt=evt, port_cb=port_cb)
 
-    async def _handle(self, conn):
+    async def _handle(self, conn) -> None:
         await self.add_conn(SingleAIOBuf(conn))

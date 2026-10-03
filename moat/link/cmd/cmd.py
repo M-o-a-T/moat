@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
 @attr_args(with_path=True, with_arglist=True)
-async def cli(ctx, path, stream, raw, client, **kw):
+async def cli(ctx, path, stream, raw, client, **kw) -> None:
     """
     Send a command to the server.
     """

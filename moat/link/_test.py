@@ -43,7 +43,7 @@ _seq = 0
 # TODO launch a "real" broker instead
 
 
-async def run_broker(cfg, *, task_status):
+async def run_broker(cfg, *, task_status) -> None:
     """
     Runs a basic MQTT broker.
 
@@ -124,7 +124,7 @@ class Scaffold(CtxObj):
 
     def __init__(
         self, cfg: attrdict | Literal[True], use_servers=True, tempdir: str | None = None
-    ):
+    ) -> None:
         cf = attrdict(
             root=P("test.moat.link"),
             backend=attrdict(
@@ -353,7 +353,7 @@ class Scaffold(CtxObj):
             evt = ValueEvent()
 
             @tg.start_soon
-            async def work():
+            async def work() -> None:
                 res = []
                 try:
                     async with c.d_watch(path, **kw) as mon:

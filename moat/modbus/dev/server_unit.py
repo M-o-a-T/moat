@@ -22,13 +22,13 @@ class ServerUnitContext(UnitContext):
     a re-read from the client before serving the values.
     """
 
-    def __init__(self, server=None, unit=None):
+    def __init__(self, server=None, unit=None) -> None:
         super().__init__(server, unit)
         self._slot_cache = {}  # Cache of register -> slot mappings
         self._client_unit = None  # The client unit for forwarding
         self._forward = False  # Whether to forward unslotted registers
 
-    def add_mapping(self, register, reg_type_key, slot):
+    def add_mapping(self, register, reg_type_key, slot) -> None:
         """Track which slot a register belongs to for age checking.
 
         Args:

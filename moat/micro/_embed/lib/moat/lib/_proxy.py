@@ -114,7 +114,7 @@ def as_proxy(name: str, obj: Any = NotImplemented, replace: bool = False):
         return obj
 
 
-def drop_proxy(p):
+def drop_proxy(p) -> None:
     """
     After sending a proxy we keep it in memory in case the remote returns
     it, or an expression with it.
@@ -141,10 +141,10 @@ class Proxy:
     through a codec. No object data are included.
     """
 
-    def __init__(self, name):
+    def __init__(self, name) -> None:
         self.name = name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.name!r})"
 
     def ref(self):
@@ -160,7 +160,7 @@ class DProxy(Proxy):
     proxy structure back (if it doesn't). The object's state is included.
     """
 
-    def __init__(self, name, a, k):
+    def __init__(self, name, a, k) -> None:
         super().__init__(name)
         self.a = a
         self.k = k
@@ -189,7 +189,7 @@ class DProxy(Proxy):
             return False
         return True
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}({self.name!r},"
             + ",".join(repr(x) for x in (self.a, self.k))

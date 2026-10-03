@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(cls=AliasedGroup)
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx) -> None:
     """
     Commands that bypass the MoaT-Link server
 
@@ -46,7 +46,7 @@ async def cli(ctx):
 
 @cli.command()
 @click.argument("file", type=click.Path(), nargs=1)
-async def init(file):
+async def init(file) -> None:
     """Write an initial preload file.
 
     Usage: moat link raw init <node> <outfile>
@@ -69,7 +69,7 @@ async def init(file):
 
 @cli.command("test")
 @click.pass_obj
-async def test(obj):
+async def test(obj) -> None:
     """
     Check the root dataset, the server broadcast, and the running servers.
 
@@ -84,11 +84,11 @@ async def test(obj):
     stale = obj.cfg.link.timeout.ping.stale
     dead: list[str] = []
 
-    async def say(msg):
+    async def say(msg) -> None:
         async with lock:
             print(msg, file=obj.stdout)
 
-    async def check(path, what):
+    async def check(path, what) -> None:
         try:
             with anyio.fail_after(1):
                 async with back.monitor(path) as mon:
@@ -101,7 +101,7 @@ async def test(obj):
         except TimeoutError:
             await say(f"No retained {what.lower()} on {path} found.")
 
-    async def check_ping(names, ident):
+    async def check_ping(names, ident) -> None:
         state = f"dead (no ping within {stale}s)"
         with anyio.move_on_after(stale):
             async with back.monitor(P(":R.run.ping.id") / ident) as mon:
@@ -117,10 +117,10 @@ async def test(obj):
                 dead.append(name)
             await say(f"{name}: {state}")
 
-    async def check_running():
+    async def check_running() -> None:
         found: dict[str, Any] = {}
 
-        async def collect(path):
+        async def collect(path) -> None:
             with anyio.move_on_after(1):
                 async with back.monitor(path) as mon:
                     async for msg in mon:
@@ -195,7 +195,7 @@ def _get_message(args):
         yield eval(message)  # pylint: disable=eval-used
 
 
-async def do_pub(client, args, cfg, codec):  # noqa: D103
+async def do_pub(client, args, cfg, codec) -> None:  # noqa: D103
     logger.info("%s Connected to broker", client.name)
     for k, v in args.items():
         if v is None or v is NotGiven:
@@ -252,7 +252,7 @@ async def do_pub(client, args, cfg, codec):  # noqa: D103
 @click.option("-k", "--keep-alive", type=float, help="Keep-alive timeout (seconds)")
 @click.option("-c", "--codec", type=str, default="noop", help="codec to use (default: noop)")
 @click.pass_obj
-async def pub(obj, **args):
+async def pub(obj, **args) -> None:
     """Publish one or more MoaT-Link messages.
 
     This command directly accesses the MQTT server: it works without a
@@ -269,7 +269,7 @@ async def pub(obj, **args):
     await do_pub(obj.conn, args, cfg, codec)
 
 
-async def run_kvsub(client, topic, lock, timing, ignore):
+async def run_kvsub(client, topic, lock, timing, ignore) -> None:
     """Monitor a MoaT-KV subtree"""
 
     if topic[-1] == "#":
@@ -314,7 +314,7 @@ async def run_kvsub(client, topic, lock, timing, ignore):
                 timing["tm"] = atm
 
 
-async def do_sub(client, args, cfg):
+async def do_sub(client, args, cfg) -> None:
     "handle subscriptions"
     lock = anyio.Lock()
     timing = {"tm": anyio.current_time()}
@@ -340,7 +340,7 @@ async def do_sub(client, args, cfg):
         logger.fatal("connection to '%s' failed: %r", args["uri"], ce)
 
 
-async def run_sub(client, topic, args, cfg, lock, timing, ignore, retained):
+async def run_sub(client, topic, args, cfg, lock, timing, ignore, retained) -> None:
     "handle a single subscription"
     qos = args["qos"] or cfg["qos"]
     max_count = args["n_msg"]
@@ -436,7 +436,7 @@ async def run_sub(client, topic, args, cfg, lock, timing, ignore, retained):
 @click.option("-u", "--updates", help="Ignore retained data")
 @click.option("-l", "--limit", type=float, help="Stop after this many seconds")
 @click.pass_obj
-async def sub(obj, **args):
+async def sub(obj, **args) -> None:
     """
     Monitor one or more MoaT-Link topics.
 
@@ -457,7 +457,7 @@ async def sub(obj, **args):
 @click.option(
     "-d", "--dest", type=click.Path(dir_okay=False), help="Destination (default: link storage)"
 )
-async def init_(obj, dest):
+async def init_(obj, dest) -> None:
     """
     This command generates an initial data file for `moat link server`.
     """
@@ -478,7 +478,7 @@ async def init_(obj, dest):
     c = Codec()
     with dest.open("wb") as f:
 
-        def w(x):
+        def w(x) -> None:
             f.write(c.encode(x))
 
         w(

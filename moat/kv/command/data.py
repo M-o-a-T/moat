@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 @click.group(cls=AliasedGroup, short_help="Manage data.", invoke_without_command=True)  # pylint: disable=undefined-variable
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def cli(ctx, path):
+async def cli(ctx, path) -> None:
     """
     This subcommand accesses the actual user data stored in your MoaT-KV tree.
     """
@@ -57,7 +57,7 @@ async def cli(ctx, path):
 @click.option("-R", "--raw", is_flag=True, help="Print string values without quotes etc.")
 @click.option("-D", "--add-date", is_flag=True, help="Add *_date entries")
 @click.pass_obj
-async def get(obj, **k):
+async def get(obj, **k) -> None:
     """
     Read a MoaT-KV value.
 
@@ -92,7 +92,7 @@ async def get(obj, **k):
     help="Starting depth. Default: 1 (single layer).",
 )
 @click.pass_obj
-async def list_(obj, **k):
+async def list_(obj, **k) -> None:
     """
     List MoaT-KV values.
 
@@ -114,7 +114,7 @@ async def list_(obj, **k):
 @click.option("-l", "--last", nargs=2, help="Previous change entry (node serial)")
 @click.option("-n", "--new", is_flag=True, help="This is a new entry.")
 @click.pass_obj
-async def set_(obj, last, new, **kw):
+async def set_(obj, last, new, **kw) -> None:
     """
     Store a value at some MoaT-KV position.
 
@@ -167,7 +167,7 @@ class nstr:
 @click.option("--internal", is_flag=True, help="Affect the internal tree. DANGER.")
 @click.option("-e", "--eval", "eval_", is_flag=True, help="The previous value shall be evaluated.")
 @click.pass_obj
-async def delete(obj, prev, last, recursive, eval_, internal):
+async def delete(obj, prev, last, recursive, eval_, internal) -> None:
     """
     Delete an entry, or a whole subtree.
 
@@ -215,7 +215,7 @@ async def delete(obj, prev, last, recursive, eval_, internal):
 @click.option("-D", "--add-date", is_flag=True, help="Add *_date entries")
 @click.option("-i", "--ignore", multiple=True, type=P, help="Skip this (sub)tree")
 @click.pass_obj
-async def monitor(obj, state, only, path_only, add_date, ignore):
+async def monitor(obj, state, only, path_only, add_date, ignore) -> None:
     """Monitor a MoaT-KV subtree"""
 
     flushing = not state
@@ -267,7 +267,7 @@ async def monitor(obj, state, only, path_only, add_date, ignore):
 @cli.command()
 @click.option("-i", "--infile", type=click.Path(), help="File to read (msgpack).")
 @click.pass_obj
-async def update(obj, infile):
+async def update(obj, infile) -> None:
     """Send a list of updates to a MoaT-KV subtree"""
     async with MsgReader(path=infile, codec="std-msgpack") as reader:
         async for msg in reader:

@@ -42,7 +42,7 @@ from moat.link.server import Server
     "setting up a new cluster!",
 )
 @click.pass_obj
-async def cli(obj, load, save, init, force_local, name):
+async def cli(obj, load, save, init, force_local, name) -> None:
     """
     Start a MoaT-Link server. It defaults to connecting to the local MQTT
     broker.
@@ -88,7 +88,7 @@ async def cli(obj, load, save, init, force_local, name):
         s = Server(cfg=obj.cfg.link, name=name, force_local=force_local, **kw)
         ev = anyio.Event()
 
-        async def mon(ev):
+        async def mon(ev) -> None:
             try:
                 with anyio.fail_after(3):
                     await ev.wait()

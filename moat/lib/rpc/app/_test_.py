@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from moat.lib.rpc import Msg
 
     from collections.abc import Awaitable
-    from typing import Any
+    from typing import Any, Never
 
 
 class Cmd(BaseCmd):
@@ -46,7 +46,7 @@ class Cmd(BaseCmd):
 
     doc_it = dict(_d="Iterator. Sends 0…lim-1.", lim="int:limit", _o="int", delay="float:timer")
 
-    async def stream_it(self, msg: Msg):
+    async def stream_it(self, msg: Msg) -> None:
         "Streams numbers."
         lim = msg.get("lim", -1)
         i = 0
@@ -71,7 +71,7 @@ class Cmd(BaseCmd):
 
     doc_store = dict(_d="Save data.", _0="any:Data", _r="list[any]:collected data if no param")
 
-    async def stream_store(self, msg):
+    async def stream_store(self, msg) -> None:
         "Collect data (or return them)"
         if msg.args:
             self.store.extend(msg.args)
@@ -82,18 +82,18 @@ class Cmd(BaseCmd):
 
     doc_clr = dict(_d="Clear the counter.", n="int:new value, default zero")
 
-    async def cmd_clr(self, n: int = 0):
+    async def cmd_clr(self, n: int = 0) -> None:
         self.n = n
 
     doc_print = dict(_d="print string", _0="str:output", e="bool:use stderr")
 
-    async def cmd_print(self, d: str, e: bool = False):
+    async def cmd_print(self, d: str, e: bool = False) -> None:
         "print to stdout/stderr"
         print(d, file=sys.stderr if e else sys.stdout)
 
     doc_error = dict(_d="raise exc", e="exc:raised")
 
-    async def cmd_error(self, e: Exception | type[Exception] = RuntimeError):
+    async def cmd_error(self, e: Exception | type[Exception] = RuntimeError) -> Never:
         "raise an exception"
         if isinstance(e, Exception):
             raise e
@@ -102,7 +102,7 @@ class Cmd(BaseCmd):
 
     doc_crash = dict(_d="cause a crash", e="exc:raised")
 
-    async def cmd_crash(self, e: Exception | type[Exception] = UserCrash, *a):
+    async def cmd_crash(self, e: Exception | type[Exception] = UserCrash, *a) -> None:
         "crash this app"
         if isinstance(e, Exception):
             assert not a
@@ -114,7 +114,7 @@ class Cmd(BaseCmd):
             self.err = UserCrash(e, *a)  # the remote might send a text instead
         self.err_evt.set()
 
-    async def stream_run(self, msg: Msg):
+    async def stream_run(self, msg: Msg) -> None:
         """
         Originate a command.
         """
@@ -123,12 +123,12 @@ class Cmd(BaseCmd):
         res = await self.root.sender.cmd(msg.args[0], *msg.args[1:], **msg.kw)
         await msg.result(*res.args, **res.kw)
 
-    async def setup(self):
+    async def setup(self) -> None:
         self.err_evt = Event()
         self.store = []
         await super().setup()
 
-    async def task(self):
+    async def task(self) -> Never:
         """
         Idle task, except that it crashes the app 100 ms after *crash* is called.
         """
@@ -161,10 +161,10 @@ class Cons(BaseCmd):
         )
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
 
-    async def setup(self):
+    async def setup(self) -> None:
         await super().setup()
         self.con = self.root.sub_at(self.cfg["cons"])
         if self.cfg.get("prefix", None) is None:
@@ -176,7 +176,7 @@ class Cons(BaseCmd):
     def cmd_rd(self) -> Awaitable:
         return self.q.get()
 
-    async def task(self):
+    async def task(self) -> None:
         if L:
             self.set_ready()
         await self.con.cmd("rdy_")

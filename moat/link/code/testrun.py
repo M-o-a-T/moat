@@ -61,12 +61,12 @@ class TestFailed(Exception):
 
     __test__ = False  # not a pytest class
 
-    def __init__(self, msg: str, step: int | None = None):
+    def __init__(self, msg: str, step: int | None = None) -> None:
         super().__init__(msg)
         self.msg = msg
         self.step = step
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.step is None:
             return self.msg
         return f"step {self.step}: {self.msg}"
@@ -104,7 +104,7 @@ class TestOutcome:
     log: list[str] = field(factory=list)
     "What happened, one line per step."
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.ok:
             return "OK"
         return f"FAIL: step {self.step}: {self.message}" if self.step else f"FAIL: {self.message}"
@@ -128,7 +128,7 @@ class _Run:
         root: TestRoot,
         out: TestOutcome,
         log_stream: Any = None,
-    ):
+    ) -> None:
         self.link = link
         self.code = code
         self.test = test

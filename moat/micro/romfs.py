@@ -21,7 +21,7 @@ class VfsRomWriter:  # noqa: D101
     ROMFS_RECORD_KIND_DIRECTORY = 4
     ROMFS_RECORD_KIND_FILE = 5
 
-    def __init__(self, cross):
+    def __init__(self, cross) -> None:
         self._dir_stack = [(None, bytearray())]
         self.cross = cross
 
@@ -50,10 +50,10 @@ class VfsRomWriter:  # noqa: D101
         data = encoded_kind + encoded_len + data
         return data
 
-    def opendir(self, dirname):  # noqa: D102
+    def opendir(self, dirname) -> None:  # noqa: D102
         self._dir_stack.append((dirname, bytearray()))
 
-    def closedir(self):  # noqa: D102
+    def closedir(self) -> None:  # noqa: D102
         dirname, dirdata = self._dir_stack.pop()
         dirdata = self._encode_uint(len(dirname)) + bytes(dirname, "utf-8") + dirdata
         self._extend(self._pack(VfsRomWriter.ROMFS_RECORD_KIND_DIRECTORY, dirdata))
@@ -64,7 +64,7 @@ class VfsRomWriter:  # noqa: D101
             data
         )
 
-    def mkfile(self, filename, filedata):  # noqa: D102
+    def mkfile(self, filename, filedata) -> None:  # noqa: D102
         filename = bytes(filename, "utf-8")
         payload = self._encode_uint(len(filename))
         payload += filename
@@ -76,10 +76,10 @@ class VfsRomWriter:  # noqa: D101
             payload += self._pack(VfsRomWriter.ROMFS_RECORD_KIND_DATA_VERBATIM, filedata)
         self._dir_stack[-1][1].extend(self._pack(VfsRomWriter.ROMFS_RECORD_KIND_FILE, payload))
 
-    async def copy_in():  # noqa: D102
+    async def copy_in() -> None:  # noqa: D102
         pass
 
-    async def copy_recursively(self, src_dir, arch: str | None = None):  # noqa: D102
+    async def copy_recursively(self, src_dir, arch: str | None = None) -> None:  # noqa: D102
         DIR = 1 << 14
         dir_contents = sorted(os.listdir(src_dir))
         for name in dir_contents:

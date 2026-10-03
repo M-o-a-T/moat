@@ -22,7 +22,7 @@ log = logging.getLogger()
 @load_subgroup(sub_pre="moat.bms")
 @click.option("-b", "--bat", "--battery", type=P, help="Battery to talk to. Default:'std'")
 @click.pass_obj
-async def cli(obj, bat):
+async def cli(obj, bat) -> None:
     """Battery Manager"""
     cfg = obj.cfg
     if not bat:
@@ -55,13 +55,13 @@ async def _bat(obj):
 @cli.group
 @click.argument("cell", type=int)
 @click.pass_obj
-async def cell(obj, cell):
+async def cell(obj, cell) -> None:
     obj.cell = cell
 
 
 @cell.command
 @click.pass_obj
-async def state(obj):
+async def state(obj) -> None:
     async with _bat(obj) as bat:
         c = bat.sub_at(obj.cell)
         p = await c.param()
@@ -74,7 +74,7 @@ async def state(obj):
 
 @cell.command
 @click.pass_obj
-async def cfg(obj):
+async def cfg(obj) -> None:
     print("TODO", file=sys.stderr)
     async with _bat(obj) as bat:
         c = bat.sub_at(obj.cell)

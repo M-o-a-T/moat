@@ -63,14 +63,14 @@ class TestRoot:
 
     path: Path
 
-    def __init__(self, path: Path | None = None):
+    def __init__(self, path: Path | None = None) -> None:
         if path is None:
             path = _plain(TEST_ROOT.raw + (os.getpid(), next(_seq)))
         elif path.has_prefix or path.is_relative:
             raise ValueError(f"The test root must be a plain path, not {path}")
         self.path = path
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"TestRoot({self.path})"
 
     def resolve_path(self, path: Path) -> Path:

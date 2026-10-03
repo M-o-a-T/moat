@@ -21,7 +21,7 @@ from typing import Any, cast
 
 @click.group(cls=AliasedGroup, short_help="Manage data flows.")
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx) -> None:
     """
     Data flow monitoring.
 
@@ -341,7 +341,7 @@ class FlowMon:
     Monitor incoming messages and create flow errors.
     """
 
-    def __init__(self, conn: Link, path: Path):
+    def __init__(self, conn: Link, path: Path) -> None:
         self.conn = conn
         self.path = path
         self.previous: dict[Path, Any] = {}
@@ -465,7 +465,7 @@ class FlowMon:
 @cli.command("for")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def get(obj, path):
+async def get(obj, path) -> None:
     """
     Retrieve the flow-check definition for a path.
     """
@@ -476,7 +476,7 @@ async def get(obj, path):
 @cli.command()
 @click.argument("path", type=P, nargs=1, default=P("state"))
 @click.pass_obj
-async def monitor(obj, path):
+async def monitor(obj, path) -> None:
     """
     Monitor a subtree and report flow errors.
     """
@@ -489,7 +489,7 @@ async def monitor(obj, path):
 @click.option("-m", "--monitor", is_flag=True, help="Continue monitoring.")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def check(obj, path, verbose, monitor):
+async def check(obj, path, verbose, monitor) -> None:
     """
     Check stored messages in a subtree against flow checks.
 

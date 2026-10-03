@@ -12,7 +12,7 @@ from moat.lib.run import AliasedGroup
 @click.group(cls=AliasedGroup, short_help="Manage authorization")  # pylint: disable=undefined-variable
 @click.option("-m", "--method", default=None, help="Affect/use this auth method")
 @click.pass_obj
-async def cli(obj, method):
+async def cli(obj, method) -> None:
     """Manage authorization. Usage: … auth METHOD command…. Use '.' for 'all methods'."""
     a = await obj.client._request(action="auth_info")  # noqa:SLF001
     a = a.get("value", None)
@@ -86,7 +86,7 @@ async def enum_typ(obj, kind="user", ident=None, nchain=0):
 
 @cli.command("list")
 @click.pass_obj
-async def list_(obj):
+async def list_(obj) -> None:
     """List known auth methods"""
     async for auth in enum_auth(obj):
         print(auth, file=obj.stdout)
@@ -95,7 +95,7 @@ async def list_(obj):
 @cli.command()
 @click.option("-s", "--switch", is_flag=True, help="Switch to a different auth method")
 @click.pass_obj
-async def init(obj, switch):
+async def init(obj, switch) -> None:
     """Setup authorization"""
     if obj.auth_current is not None and not switch:
         raise click.UsageError("Authentication is already set up")
@@ -109,7 +109,7 @@ async def init(obj, switch):
 
 
 @cli.group(cls=AliasedGroup)
-async def user():
+async def user() -> None:
     """Manage users."""
     pass
 
@@ -122,7 +122,7 @@ async def user():
     help="Print complete results. Default: just the names",
 )
 @click.pass_obj  # pylint: disable=function-redefined
-async def list_user(obj, verbose):
+async def list_user(obj, verbose) -> None:
     """List all users (raw data)."""
     async for r in enum_typ(obj, nchain=obj.meta):
         if obj.meta or verbose:
@@ -137,7 +137,7 @@ async def list_user(obj, verbose):
 @user.command()
 @click.argument("ident", nargs=1)
 @click.pass_obj
-async def get(obj, ident):
+async def get(obj, ident) -> None:
     """Retrieve a user (processed)."""
     lv = loader(await one_auth(obj), "user", make=True, server=False)
     if obj.DEBUG:
@@ -150,7 +150,7 @@ async def get(obj, ident):
 @user.command()
 @click.argument("args", nargs=-1)
 @click.pass_obj
-async def add(obj, args):
+async def add(obj, args) -> None:
     """Add a user."""
     await _add_mod_user(obj, args, None)
 
@@ -162,7 +162,7 @@ async def add(obj, args):
 @click.argument("key", nargs=1)
 @click.argument("args", nargs=-1)
 @click.pass_obj
-async def param(obj, new, ident, type, key, args):  # noqa:A002
+async def param(obj, new, ident, type, key, args) -> None:  # noqa:A002
     """Set user parameters for auth, conversion, etc."""
     auth = await one_auth(obj)
     u = loader(auth, "user", make=True, server=False)
@@ -215,12 +215,12 @@ async def param(obj, new, ident, type, key, args):  # noqa:A002
 @click.argument("ident", nargs=1)
 @click.argument("args", nargs=-1)
 @click.pass_obj
-async def mod(obj, ident, args):
+async def mod(obj, ident, args) -> None:
     """Change a user."""
     await _add_mod_user(obj, args, ident)
 
 
-async def _add_mod_user(obj, args, modify):
+async def _add_mod_user(obj, args, modify) -> None:
     auth = await one_auth(obj)
     u = loader(auth, "user", make=True, server=False)
     if obj.DEBUG:
@@ -255,7 +255,7 @@ async def _add_mod_user(obj, args, modify):
     help="Auth params. =file or 'type param=value…' Default: root",
 )
 @click.pass_obj
-async def auth_(obj, auth):
+async def auth_(obj, auth) -> None:
     """Test user authorization."""
     user = gen_auth(auth)  # pylint: disable=redefined-outer-name
     await user.auth(obj.client)

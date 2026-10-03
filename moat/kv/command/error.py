@@ -14,7 +14,7 @@ from moat.lib.run import AliasedGroup
 
 @click.group(cls=AliasedGroup)  # pylint: disable=undefined-variable
 @click.pass_obj
-async def cli(obj):
+async def cli(obj) -> None:
     """Manage error records in MoaT-KV."""
     obj.err = await ErrorRoot.as_handler(obj.client)
 
@@ -23,7 +23,7 @@ async def cli(obj):
 @click.option("-s", "--subsys", help="Subsystem to access")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def resolve(obj, path, subsys):
+async def resolve(obj, path, subsys) -> None:
     """
     Mark an error as resolved.
     """
@@ -47,13 +47,13 @@ async def resolve(obj, path, subsys):
 @click.option("-d", "--as-dict", default=None, help="Dump a list of all open (or resolved) error.")
 @click.option("-p", "--path", default=":", help="only show errors below this subpath")
 @click.pass_obj
-async def dump(obj, as_dict, path, node, all_errors, verbose, resolved, subsys):
+async def dump(obj, as_dict, path, node, all_errors, verbose, resolved, subsys) -> None:
     """Dump error entries."""
     path = P(path)
     path_ = obj.cfg.kv.errors.prefix
     d = 2
 
-    async def one(r):
+    async def one(r) -> None:
         nonlocal y
         val = r.value
         if subsys and val.get("subsystem", "") != subsys:
@@ -85,7 +85,7 @@ async def dump(obj, as_dict, path, node, all_errors, verbose, resolved, subsys):
 
         rn = {}
 
-        def disp(rr):
+        def disp(rr) -> None:
             if node and rr.path[-1] != node:
                 return
             val = rr.value

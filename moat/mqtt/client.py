@@ -34,6 +34,11 @@ from .plugins.manager import BaseContext, PluginManager
 from .session import Session
 from .utils import match_topic
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Never
+
 _defaults = {
     "keep_alive": 10,
     "ping_delay": 1,
@@ -81,7 +86,7 @@ class ClientException(Exception):  # noqa: D101
 
 
 class ConnectException(ClientException):  # noqa: D101
-    def __init__(self, text=None, return_code=CLIENT_ERROR):
+    def __init__(self, text=None, return_code=CLIENT_ERROR) -> None:
         if text is None:
             text = self.__class__.__name__
         super().__init__(text)
@@ -91,7 +96,7 @@ class ConnectException(ClientException):  # noqa: D101
 
 
 class CodecError(ClientException):  # noqa: D101
-    def __init__(self, msg):
+    def __init__(self, msg) -> None:
         self.msg = msg
 
     pass
@@ -103,7 +108,7 @@ class ClientContext(BaseContext):
     It act as an adapter to client services from plugins
     """
 
-    def __init__(self, config):
+    def __init__(self, config) -> None:
         super().__init__()
         self.config = config
 
@@ -124,7 +129,7 @@ def mqtt_connected(func):
             base_logger.warning("Client not connected, waiting for it")
             async with anyio.create_task_group() as tg:
 
-                async def wait_no_more():
+                async def wait_no_more() -> Never:
                     await self._no_more_connections.wait()
                     raise ClientException("Will not reconnect")
 
@@ -205,7 +210,9 @@ class MQTTClient:
     this class.
     """
 
-    def __init__(self, tg: anyio.abc.TaskGroup, client_id=None, config=None, codec=NotGiven):
+    def __init__(
+        self, tg: anyio.abc.TaskGroup, client_id=None, config=None, codec=NotGiven
+    ) -> None:
         self.logger = logging.getLogger(__name__)
         self.config = copy.deepcopy(_defaults)
         if config is not None:
@@ -274,7 +281,7 @@ class MQTTClient:
             else:
                 return await self.reconnect()
 
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         """
         Disconnect from the connected broker.
 
@@ -295,7 +302,7 @@ class MQTTClient:
         else:
             self.logger.info("Client session is not currently connected, ignoring Disconnect call")
 
-    def cancel_tasks(self):
+    def cancel_tasks(self) -> None:
         """
         Before disconnection need to cancel all pending tasks
         :return:
@@ -353,7 +360,7 @@ class MQTTClient:
         return return_code
 
     @mqtt_connected
-    async def ping(self):
+    async def ping(self) -> None:
         """
         Ping the broker.
 
@@ -421,7 +428,7 @@ class MQTTClient:
         """
         return await self._handler.mqtt_subscribe(topics, self.session.next_packet_id)
 
-    async def unsubscribe(self, topics):
+    async def unsubscribe(self, topics) -> None:
         """
         Unsubscribe from some topics.
 
@@ -461,7 +468,7 @@ class MQTTClient:
         """
 
         class _Subscription:
-            def __init__(self, client, topic: str | tuple, qos: int, codec=NotGiven):
+            def __init__(self, client, topic: str | tuple, qos: int, codec=NotGiven) -> None:
                 self.client = client
                 self.topic = topic if isinstance(topic, str) else "/".join(topic)
                 self.qos = qos
@@ -512,11 +519,11 @@ class MQTTClient:
                     raise CodecError(message) from exc
                 return message
 
-            async def __len__(self):
+            async def __len__(self) -> int:
                 """Queue length"""
                 return self._q.qsize()
 
-            async def publish(self, topic, message, *a, **kw):
+            async def publish(self, topic, message, *a, **kw) -> None:
                 """
                 Publish a message.
 
@@ -534,7 +541,7 @@ class MQTTClient:
 
         return _Subscription(self, topic, qos, codec=codec)
 
-    async def _subscribe(self, handler):
+    async def _subscribe(self, handler) -> None:
         topic = handler.topic
         if self._subscriptions is None:
             self._subscriptions = dict()
@@ -551,7 +558,7 @@ class MQTTClient:
 
         clients.add(handler)
 
-    async def _unsubscribe(self, handler):
+    async def _unsubscribe(self, handler) -> None:
         topic = handler.topic
         clients = self._subscriptions[topic]
         clients.remove(handler)
@@ -559,7 +566,7 @@ class MQTTClient:
             del self._subscriptions[topic]
             await self.unsubscribe([topic])
 
-    async def _dispatch(self, msg):
+    async def _dispatch(self, msg) -> None:
         t = msg.topic.split("/")
         for clients in list(self._subscriptions.values()):
             if not match_topic(t, clients.topic):
@@ -573,7 +580,7 @@ class MQTTClient:
                     await c._q.put(None)  # noqa: SLF001
                     c._q = None  # noqa: SLF001
 
-    async def _deliver_loop(self):
+    async def _deliver_loop(self) -> None:
         """
         Dispatch incoming messages to subscriptions.
         """
@@ -756,8 +763,8 @@ class MQTTClient:
                     await adapter.close()
             raise
 
-    async def handle_connection_close(self, evt):  # noqa: D102
-        def cancel_tasks():
+    async def handle_connection_close(self, evt) -> None:  # noqa: D102
+        def cancel_tasks() -> None:
             self._no_more_connections.set()
             if self.client_task:
                 task, self.client_task = self.client_task, None

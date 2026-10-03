@@ -27,7 +27,7 @@ class SerialPackerBlkBuf(StackedBlk):
 
     cons = False
 
-    def __init__(self, stream: BaseBuf, frame: dict, console: bool | int = False):
+    def __init__(self, stream: BaseBuf, frame: dict, console: bool | int = False) -> None:
         StackedBlk.__init__(self, stream, None)
 
         SerialPacker = __import__("serialpacker", globals(), None, ("SerialPacker",)).SerialPacker

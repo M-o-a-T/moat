@@ -77,10 +77,10 @@ except AttributeError:
     # this is exactly the minimum necessary to support what we
     # do with poll objects
     class MinimalPoll:
-        def __init__(self):
+        def __init__(self) -> None:
             pass
 
-        def register(self, fd, flag):  # noqa: ARG002
+        def register(self, fd, flag) -> None:  # noqa: ARG002
             self.fd = fd
 
         # note: The 'timeout' argument is received as *milliseconds*
@@ -103,7 +103,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         stream: TermBuf | None = None,
         term: str = "",
         encoding: str = "",
-    ):
+    ) -> None:
         """
         Initialize the UnixConsole.
 
@@ -198,13 +198,13 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         ):
 
             @tg.start_soon
-            async def _winch():
+            async def _winch() -> None:
                 with anyio.open_signal_receiver(signal.SIGWINCH) as wch:
                     async for _sig in wch:
                         await self.__sigwinch()
 
             @tg.start_soon
-            async def _sigcont():
+            async def _sigcont() -> None:
                 with anyio.open_signal_receiver(signal.SIGCONT) as wch:
                     async for _sig in wch:
                         await self.__sigcont()
@@ -215,7 +215,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             finally:
                 tg.cancel_scope.cancel()
 
-    async def _reader(self, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _reader(self, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         if self.__read_task_end is not None:
             raise RuntimeError("Started twice")
         self.__read_task_end = anyio.Event()
@@ -230,7 +230,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         finally:
             self.__read_task_end.set()
 
-    async def __sigcont(self):
+    async def __sigcont(self) -> None:
         await self.restore()
         await self.prepare()
 
@@ -341,7 +341,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         await self.move_cursor(cx, cy)
         await self.flushoutput()
 
-    async def move_cursor(self, x, y):
+    async def move_cursor(self, x, y) -> None:
         """
         Move the cursor to the specified position on the screen.
 
@@ -355,7 +355,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             self.__move(x, y)
             self.posxy = x, y
 
-    async def prepare(self, reader: bool = True):
+    async def prepare(self, reader: bool = True) -> None:
         """
         Prepare the console for input/output operations.
         """
@@ -385,7 +385,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         self.__maybe_write_code(self._smkx)
         await self.__enable_bracketed_paste()
 
-    async def restore(self):
+    async def restore(self) -> None:
         """
         Restore the console to the default state
         """
@@ -420,7 +420,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         """
         return await self.event_queue.get()
 
-    async def set_cursor_vis(self, visible):
+    async def set_cursor_vis(self, visible) -> None:
         """
         Set the visibility of the cursor.
 
@@ -446,13 +446,13 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             except (KeyError, TypeError, ValueError):
                 return 25, 80
 
-    async def forgetinput(self):
+    async def forgetinput(self) -> None:
         """
         Discard any pending input on the console.
         """
         await self.__io.forget_input()
 
-    async def flushoutput(self):
+    async def flushoutput(self) -> None:
         """
         Flush the output buffer.
         """
@@ -460,7 +460,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
         async with self._wrl:
 
-            async def _flush():
+            async def _flush() -> None:
                 nonlocal buf
                 if buf:
                     await self.__io.wr(b"".join(buf))
@@ -476,7 +476,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
             del self.__buffer[:]
 
-    async def finish(self):
+    async def finish(self) -> None:
         """
         Finish console operations and flush the output buffer.
         """
@@ -487,7 +487,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         self.__write("\n")
         await self.flushoutput()
 
-    async def beep(self):
+    async def beep(self) -> None:
         """
         Emit a beep sound.
         """
@@ -516,7 +516,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         e.raw += raw
         return e
 
-    async def clear(self):
+    async def clear(self) -> None:
         """
         Clear the console screen.
         """
@@ -543,7 +543,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         async with self._wrl:
             await self.__io.wr(b"\x1b[?2004l")
 
-    def __setup_movement(self):
+    def __setup_movement(self) -> None:
         """
         Set up the movement functions based on the terminal capabilities.
         """
@@ -579,7 +579,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
 
         self.__move = self.__move_short
 
-    async def __write_changed_line(self, y, oldline, newline, px_coord):
+    async def __write_changed_line(self, y, oldline, newline, px_coord) -> None:
         # this is frustrating; there's no reason to test (say)
         # self.dch1 inside the loop -- but alternative ways of
         # structuring this function are equally painful (I'm trying to
@@ -662,17 +662,17 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             # to the left margin should work to get to a known position.
             await self.move_cursor(0, y)
 
-    def __write(self, text):
+    def __write(self, text) -> None:
         self.__buffer.append((text, 0))
 
-    def __write_code(self, fmt, *args):
+    def __write_code(self, fmt, *args) -> None:
         self.__buffer.append((terminfo.tparm(fmt, *args), 1))
 
-    def __maybe_write_code(self, fmt, *args):
+    def __maybe_write_code(self, fmt, *args) -> None:
         if fmt:
             self.__write_code(fmt, *args)
 
-    def __move_y_cuu1_cud1(self, y):
+    def __move_y_cuu1_cud1(self, y) -> None:
         assert self._cud1 is not None
         assert self._cuu1 is not None
         dy = y - self.posxy[1]
@@ -681,7 +681,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         elif dy < 0:
             self.__write_code((-dy) * self._cuu1)
 
-    def __move_y_cuu_cud(self, y):
+    def __move_y_cuu_cud(self, y) -> None:
         dy = y - self.posxy[1]
         if dy > 0:
             self.__write_code(self._cud, dy)
@@ -708,29 +708,29 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         elif dx < 0:
             self.__write_code(self._cub, -dx)
 
-    def __move_short(self, x, y):
+    def __move_short(self, x, y) -> None:
         self.__move_x(x)
         self.__move_y(y)
 
-    def __move_tall(self, x, y):
+    def __move_tall(self, x, y) -> None:
         assert 0 <= y - self.__offset < self._height, y - self.__offset
         self.__write_code(self._cup, y - self.__offset, x)
 
-    async def __sigwinch(self):
+    async def __sigwinch(self) -> None:
         self._height, self._width = await self.getheightwidth()
         self.event_queue.insert(Event("resize", None))
 
-    def __hide_cursor(self):
+    def __hide_cursor(self) -> None:
         if self.cursor_visible:
             self.__maybe_write_code(self._civis)
             self.cursor_visible = 0
 
-    def __show_cursor(self):
+    def __show_cursor(self) -> None:
         if not self.cursor_visible:
             self.__maybe_write_code(self._cnorm)
             self.cursor_visible = 1
 
-    async def repaint(self):  # noqa: D102
+    async def repaint(self) -> None:  # noqa: D102
         if not self.__gone_tall:
             self.posxy = 0, self.posxy[1]
             self.__write("\r")
@@ -741,7 +741,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
             ns = self._height * ["\000" * self._width]
         self.screen = ns  # ty:ignore[invalid-assignment]  # yes it is
 
-    async def __tputs(self, fmt, prog=delayprog):
+    async def __tputs(self, fmt, prog=delayprog) -> None:
         """A Python implementation of the curses tputs function; the
         curses one can't really be wrapped in a sane manner.
         """

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 @click.group(cls=AliasedGroup, short_help="Manage KNX controllers.")
-async def cli():
+async def cli() -> None:
     """
     List KNX controllers, modify device handling …
     """
@@ -28,7 +28,7 @@ async def cli():
 @cli.command()
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def dump(obj, path):
+async def dump(obj, path) -> None:
     """Emit the current state as a YAML file."""
     cfg = obj.cfg.kv.knx
     res = {}
@@ -51,7 +51,7 @@ async def dump(obj, path):
 @cli.command(name="list")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def list_(obj, path):
+async def list_(obj, path) -> None:
     """List the next stage."""
     cfg = obj.cfg.kv.knx
     path = P(path)
@@ -71,7 +71,7 @@ async def list_(obj, path):
 @click.argument("bus", nargs=1)
 @click.argument("group", nargs=1)
 @click.pass_obj
-async def attr_(obj, bus, group, vars_, eval_, path_):
+async def attr_(obj, bus, group, vars_, eval_, path_) -> None:
     """Set/get/delete an attribute on a given KNX element.
 
     `--eval` without a value deletes the attribute.
@@ -135,7 +135,7 @@ Known modes: {" ".join(map_keys())}
 @click.argument("bus", nargs=1)
 @click.argument("group", nargs=1)
 @click.pass_obj
-async def addr(obj, bus, group, typ, mode, attr):
+async def addr(obj, bus, group, typ, mode, attr) -> None:
     """Set/get/delete device settings. This is a shortcut for the "attr" command."""
     cfg = obj.cfg.kv.knx
     group = (int(x) for x in group.split("/"))
@@ -171,7 +171,7 @@ async def addr(obj, bus, group, typ, mode, attr):
     await _attr(obj, (), val, path, False, res)
 
 
-async def _attr(obj, attr, value, path, eval_, res=None):
+async def _attr(obj, attr, value, path, eval_, res=None) -> None:
     # Sub-attr setter.
     # Special: if eval_ is True, an empty value deletes. A mapping replaces instead of updating.
     cfg = obj.cfg.kv.knx
@@ -214,7 +214,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
 @click.argument("bus", nargs=1)
 @click.argument("name", nargs=-1)
 @click.pass_obj
-async def server_(obj, bus, name, host, port, delete):
+async def server_(obj, bus, name, host, port, delete) -> None:
     """
     Configure a server for a bus.
     """
@@ -256,7 +256,7 @@ async def server_(obj, bus, name, host, port, delete):
 @click.argument("bus", nargs=1)
 @click.argument("server", nargs=-1)
 @click.pass_obj
-async def monitor(obj, bus, server, local_ip, initial):
+async def monitor(obj, bus, server, local_ip, initial) -> None:
     """Stand-alone task to talk to a single server."""
     from .model import KNXroot  # noqa: PLC0415
     from .task import task  # noqa: PLC0415

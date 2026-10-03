@@ -151,7 +151,7 @@ def _render_detail(obj, spkg: Spkg, *, yaml: bool, n_branches: int) -> None:
     invoke_without_command=True,
 )
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx) -> None:
     """Track source packages, their archive remotes, and local branches."""
     obj = ctx.obj
     sess = ctx.with_resource(database(obj.cfg.db))
@@ -181,7 +181,7 @@ async def _list_spkgs(obj) -> None:
 
 @cli.command(name="list")
 @click.pass_obj
-async def list_(obj):
+async def list_(obj) -> None:
     """List all source packages."""
     await _list_spkgs(obj)
 
@@ -196,7 +196,7 @@ def _spkg_common(c):
 @_spkg_common
 @click.argument("name", type=str)
 @click.pass_obj
-async def add(obj, name, **kw):
+async def add(obj, name, **kw) -> None:
     """Create a new source package (SPKG).
 
     Refuses if a package with this name already exists.
@@ -240,7 +240,7 @@ async def add(obj, name, **kw):
     help="Mark push-capable remote REMOTE as 'mirror' rather than 'local'",
 )
 @click.pass_obj
-async def import_top(obj, path, iname, iroles, imirrors, **kw):
+async def import_top(obj, path, iname, iroles, imirrors, **kw) -> None:
     """Bootstrap a NEW source package from an existing local git repo.
 
     Discovers remotes and branches via git plumbing (no network) and
@@ -280,7 +280,7 @@ async def import_top(obj, path, iname, iroles, imirrors, **kw):
 
 
 @cli.group(name="archive", cls=AliasedGroup)
-def archive_grp():
+def archive_grp() -> None:
     """Manage the global archive-role registry."""
 
 
@@ -292,7 +292,7 @@ def _archive_role_common(c):
 
 @archive_grp.command(name="list")
 @click.pass_obj
-async def archive_list(obj):
+async def archive_list(obj) -> None:
     """List all archive roles."""
     sess = obj.session
     seen = False
@@ -307,7 +307,7 @@ async def archive_list(obj):
 @archive_grp.command(name="show")
 @click.argument("name", type=str)
 @click.pass_obj
-async def archive_show(obj, name):
+async def archive_show(obj, name) -> None:
     """Show details of one archive role."""
     try:
         ar = obj.session.one(ArchiveRole, name=name)
@@ -320,7 +320,7 @@ async def archive_show(obj, name):
 @_archive_role_common
 @click.argument("name", type=str)
 @click.pass_obj
-async def archive_add(obj, name, **kw):
+async def archive_add(obj, name, **kw) -> None:
     """Add an archive role."""
     try:
         obj.session.one(ArchiveRole, name=name)
@@ -337,7 +337,7 @@ async def archive_add(obj, name, **kw):
 @_archive_role_common
 @click.argument("name", type=str)
 @click.pass_obj
-async def archive_set(obj, name, **kw):
+async def archive_set(obj, name, **kw) -> None:
     """Modify an archive role."""
     try:
         ar = obj.session.one(ArchiveRole, name=name)
@@ -349,7 +349,7 @@ async def archive_set(obj, name, **kw):
 @archive_grp.command(name="delete")
 @click.argument("name", type=str)
 @click.pass_obj
-async def archive_delete(obj, name):
+async def archive_delete(obj, name) -> None:
     """Remove an archive role."""
     try:
         ar = obj.session.one(ArchiveRole, name=name)
@@ -364,7 +364,7 @@ async def archive_delete(obj, name):
 
 
 @cli.group(name="branch", cls=AliasedGroup)
-def branch_grp():
+def branch_grp() -> None:
     """Manage the global branch-role registry."""
 
 
@@ -377,7 +377,7 @@ def _branch_role_common(c):
 
 @branch_grp.command(name="list")
 @click.pass_obj
-async def branch_list(obj):
+async def branch_list(obj) -> None:
     """List all branch roles."""
     sess = obj.session
     seen = False
@@ -392,7 +392,7 @@ async def branch_list(obj):
 @branch_grp.command(name="show")
 @click.argument("name", type=str)
 @click.pass_obj
-async def branch_show(obj, name):
+async def branch_show(obj, name) -> None:
     """Show details of one branch role."""
     try:
         br = obj.session.one(BranchRole, name=name)
@@ -405,7 +405,7 @@ async def branch_show(obj, name):
 @_branch_role_common
 @click.argument("name", type=str)
 @click.pass_obj
-async def branch_add(obj, name, **kw):
+async def branch_add(obj, name, **kw) -> None:
     """Add a branch role."""
     try:
         obj.session.one(BranchRole, name=name)
@@ -422,7 +422,7 @@ async def branch_add(obj, name, **kw):
 @_branch_role_common
 @click.argument("name", type=str)
 @click.pass_obj
-async def branch_set(obj, name, **kw):
+async def branch_set(obj, name, **kw) -> None:
     """Modify a branch role."""
     try:
         br = obj.session.one(BranchRole, name=name)
@@ -434,7 +434,7 @@ async def branch_set(obj, name, **kw):
 @branch_grp.command(name="delete")
 @click.argument("name", type=str)
 @click.pass_obj
-async def branch_delete(obj, name):
+async def branch_delete(obj, name) -> None:
     """Remove a branch role."""
     try:
         br = obj.session.one(BranchRole, name=name)
@@ -452,7 +452,7 @@ async def branch_delete(obj, name):
 @_detail_options
 @click.argument("spkg", type=str)
 @click.pass_obj
-async def at_grp(obj, spkg, yaml, n_branches):
+async def at_grp(obj, spkg, yaml, n_branches) -> None:
     """Scope subsequent verbs to one source package.
 
     Verifies the SPKG exists and stashes it on ``obj.spkg``. With no
@@ -473,7 +473,7 @@ async def at_grp(obj, spkg, yaml, n_branches):
 @at_grp.command(name="list")
 @_detail_options
 @click.pass_obj
-async def at_list(obj, yaml, n_branches):
+async def at_list(obj, yaml, n_branches) -> None:
     """Show this source package's detail."""
     _render_detail(obj, obj.spkg, yaml=yaml, n_branches=n_branches)
 
@@ -481,14 +481,14 @@ async def at_list(obj, yaml, n_branches):
 @at_grp.command(name="set")
 @_spkg_common
 @click.pass_obj
-async def at_set(obj, **kw):
+async def at_set(obj, **kw) -> None:
     """Modify this source package."""
     obj.spkg.apply(**kw)
 
 
 @at_grp.command(name="delete")
 @click.pass_obj
-async def at_delete(obj):
+async def at_delete(obj) -> None:
     """Remove this source package (cascades to remotes and branches)."""
     obj.session.delete(obj.spkg)
 
@@ -512,7 +512,7 @@ async def at_delete(obj):
     help="Mark push-capable remote REMOTE as 'mirror' rather than 'local'",
 )
 @click.pass_obj
-async def at_import(obj, path, iroles, imirrors):
+async def at_import(obj, path, iroles, imirrors) -> None:
     """Re-sync THIS package from an existing local git repo.
 
     Updates remotes/branches to match the repo, preserving DB-only
@@ -538,7 +538,7 @@ async def at_import(obj, path, iroles, imirrors):
     help="Overwrite a non-empty destination (still refuses dirty git trees)",
 )
 @click.pass_obj
-async def at_export(obj, dest, bare, force):
+async def at_export(obj, dest, bare, force) -> None:
     """Materialise a repo from this package's DB record.
 
     Clones the default remote, wires up the other remotes, and restores
@@ -553,7 +553,7 @@ async def at_export(obj, dest, bare, force):
 
 
 @at_grp.group(name="remote", cls=AliasedGroup)
-def remote_grp():
+def remote_grp() -> None:
     """Manage this package's archive remotes."""
 
 
@@ -588,7 +588,7 @@ def _remote_common(c):
 
 @remote_grp.command(name="list")
 @click.pass_obj
-async def remote_list(obj):
+async def remote_list(obj) -> None:
     """List this package's remotes."""
     sp = obj.spkg
     seen = False
@@ -603,7 +603,7 @@ async def remote_list(obj):
 @remote_grp.command(name="show")
 @click.argument("name", type=str)
 @click.pass_obj
-async def remote_show(obj, name):
+async def remote_show(obj, name) -> None:
     """Show one remote of this package."""
     try:
         ar = obj.session.one(Archive, spkg=obj.spkg, name=name)
@@ -622,7 +622,7 @@ async def remote_show(obj, name):
 )
 @click.argument("name", type=str)
 @click.pass_obj
-async def remote_add(obj, name, default, **kw):
+async def remote_add(obj, name, default, **kw) -> None:
     """Add a remote (archive) to this package.
 
     ``--role`` and ``--url`` are required on create.
@@ -655,7 +655,7 @@ async def remote_add(obj, name, default, **kw):
 )
 @click.argument("name", type=str)
 @click.pass_obj
-async def remote_set(obj, name, default, **kw):
+async def remote_set(obj, name, default, **kw) -> None:
     """Modify a remote of this package."""
     try:
         ar = obj.session.one(Archive, spkg=obj.spkg, name=name)
@@ -670,7 +670,7 @@ async def remote_set(obj, name, default, **kw):
 @remote_grp.command(name="delete")
 @click.argument("name", type=str)
 @click.pass_obj
-async def remote_delete(obj, name):
+async def remote_delete(obj, name) -> None:
     """Remove a remote from this package."""
     try:
         ar = obj.session.one(Archive, spkg=obj.spkg, name=name)
@@ -683,7 +683,7 @@ async def remote_delete(obj, name):
 
 
 @at_grp.group(name="branch", cls=AliasedGroup)
-def lb_grp():
+def lb_grp() -> None:
     """Manage this package's local branches."""
 
 
@@ -696,7 +696,7 @@ def _branch_common(c):
 
 @lb_grp.command(name="list")
 @click.pass_obj
-async def lb_list(obj):
+async def lb_list(obj) -> None:
     """List this package's local branches."""
     sp = obj.spkg
     seen = False
@@ -711,7 +711,7 @@ async def lb_list(obj):
 @lb_grp.command(name="show")
 @click.argument("name", type=str)
 @click.pass_obj
-async def lb_show(obj, name):
+async def lb_show(obj, name) -> None:
     """Show one local branch of this package."""
     try:
         br = obj.session.one(LocalBranch, spkg=obj.spkg, name=name)
@@ -724,7 +724,7 @@ async def lb_show(obj, name):
 @_branch_common
 @click.argument("name", type=str)
 @click.pass_obj
-async def lb_add(obj, name, **kw):
+async def lb_add(obj, name, **kw) -> None:
     """Add a local branch to this package."""
     try:
         obj.session.one(LocalBranch, spkg=obj.spkg, name=name)
@@ -743,7 +743,7 @@ async def lb_add(obj, name, **kw):
 @_branch_common
 @click.argument("name", type=str)
 @click.pass_obj
-async def lb_set(obj, name, **kw):
+async def lb_set(obj, name, **kw) -> None:
     """Modify a local branch of this package."""
     try:
         br = obj.session.one(LocalBranch, spkg=obj.spkg, name=name)
@@ -757,7 +757,7 @@ async def lb_set(obj, name, **kw):
 @lb_grp.command(name="delete")
 @click.argument("name", type=str)
 @click.pass_obj
-async def lb_delete(obj, name):
+async def lb_delete(obj, name) -> None:
     """Remove a local branch from this package."""
     try:
         br = obj.session.one(LocalBranch, spkg=obj.spkg, name=name)

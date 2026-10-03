@@ -30,7 +30,7 @@ class Fwd(BaseCmd):
 
     doc = dict(_c=dict(_d="Command forwarding", path="path:dest"))
 
-    async def setup(self):
+    async def setup(self) -> None:
         """Create a subdispatcher."""
         await super().setup()
 

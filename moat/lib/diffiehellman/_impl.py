@@ -50,7 +50,7 @@ class DiffieHellman:
     public_key: int = None  # ty:ignore[invalid-assignment]
     __private_key: int = None  # ty:ignore[invalid-assignment]
 
-    def __init__(self, group=18, key_length=640):
+    def __init__(self, group=18, key_length=640) -> None:
         self.key_length = max(200, key_length)
         self.generator: int = PRIMES[group]["generator"]
         self.prime: int = PRIMES[group]["prime"]

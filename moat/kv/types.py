@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class MetaEntry(Entry):  # noqa: D101
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         super().__init__(*a, **k)
         self._metaroot = self.parent._metaroot  # noqa: SLF001
 
@@ -35,7 +35,7 @@ class TypeEntry(Entry):
     _code = None
     _schema = None
 
-    def check_value(self, value, entry=None, **kv):  # noqa: D102
+    def check_value(self, value, entry=None, **kv) -> None:  # noqa: D102
         self.parent.check_value(value, entry=entry, **kv)
         if self._schema is not None:
             if isinstance(value, Mapping):
@@ -46,7 +46,7 @@ class TypeEntry(Entry):
         if self._code is not None:
             self._code(value, entry=entry, data=self._data, **kv)
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         code = None
         schema = None
         if value is not NotGiven and (
@@ -95,11 +95,11 @@ class TypeRoot(Entry):
 
     SUBTYPE = TypeEntry
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         if value is not NotGiven:
             raise ValueError("This node can't have data.")
 
-    def check_value(self, value, entry=None, **kv):  # noqa: D102
+    def check_value(self, value, entry=None, **kv) -> None:  # noqa: D102
         pass
 
 
@@ -113,7 +113,7 @@ class MatchEntry(MetaEntry):
     hierarchy that's next to my MatchRoot.
     """
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         if value is NotGiven:
             pass
         elif isinstance(value.type, str):
@@ -140,7 +140,7 @@ class NodeFinder:
     at `bar.#.three` (assuming that nothing more specific hangs off `bar`).
     """
 
-    def __init__(self, meta):
+    def __init__(self, meta) -> None:
         if isinstance(meta, list):
             self.steps = meta
         else:
@@ -190,7 +190,7 @@ class ACLFinder(NodeFinder):
     def copy_args(self):  # noqa: D102
         return {"blocked": self._block}
 
-    def __init__(self, acl, blocked=None):
+    def __init__(self, acl, blocked=None) -> None:
         if isinstance(acl, ACLFinder):
             if blocked is None:
                 blocked = acl._block  # noqa: SLF001
@@ -208,11 +208,11 @@ class ACLFinder(NodeFinder):
             return True
         return x in r.data
 
-    def block(self, c):  # noqa: D102
+    def block(self, c) -> None:  # noqa: D102
         if c not in self._block:
             self._block += c
 
-    def check(self, x):  # noqa: D102
+    def check(self, x) -> None:  # noqa: D102
         if not self.allows(x):
             raise ACLError(self.result, x)
 
@@ -230,16 +230,16 @@ class NullACL(ACLStepper):
 
     result = "-"
 
-    def __init__(self):  # pylint: disable=super-init-not-called
+    def __init__(self) -> None:  # pylint: disable=super-init-not-called
         pass
 
     def allows(self, x):  # noqa: D102
         return x != "a"
 
-    def check(self, x):  # noqa: ARG002, D102
+    def check(self, x) -> None:  # noqa: ARG002, D102
         return
 
-    def block(self, c):  # noqa: D102
+    def block(self, c) -> None:  # noqa: D102
         pass
 
     def step(self, name, new=None):  # noqa: ARG002, D102
@@ -263,7 +263,7 @@ class MatchRoot(MetaPathEntry):
 
     SUBTYPE = MatchEntry
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         if value is not None:
             raise ValueError("This node can't have data.")
 
@@ -298,7 +298,7 @@ class CodecEntry(Entry):
                 pass
         return value
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         enc = None
         dec = None
         if value is not None and value.decode is not None:
@@ -345,11 +345,11 @@ class CodecRoot(Entry):
 
     SUBTYPE = CodecEntry
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         if value is not None:
             raise ValueError("This node can't have data.")
 
-    def check_value(self, value, entry=None, **kv):  # noqa: D102
+    def check_value(self, value, entry=None, **kv) -> None:  # noqa: D102
         pass
 
 
@@ -363,7 +363,7 @@ class ConvEntry(MetaEntry):
     hierarchy that's next to my Root.
     """
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         if value is not NotGiven:
             # can't run a nonexistent value through a codec
 
@@ -405,7 +405,7 @@ class ConvName(MetaPathEntry):
 
     SUBTYPE = ConvEntry
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         if value is not None:
             raise ValueError("This node can't have data.")
 
@@ -429,7 +429,7 @@ class ConvName(MetaPathEntry):
 class ConvRoot(MetaEntry):  # noqa: D101
     SUBTYPE = ConvName
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         if value is not None:
             raise ValueError("This node can't have data.")
 
@@ -440,7 +440,7 @@ class AclEntry(MetaPathEntry):
     My data must be a string of ACLish characters.
     """
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         if value is NotGiven:
             pass
         elif not isinstance(value, str):
@@ -466,7 +466,7 @@ class AclName(AclEntry):
 class AclRoot(MetaEntry):  # noqa: D101
     SUBTYPE = AclName
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         if value is not None:
             raise ValueError("This node can't have data.")
 
@@ -474,7 +474,7 @@ class AclRoot(MetaEntry):  # noqa: D101
 class DelRoot(Entry):  # noqa: D101
     SUBTYPE = None
 
-    async def set(self, value):  # noqa: D102
+    async def set(self, value) -> None:  # noqa: D102
         await super().set(value)
         await self.root.server.del_check(value)
 
@@ -499,7 +499,7 @@ class MetaRootEntry(Entry):  # not MetaEntry
         "actor": ActorRoot,
     }
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, **k) -> None:
         super().__init__(*a, **k)
         self._metaroot = weakref.ref(self)
 
@@ -510,7 +510,7 @@ Entry.SUBTYPES[None] = MetaRootEntry
 class RootEntry(Entry):
     """I am the root of the MoaT-KV data tree."""
 
-    def __init__(self, server, *a, **k):
+    def __init__(self, server, *a, **k) -> None:
         super().__init__("ROOT", None, *a, **k)
         self._server = weakref.ref(server)
 

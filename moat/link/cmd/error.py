@@ -20,7 +20,7 @@ from moat.util.times import humandelta
 @click.option("-m", "--meta", is_flag=True, help="include metadata")
 @click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def cli(ctx, path, meta):
+async def cli(ctx, path, meta) -> None:
     """
     This subcommand reads and manipulates errors stored in the MoaT-Link service.
     """
@@ -37,7 +37,7 @@ async def cli(ctx, path, meta):
 
 @cli.command
 @click.pass_obj
-async def get(obj, **k):
+async def get(obj, **k) -> None:
     """
     Retrieve a MoaT-Link error entry.
 
@@ -52,7 +52,7 @@ async def get(obj, **k):
 @click.option("-k/-K", "--ok/--bad", is_flag=True, help="Mark as ok / not ok")
 @attr_args
 @click.pass_obj
-async def set_(obj, ok, **kw):
+async def set_(obj, ok, **kw) -> None:
     """
     Update some MoaT-Link error entry.
     """
@@ -73,7 +73,7 @@ async def set_(obj, ok, **kw):
 )
 @click.option("-r", "--recursive", is_flag=True, help="Delete a complete subtree")
 @click.pass_obj
-async def delete(obj, before, recursive):
+async def delete(obj, before, recursive) -> None:
     """
     Delete an entry, or a subtree.
 
@@ -102,7 +102,7 @@ async def delete(obj, before, recursive):
 @click.pass_obj
 @click.option("-k/-A", "--ok/--all", is_flag=True, help="only list if ok / list all")
 @click.option("-r", "--raw", is_flag=True, help="show age in seconds")
-async def list_(obj, ok, raw):
+async def list_(obj, ok, raw) -> None:
     """
     List all errors with their paths and age.
 
@@ -162,7 +162,7 @@ async def monitor(
     max_length,
     max_age,
     timeout,
-):
+) -> None:
     """Monitor a MoaT-Link subtree.
 
     The mode can be:
@@ -186,7 +186,7 @@ async def monitor(
     if mark and state is not None:
         raise click.UsageError("You can only add a mark in Stream mode")
 
-    def pm(p):
+    def pm(p) -> bool:
         for ip in ignore:
             if len(p) >= len(ip) and p[: len(ip)] == ip:
                 return True

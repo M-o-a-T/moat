@@ -18,7 +18,7 @@ from typing import Any
 
 @click.group(cls=AliasedGroup, short_help="Manage schemas.")  # pylint: disable=undefined-variable
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx) -> None:
     """
     This subcommand reads schema entries stored in the MoaT-Link service.
     """
@@ -30,7 +30,7 @@ async def cli(ctx):
 @cli.command("for")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def get(obj, path):
+async def get(obj, path) -> None:
     """
     Retrieve the schema for a path.
     """
@@ -74,7 +74,7 @@ async def _schema_record_error(conn, path: Path, data: Any, exc: Exception) -> N
 @click.option("-v", "--verbose", is_flag=True, help="Print running mismatch counters.")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def monitor(obj, path, limit, verbose):
+async def monitor(obj, path, limit, verbose) -> None:
     """
     Monitor a subtree and report schema mismatches as errors.
     """
@@ -83,7 +83,7 @@ async def monitor(obj, path, limit, verbose):
     next_err = 0.0
     qw, qr = anyio.create_memory_object_stream(10)
 
-    async def _worker(schemas):
+    async def _worker(schemas) -> None:
         nonlocal n_bad, n_err, next_err
         async for rel, data in qr:
             full = path + rel
@@ -105,7 +105,7 @@ async def monitor(obj, path, limit, verbose):
         anyio.create_task_group() as tg,
     ):
 
-        async def _reader():
+        async def _reader() -> None:
             try:
                 async for rel, data in mon:
                     with suppress(anyio.WouldBlock):
@@ -121,7 +121,7 @@ async def monitor(obj, path, limit, verbose):
 @click.option("-v", "--verbose", is_flag=True, help="Show a mismatch summary.")
 @click.argument("path", type=P, nargs=1)
 @click.pass_obj
-async def check(obj, path, verbose):
+async def check(obj, path, verbose) -> None:
     """
     Check all stored messages in a subtree against their schema.
     """

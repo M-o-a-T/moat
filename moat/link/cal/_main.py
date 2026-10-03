@@ -31,7 +31,7 @@ now = partial(datetime.now, utc)
 
 @click.group(cls=AliasedGroup, short_help="Manage calendar polling.")
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx) -> None:
     """
     List known calendars and poll them.
     """
@@ -46,7 +46,7 @@ async def cli(ctx):
 @cli.command("run")
 @click.argument("name", nargs=1)
 @click.pass_obj
-async def run_(obj, name):
+async def run_(obj, name) -> None:
     """Process calendar alarms.
 
     Polls the CalDAV calendar configured at ``link.cal.prefix.NAME``
@@ -134,7 +134,7 @@ async def run_(obj, name):
 
 @cli.command("list")
 @click.pass_obj
-async def list_(obj):
+async def list_(obj) -> None:
     """Emit the current state as a YAML file."""
     prefix = obj.cal_cfg.prefix
     path = Path()

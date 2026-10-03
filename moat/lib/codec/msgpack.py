@@ -39,7 +39,7 @@ __all__ = ["Codec", "ExtType"]
 class Codec(_Codec):
     "Extensible msgpack codec"
 
-    def __init__(self, use_attrdict: bool = False, **kw):
+    def __init__(self, use_attrdict: bool = False, **kw) -> None:
         # TODO add keywords for msgpack enc/dec settings
         super().__init__(**kw)
         self.use_attrdict = use_attrdict
@@ -76,7 +76,7 @@ class Codec(_Codec):
         except NoCodecError:
             return ExtType(key, data)
 
-    def feed(self, data):
+    def feed(self, data) -> None:
         "Add more bytes. Returns an iterator for the result."
         self.stream.feed(data)
 
@@ -107,24 +107,24 @@ class FormatError(UnpackException):
 class ExtraData(ValueError):
     "too much data in buffer"
 
-    def __init__(self, unpacked, extra):
+    def __init__(self, unpacked, extra) -> None:
         self.unpacked = unpacked
         self.extra = extra
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "unpack(b) received extra data."
 
 
 class ExtType:
     """ExtType represents extension types in msgpack."""
 
-    def __init__(self, code, data):
+    def __init__(self, code, data) -> None:
         if isinstance(data, memoryview):
             data = bytes(data)
         self.code = code
         self.data = data
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Ext({self.code}:{self.data})"
 
 
@@ -180,7 +180,7 @@ class Unpacker:
         ext_hook=ExtType,
         use_attrdict=False,
         min_memview_len=-1,
-    ):
+    ) -> None:
         #: array of bytes fed.
         self._buffer = bytearray()
         #: Which position we currently reads
@@ -190,7 +190,7 @@ class Unpacker:
         self._min_memview_len = min_memview_len
         self._use_attrdict = use_attrdict
 
-    def feed(self, data):
+    def feed(self, data) -> None:
         "set the buffer"
         if self._buffer and self._buf_pos < len(self._buffer):
             if self._buf_pos == 0:
@@ -235,7 +235,7 @@ class Unpacker:
         self._buf_pos = i + len(ret)
         return ret
 
-    def _reserve(self, n):
+    def _reserve(self, n) -> None:
         remain_bytes = len(self._buffer) - self._buf_pos - n
 
         # Fast path: buffer has n bytes already
@@ -394,12 +394,12 @@ class Packer:
         self,
         # unicode_errors=None,
         default=None,
-    ):
+    ) -> None:
         self._buffer = BytesIO()
         # self._unicode_errors = unicode_errors or "strict"
         self._default = default
 
-    def _pack(self, obj, default=None):
+    def _pack(self, obj, default=None) -> None:
         # Warning, does not deal with recursive data structures
         # (except by running out of memory)
         list_types = (list, tuple)

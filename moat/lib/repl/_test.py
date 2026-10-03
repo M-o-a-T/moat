@@ -37,7 +37,7 @@ class MockTerm(TermBuf):
         self,
         cfg: dict | None = None,
         user_actions: list[float | bytes] | None = None,
-    ):
+    ) -> None:
         super().__init__(cfg)
         self.user_actions = list(user_actions) if user_actions else []
         self.record: list[tuple[str, object]] = []
@@ -46,7 +46,7 @@ class MockTerm(TermBuf):
         self._height = 25
         self._width = 80
 
-    async def stream(self):
+    async def stream(self) -> int:
         return 42
 
     async def rd(self, buf: Buffer) -> int:

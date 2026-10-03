@@ -34,11 +34,11 @@ class ArrayCmd(BaseSuperCmd):
         )
     )
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self.apps = []
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         await self._setup_apps()
 
@@ -95,7 +95,7 @@ class ArrayCmd(BaseSuperCmd):
             set_part(cfg, ii, i + self.cfg.get("i_off", 0))
         return cfg
 
-    async def reload(self):  # noqa:D102
+    async def reload(self) -> None:  # noqa:D102
         await super().reload()
         self.n = self.cfg["n"]
         for i, app in enumerate(self.apps):
@@ -105,7 +105,7 @@ class ArrayCmd(BaseSuperCmd):
             app = self.apps.pop()
             await self.detach(len(self.apps))
 
-    async def _setup_apps(self):
+    async def _setup_apps(self) -> None:
         name = self.cfg["cfg"]["app"]
         cls = load_app(name)
 
@@ -185,7 +185,7 @@ class ArrayCmd(BaseSuperCmd):
         e="int:end index",
     )
 
-    async def _cmd_all(self, msg, rcmd):
+    async def _cmd_all(self, msg, rcmd) -> None:
         """
         Call all sub-apps and collect the result.
         """
@@ -217,7 +217,7 @@ class ArrayCmd(BaseSuperCmd):
             res.extend(r.args)
         return res
 
-    async def _stream_all(self, msg, rcmd):
+    async def _stream_all(self, msg, rcmd) -> None:
         """
         Call all sub-apps and send the results.
         """
@@ -232,7 +232,7 @@ class ArrayCmd(BaseSuperCmd):
             cmd.reverse()
             rcmd = cmd
 
-        async def _reply(i, app, st):
+        async def _reply(i, app, st) -> None:
             msg_ = Msg.Call(msg.cmd, msg.args, msg.kw)
             res = await app.handle(msg_, rcmd[:])
             await st.send(i, *res.args, **res.kw)

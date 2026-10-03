@@ -38,22 +38,22 @@ class BaseAdapter:
         :return: packet read as bytes data
         """
 
-    def feed_eof(self):
+    def feed_eof(self) -> None:
         """
         Acknowleddge EOF
         """
 
-    async def write(self, data):
+    async def write(self, data) -> None:
         """
         write some data to the protocol layer
         """
 
-    def get_peer_info(self):
+    def get_peer_info(self) -> None:
         """
         Return peer socket info (remote address and remote port as tuple
         """
 
-    async def close(self):
+    async def close(self) -> None:
         """
         Close the protocol connection
         """
@@ -64,7 +64,7 @@ class WebSocketsAdapter(BaseAdapter):
     WebSockets API reader adapter
     """
 
-    def __init__(self, websocket: Websocket):
+    def __init__(self, websocket: Websocket) -> None:
         self._websocket = websocket
         self._buffer = io.BytesIO(b"")
 
@@ -77,7 +77,7 @@ class WebSocketsAdapter(BaseAdapter):
         data = self._buffer.read(n)
         return data
 
-    async def _feed_buffer(self, n=1):
+    async def _feed_buffer(self, n=1) -> None:
         """
         Feed the data buffer by reading a Websocket message.
         :param n: if given, feed buffer until it contains at least n bytes
@@ -98,7 +98,7 @@ class WebSocketsAdapter(BaseAdapter):
             buffer.extend(message.data)
         self._buffer = io.BytesIO(buffer)
 
-    async def write(self, data):
+    async def write(self, data) -> None:
         """
         write some data to the protocol layer
         """
@@ -108,7 +108,7 @@ class WebSocketsAdapter(BaseAdapter):
         res = self._websocket._sock.extra(anyio.abc.SocketAttribute.remote_address)  # noqa: SLF001
         return res[0:2]
 
-    async def close(self):  # noqa: D102
+    async def close(self) -> None:  # noqa: D102
         await self._websocket.close()
 
 
@@ -119,7 +119,7 @@ class StreamAdapter(BaseAdapter):
     Because API is very close, this class is trivial
     """
 
-    def __init__(self, stream: anyio.abc.ByteStream):
+    def __init__(self, stream: anyio.abc.ByteStream) -> None:
         self.logger = logging.getLogger(__name__)
         self._stream = stream
         self._rstream = anyio.streams.buffered.BufferedByteReceiveStream(stream)
@@ -135,14 +135,14 @@ class StreamAdapter(BaseAdapter):
             data = await self._rstream.receive_exactly(n)
         return data
 
-    async def write(self, data):  # noqa: D102
+    async def write(self, data) -> None:  # noqa: D102
         await self._stream.send(data)
 
     def get_peer_info(self):  # noqa: D102
         res = self._stream.extra(anyio.abc.SocketAttribute.remote_address)
         return res[0:2]
 
-    async def close(self):  # noqa: D102
+    async def close(self) -> None:  # noqa: D102
         try:
             try:
                 await self._stream.close()
@@ -158,14 +158,14 @@ class BufferAdapter(BaseAdapter):
     This adapter simply adapt reading a byte buffer.
     """
 
-    def __init__(self, buffer: bytes):
+    def __init__(self, buffer: bytes) -> None:
         self._rstream = io.BytesIO(buffer)
         self._wstream = io.BytesIO(b"")
 
     async def read(self, n=-1) -> bytes:  # noqa: D102
         return self._rstream.read(n)
 
-    async def write(self, data):
+    async def write(self, data) -> None:
         """
         write some data to the protocol layer
         """
@@ -177,6 +177,6 @@ class BufferAdapter(BaseAdapter):
     def get_peer_info(self):  # noqa: D102
         return "BufferWriter", 0
 
-    async def close(self):  # noqa: D102
+    async def close(self) -> None:  # noqa: D102
         self._rstream.close()
         self._wstream.close()

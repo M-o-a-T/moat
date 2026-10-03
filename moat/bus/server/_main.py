@@ -21,14 +21,14 @@ logger = logging.getLogger(__name__)
 
 
 class MqttServer(Server):
-    def __init__(self, serial, mqtt_in, topic_out):
+    def __init__(self, serial, mqtt_in, topic_out) -> None:
         self.serial = serial
         self.mqtt = mqtt_in
         self.topic = topic_out
         self.bus = StreamHandler("Ser", serial)
         super().__init__(self.bus)
 
-    async def reader(self):
+    async def reader(self) -> None:
         async with self.bus as b:
             logger.debug("Reader started")
             async for msg in b:
@@ -49,7 +49,7 @@ async def run(
     topic_out="test/moat/out",
     port="/dev/ttyUSB0",
     baud=57600,
-):
+) -> None:
     async with (
         open_mqttclient(dict(host="localhost", codec=StdMsgpack())) as C,
         Serial(port=port, baudrate=baud) as S,
@@ -80,7 +80,7 @@ async def run(
 @click.option("-p", "--port", default="/dev/ttyUSB0", help="Serial port to access")
 @click.option("-b", "--baud", type=int, default=57600, help="Serial port baud rate")
 @click.option("-d", "--debug", is_flag=True, help="Debug?")
-async def cli(debug, **kw):
+async def cli(debug, **kw) -> None:
     """
     Simple message transfer from MQTT to MoaT-bus-serial and back.
     """

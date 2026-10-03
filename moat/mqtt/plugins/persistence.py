@@ -8,7 +8,7 @@ import sqlite3
 
 
 class SQLitePlugin:  # noqa: D101
-    def __init__(self, context):
+    def __init__(self, context) -> None:
         self.context = context
         self.conn = None
         self.cursor = None
@@ -19,7 +19,7 @@ class SQLitePlugin:  # noqa: D101
         except KeyError:
             self.context.logger.warning("'persistence' section not found in context configuration")
 
-    def init_db(self):  # noqa: D102
+    def init_db(self) -> None:  # noqa: D102
         self.db_file = self.persistence_config.get("file", None)
         if not self.db_file:
             self.context.logger.warning("'file' persistence parameter not found")
@@ -40,7 +40,7 @@ class SQLitePlugin:  # noqa: D101
                 "CREATE TABLE IF NOT EXISTS session(client_id TEXT PRIMARY KEY, data BLOB)",
             )
 
-    async def save_session(self, session):  # noqa: D102
+    async def save_session(self, session) -> None:  # noqa: D102
         if self.cursor:
             dump = pickle.dumps(session)
             try:
@@ -64,17 +64,17 @@ class SQLitePlugin:  # noqa: D101
             else:
                 return None
 
-    async def del_session(self, client_id):  # noqa: D102
+    async def del_session(self, client_id) -> None:  # noqa: D102
         if self.cursor:
             self.cursor.execute("DELETE FROM session where client_id=?", (client_id,))
             self.conn.commit()
 
-    def close(self):  # noqa: D102
+    def close(self) -> None:  # noqa: D102
         if self.conn:
             self.conn.close()
             self.conn = None
             self.cursor = None
             self.context.logger.info("Database file '%s' closed", self.db_file)
 
-    async def on_broker_post_shutdown(self):  # noqa: D102
+    async def on_broker_post_shutdown(self) -> None:  # noqa: D102
         self.close()

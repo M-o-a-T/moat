@@ -9,7 +9,7 @@ import asyncclick as click
 import trio
 
 
-async def reader(sock, verbose):  # noqa:D103
+async def reader(sock, verbose) -> None:  # noqa:D103
     while True:
         b = await sock.recv(1)
         if not b:
@@ -37,7 +37,7 @@ The sequence repeats until `--loops`, if used, or interrupted.
 @click.option("-i", "--init", type=int, default=0, help="Initial wire state")
 @click.option("-n", "--loops", type=int, default=-1, help="Stop after this many iterations")
 @click.argument("data", nargs=-1)
-async def run(sockname, delay, verbose, data, init, loops):  # noqa:D103
+async def run(sockname, delay, verbose, data, init, loops) -> None:  # noqa:D103
     if not data:
         if not init:
             raise click.UsageError("Need some data")

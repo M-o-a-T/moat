@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(cls=AliasedGroup, short_help="Manage computer inventory.")
 @click.pass_obj
-async def cli(obj):
+async def cli(obj) -> None:
     """
     Inventorize your computers, networks, and their connections.
     """
@@ -34,7 +34,7 @@ async def cli(obj):
 @cli.command("dump")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def dump_(obj, path):
+async def dump_(obj, path) -> None:
     """Emit the current state as a YAML file."""
     path = P(path)
     await data_get(obj.client, obj.cfg.inv.prefix + path, out=obj.stdout)
@@ -71,7 +71,7 @@ def rev_wire(ctx, param, value):
     return rev_name(ctx, param, value, delim="-", rev=False)
 
 
-def host_post(obj, h, values):
+def host_post(obj, h, values) -> None:
     net = values.get("net", None)
     if net not in (None, "-"):
         n = obj.data.net.by_name(net)
@@ -130,7 +130,7 @@ def get_mac(ctx, attr, val):  # pylint: disable=unused-argument
     return EUI(val)
 
 
-def net_apply(obj, n, kw):  # pylint:disable=unused-argument
+def net_apply(obj, n, kw) -> None:  # pylint:disable=unused-argument
     obj  # noqa:B018
     seen = 0
     val = kw.pop("virt", None)
@@ -211,7 +211,7 @@ cmd_host = std_command(
 )
 @click.argument("name", type=str, nargs=1)
 @click.pass_context
-async def host_port(ctx, name):
+async def host_port(ctx, name) -> None:
     """\
         Manager for ports.
 
@@ -243,7 +243,7 @@ async def host_port(ctx, name):
 @click.option("-d", "--dump", is_flag=True, help="Dump the template's replacement data")
 @click.argument("template", type=click.Path("r"), nargs=-1)
 @click.pass_obj
-async def host_template(obj, dump, template):
+async def host_template(obj, dump, template) -> None:
     """\
         Load a template, for generating a host configuration file.
 
@@ -347,7 +347,7 @@ async def host_template(obj, dump, template):
 @cmd_host.command(name="find", short_help="Show the path to another host")
 @click.argument("dest", type=str, nargs=1)
 @click.pass_obj
-async def host_find(obj, dest):
+async def host_find(obj, dest) -> None:
     """\
         Find the path to another host.
 
@@ -434,7 +434,7 @@ cmd_wire = std_command(
 @click.option("-A", "--a-ends", is_flag=True, help="Link the A ends")
 @click.option("-f", "--force", is_flag=True, help="Replace existing cables")
 @click.pass_obj
-async def wire_link(obj, dest, a_ends, force):
+async def wire_link(obj, dest, a_ends, force) -> None:
     """\
         Link the B ends of two wires.
 
@@ -466,7 +466,7 @@ async def wire_link(obj, dest, a_ends, force):
 
 @cli.command(short_help="Manage cables")
 @click.pass_context
-async def cable(ctx):
+async def cable(ctx) -> None:
     """
     List cables
     """
@@ -491,7 +491,7 @@ def _hp_args(p):
 @host_port.command(name="add", short_help="add a port")
 @_hp_args
 @click.pass_obj
-async def hp_add(obj, **kw):
+async def hp_add(obj, **kw) -> None:
     """\
         Add a port to a host.
         """
@@ -509,7 +509,7 @@ async def hp_add(obj, **kw):
 @_hp_args
 @click.option("-N", "--name", type=str, default=None, help="Rename this interface")
 @click.pass_obj
-async def hp_set(obj, name, **kw):
+async def hp_set(obj, name, **kw) -> None:
     """\
         Set port parameters.
         """
@@ -521,7 +521,7 @@ async def hp_set(obj, name, **kw):
     await h.save()
 
 
-async def _hp_mod(obj, p, **kw):
+async def _hp_mod(obj, p, **kw) -> None:
     net = kw.get("net")
 
     if net not in (None, "-"):
@@ -563,7 +563,7 @@ async def _hp_mod(obj, p, **kw):
 
 @host_port.command(name="delete", short_help="delete a port")
 @click.pass_obj
-async def hp_delete(obj):
+async def hp_delete(obj) -> None:
     """\
         Delete a port.
         """
@@ -578,7 +578,7 @@ async def hp_delete(obj):
 @click.option("-B", "--b-end", is_flag=True, help="Dest is a wire, link to B end")
 @click.option("-f", "--force", is_flag=True, help="Replace existing cables")
 @click.pass_obj
-async def hp_link(obj, dest, a_end, b_end, force):
+async def hp_link(obj, dest, a_end, b_end, force) -> None:
     """\
         Link a port to another host or port.
         """

@@ -39,7 +39,7 @@ class EphemeralMsg:
     updated.
     """
 
-    def __init__(self, chan: int, data: Any):
+    def __init__(self, chan: int, data: Any) -> None:
         self.chan = chan
         self.data = data
 
@@ -108,7 +108,7 @@ class ReliableMsg(StackedMsg):
     _tg = None
     __tg = None
 
-    def __init__(self, link, cfg):
+    def __init__(self, link, cfg) -> None:
         super().__init__(link, cfg)
 
         window = cfg.get("window", 8)
@@ -128,7 +128,7 @@ class ReliableMsg(StackedMsg):
         self.retries = retries
         self._iters = {}
 
-    def reset(self, level=1):  # noqa:D102
+    def reset(self, level=1) -> None:  # noqa:D102
         self.s_send_head = 0  # next to be transmitted
         self.s_send_tail = 0  # no open messages before this point
         self.s_recv_head = 0  # next expected message. Messages before this are out of sequence
@@ -145,7 +145,7 @@ class ReliableMsg(StackedMsg):
         if self.rq is None:
             self.rq = Queue(self.window)
 
-    async def send_msg(self, k=None):
+    async def send_msg(self, k=None) -> None:
         """
         Send some message.
 
@@ -194,7 +194,7 @@ class ReliableMsg(StackedMsg):
         if k is not None and self.m_send.get(k, None) is mte:
             mte[1] = ticks_add(ticks_ms(), self.timeout)
 
-    async def _run_bg(self):
+    async def _run_bg(self) -> None:
         while not self.closed:
             if self.in_reset:
                 await self._trigger.wait()
@@ -270,7 +270,7 @@ class ReliableMsg(StackedMsg):
                 if nk is None:
                     self.t_recv = ticks_add(ticks_ms(), self.timeout)
 
-    async def wait(self):
+    async def wait(self) -> None:
         """
         Wait until the lower side is (again) ready to be used.
 
@@ -307,12 +307,12 @@ class ReliableMsg(StackedMsg):
         self._tg = None
         return await AC_exit(self, exc_type, exc, tb)
 
-    async def _mon(self):
+    async def _mon(self) -> None:
         while True:
             await wait_for_ms(self.retries * self.timeout, self._is_up.wait)
             await self._is_down.wait()
 
-    async def _run_(self):
+    async def _run_(self) -> None:
         if self._is_down.is_set():
             self._is_down = Event()
         self.reset_level = 1
@@ -355,7 +355,7 @@ class ReliableMsg(StackedMsg):
                 self._is_up = Event()
             self._trigger.set()
 
-    async def _run(self):
+    async def _run(self) -> None:
         self.reset()
         try:
             while True:
@@ -395,7 +395,7 @@ class ReliableMsg(StackedMsg):
             except EOFError:
                 pass
 
-    async def send_reset(self, level=None, err=None):
+    async def send_reset(self, level=None, err=None) -> None:
         "send a Reset message to the other side"
         if level is None:
             level = self.reset_level
@@ -450,13 +450,13 @@ class ReliableMsg(StackedMsg):
     def _get_config(self):
         return [self.window, self.timeout]
 
-    def _update_config(self, c):
+    def _update_config(self, c) -> None:
         if len(c) > 0 and c[0] > 0:
             self.window = max(4, min(self.window, c[0]))
         if len(c) > 1 and c[1] > 0:
             self.timeout = max(10, self.timeout, c[1])
 
-    def _reset_done(self):
+    def _reset_done(self) -> None:
         if self.in_reset:
             self.in_reset = False
             self._trigger.set()
@@ -485,7 +485,7 @@ class ReliableMsg(StackedMsg):
         "check if the link is down"
         return self._is_down.is_set()
 
-    async def _dispatch(self, msg):
+    async def _dispatch(self, msg) -> None:
         if not isinstance(msg, (tuple, list)):
             raise TypeError(msg)
 

@@ -46,7 +46,7 @@ class ModuleRoot(ClientRoot):
     def child_type(cls, name):  # noqa:D102,ARG003
         return ModuleEntry
 
-    async def run_starting(self):  # noqa:D102
+    async def run_starting(self) -> None:  # noqa:D102
         from .errors import ErrorRoot  # noqa: PLC0415
 
         self.err = await ErrorRoot.as_handler(self.client)
@@ -80,7 +80,7 @@ class ModuleEntry(ClientEntry):  # noqa:D101
     def name(self):  # noqa:D102
         return ".".join(self.subpath)
 
-    async def set_value(self, value):  # noqa:D102
+    async def set_value(self, value) -> None:  # noqa:D102
         await super().set_value(value)
         if value is NotGiven:
             self._module = None
@@ -147,7 +147,7 @@ class CodeRoot(ClientRoot):
     def child_type(cls, name):  # noqa:D102,ARG003
         return CodeEntry
 
-    async def run_starting(self):  # noqa:D102
+    async def run_starting(self) -> None:  # noqa:D102
         from .errors import ErrorRoot  # noqa: PLC0415
 
         self.err = await ErrorRoot.as_handler(self.client)
@@ -170,7 +170,7 @@ class CodeRoot(ClientRoot):
         )
         await self.wait_chain(r.chain)
 
-    async def remove(self, path):
+    async def remove(self, path) -> None:
         """Drop this code"""
         r = await self.client.set(*self._path, *path, value=None, nchain=2)
         await self.wait_chain(r.chain)
@@ -194,7 +194,7 @@ class CodeEntry(ClientEntry):  # noqa:D101
     _code = None
     is_async = None
 
-    def __init__(self, *a, **kv):
+    def __init__(self, *a, **kv) -> None:
         self.reload_event = anyio.Event()
         super().__init__(*a, *kv)
 
@@ -202,7 +202,7 @@ class CodeEntry(ClientEntry):  # noqa:D101
     def name(self):  # noqa:D102
         return P(self.subpath)
 
-    async def set_value(self, value):  # noqa:D102
+    async def set_value(self, value) -> None:  # noqa:D102
         await super().set_value(value)
         if value is NotGiven:
             self._code = None

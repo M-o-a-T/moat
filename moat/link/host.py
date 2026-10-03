@@ -85,7 +85,7 @@ class _ServiceData(attrdict):
 
 
 class HostMachine:
-    def __init__(self, host):
+    def __init__(self, host) -> None:
         self.host = host
         self.state = HostState.INIT
 
@@ -229,7 +229,7 @@ class Service:
             return pto.delay
         return pto.timeout
 
-    def updated(self, evt):
+    def updated(self, evt) -> None:
         "queue update to Broadcaster"
         self.mon.updated(self, evt)
 
@@ -249,7 +249,7 @@ class Service:
         return self._last
 
     @last.setter
-    def last(self, tm):
+    def last(self, tm) -> None:
         if self._last < tm:
             self._last = tm
 
@@ -257,16 +257,16 @@ class Service:
         async with self._lock:
             await self.machine.trigger(*args, **kwargs)
 
-    async def on_enter_drop(self, ev):  # noqa: ARG002
+    async def on_enter_drop(self, ev) -> None:  # noqa: ARG002
         await self.mon.drop_cb(self)
 
-    async def on_enter_timeout(self, ev):  # noqa: ARG002
+    async def on_enter_timeout(self, ev) -> None:  # noqa: ARG002
         await self.mon.drop_id(self)
 
-    async def on_enter_stale(self, ev):  # noqa: ARG002
+    async def on_enter_stale(self, ev) -> None:  # noqa: ARG002
         await self.mon.drop_host(self)
 
-    async def re_init(self, ev):
+    async def re_init(self, ev) -> None:
         """
         We have an incoming packet while a DROP event is running.
         This should not happen, but whatever …
@@ -292,7 +292,7 @@ class HostList(CtxObj):
         link: Link,
         debug: bool = False,
         broadcaster: Broadcaster[Any] | None = None,
-    ):
+    ) -> None:
         self.link = link
         self.debug = debug
         self.cfg = cfg
@@ -313,14 +313,14 @@ class HostList(CtxObj):
             yield self._bc
             self.tg.cancel_scope.cancel()
 
-    async def start_tasks(self):
+    async def start_tasks(self) -> None:
         "Starting Tasks. Can be supplanted by subclasses."
         self.tg.start_soon(self._mon_host)
         self.tg.start_soon(self._mon_ping)
         self.tg.start_soon(self._mon_id)
         self.tg.start_soon(self._timer)
 
-    def set_timeout(self, host: Service, to: float | None = None):
+    def set_timeout(self, host: Service, to: float | None = None) -> None:
         "Update service entry in timeout queue"
         if to is None:
             to = host.timeout
@@ -332,7 +332,7 @@ class HostList(CtxObj):
         # dprint("TIME ", host.id, to)
         self.times[host.id] = to
 
-    async def _timer(self):
+    async def _timer(self) -> None:
         async for id in self.times:
             try:
                 h = self.ids[id]
@@ -340,13 +340,13 @@ class HostList(CtxObj):
                 continue
             self.tg.start_soon(h.trigger, _E.TIMEOUT)
 
-    def updated(self, host: Service, evt):
+    def updated(self, host: Service, evt) -> None:
         "queue update to Broadcaster"
         if evt.transition.dest is not None or evt.kwargs.get("changed", False):
             logger.debug("Service %s: %s %s", host.id, host.state.name, srepr(host.data))
             self._bc(host)
 
-    async def _mon_host(self):
+    async def _mon_host(self) -> None:
         """
         Monitor host messages.
 
@@ -402,7 +402,7 @@ class HostList(CtxObj):
                 except Exception as exc:
                     logger.error("BadHost %r %r", p, msg, exc_info=exc)
 
-    async def _mon_id(self):
+    async def _mon_id(self) -> None:
         async with self.link.d_watch(P("run.id"), subtree=True, meta=True, state=NotGiven) as mon:
             async for p, msg, meta in mon:
                 try:
@@ -436,7 +436,7 @@ class HostList(CtxObj):
                 except Exception as exc:
                     logger.error("BadId %r %r", p, msg, exc_info=exc)
 
-    async def _mon_ping(self):
+    async def _mon_ping(self) -> None:
         async with self.link.d_watch(P("run.ping.id"), subtree=True, state=NotGiven) as mon:
             async for p, msg in mon:
                 try:
@@ -465,7 +465,7 @@ class HostList(CtxObj):
                 except Exception as exc:
                     logger.error("BadPing %r %r", p, msg, exc_info=exc)
 
-    async def drop_cb(self, host):
+    async def drop_cb(self, host) -> None:
         """
         Called from `Service.on_enter_drop`
         """
@@ -477,19 +477,19 @@ class HostList(CtxObj):
             del self.ids[host.id]
         self.set_timeout(host, False)
 
-    async def drop_id(self, host):
+    async def drop_id(self, host) -> None:
         """
         Seen a message that deletes this ID entry.
         """
         host.data.pop("i", None)
 
-    def add_path(self, host: Service, path: Path, msg: dict):
+    def add_path(self, host: Service, path: Path, msg: dict) -> None:
         """
         Add a path with this message to the service
         """
         host.data.h[path] = msg
 
-    async def drop_host(self, host: Service):
+    async def drop_host(self, host: Service) -> None:
         """
         Seen a message that deletes this service entry.
         """
@@ -498,7 +498,7 @@ class HostList(CtxObj):
                 del self.hsi[p]
         host.data.h.clear()
 
-    async def drop_path(self, host: Service, path: Path):
+    async def drop_path(self, host: Service, path: Path) -> None:
         """
         Seen a message that deletes/supersedes this service entry.
         """
@@ -513,7 +513,7 @@ class ServiceMon(HostList):
     Its main job is to remove stale retained entries under 'run.id' and 'run.host'.
     """
 
-    def __init__(self, *a, fake: bool = False, **kw):
+    def __init__(self, *a, fake: bool = False, **kw) -> None:
         """Initialize the service monitor."""
         super().__init__(*a, **kw)
         self.hostdown: TimerMap[Path] = TimerMap()
@@ -521,13 +521,13 @@ class ServiceMon(HostList):
         self.errored: dict[Path, bool] = dict()
         self.fake: bool = fake
 
-    async def start_tasks(self):
+    async def start_tasks(self) -> None:
         """Start internal helper tasks."""
         await super().start_tasks()
         self.tg.start_soon(self._mon_hostdown)
         self.tg.start_soon(self._mon_hostup)
 
-    async def _mon_hostdown(self):
+    async def _mon_hostdown(self) -> None:
         # watch host comings+goings, complain if one is down for too long
         async for path in self.hostdown:
             if path in self.hsi:
@@ -537,7 +537,7 @@ class ServiceMon(HostList):
                 # not present. Error.
                 await self._err(None, path, "down")
 
-    async def _mon_hostup(self):
+    async def _mon_hostup(self) -> None:
         # watch host.data.up
         async for path in self.hostup:
             try:
@@ -550,7 +550,7 @@ class ServiceMon(HostList):
                 if not host.data.h[path].get("up", False):
                     await self._err(None, path, "not up")
 
-    async def drop_id(self, host):
+    async def drop_id(self, host) -> None:
         """Delete a host's ID message."""
         if "i" in host.data:
             if self.fake:
@@ -559,7 +559,7 @@ class ServiceMon(HostList):
                 await self.link.d_set(P("run.id") / host.id, retain=True)
         await super().drop_id(host)
 
-    async def drop_host(self, host):
+    async def drop_host(self, host) -> None:
         """Delete a host's Service messages (yes all of them)."""
         for p in host.data.h.keys():
             if self.fake:
@@ -571,7 +571,7 @@ class ServiceMon(HostList):
                 del self.hostup[p]
         await super().drop_host(host)
 
-    async def _err(self, host: Service | None, path: Path, msg: str, data: Any = None):
+    async def _err(self, host: Service | None, path: Path, msg: str, data: Any = None) -> None:
         """Generate or update an error entry for a host path."""
         if self.errored.get(path, "") != msg:
             dat = {"msg": msg, "level": 4}
@@ -585,7 +585,7 @@ class ServiceMon(HostList):
                 await self.link.d_set(P("error.run.host") + path, dat)
             self.errored[path] = msg
 
-    async def _no_err(self, path: Path):
+    async def _no_err(self, path: Path) -> None:
         """Clear any error entry for a host path."""
         if self.errored.get(path, True) is not False:
             if self.fake:
@@ -594,7 +594,7 @@ class ServiceMon(HostList):
                 await self.link.d_set(P("error.run.host") + path)
             self.errored[path] = False
 
-    def add_path(self, host: Service, path: Path, msg: dict):
+    def add_path(self, host: Service, path: Path, msg: dict) -> None:
         """Add a path with this message to the service"""
         super().add_path(host, path, msg)
         self.hostdown[path] = self.cfg.timeout.restart.flap
@@ -604,7 +604,7 @@ class ServiceMon(HostList):
         else:
             self.hostup[path] = self.cfg.timeout.restart.up
 
-    async def drop_path(self, host: Service, path: Path):
+    async def drop_path(self, host: Service, path: Path) -> None:
         """Remove a path with this message from the service"""
         try:
             msg = host.data.h[path]

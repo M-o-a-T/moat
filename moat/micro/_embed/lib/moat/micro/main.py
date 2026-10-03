@@ -20,7 +20,7 @@ from moat.lib.rpc import MsgSender
 WDT = None
 
 
-def wr_exc(exc):
+def wr_exc(exc) -> None:
     "write exception and backtrace to stderr, and maybe flash"
     if "moat.err" not in os.listdir():
         with open("moat.err", "w") as f:
@@ -73,7 +73,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
             machine.WDT(v.get("id", 0), v.get("t", 5000))
         break
 
-    def cfg_network(n):
+    def cfg_network(n) -> None:
         import time  # noqa: PLC0415
 
         import network  # noqa: PLC0415
@@ -111,7 +111,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False) -> None:
     if "net" in cfg and cfg["net"].get("name", None) is not None:
         cfg_network(cfg["net"])
 
-    async def _main():
+    async def _main() -> None:
         import sys  # noqa: PLC0415
 
         from moat.lib.rpc import RootCmd  # noqa: PLC0415

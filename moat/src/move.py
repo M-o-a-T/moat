@@ -254,7 +254,7 @@ class RepoMover:
             async with anyio.create_task_group() as tg:
 
                 @tg.start_soon
-                async def drop_branches():
+                async def drop_branches() -> None:
                     branches = []
                     async for br in src_repo.get_branches():
                         brn = br.data.name
@@ -263,7 +263,7 @@ class RepoMover:
                     await src_repo.drop_branches(*branches)
 
                 @tg.start_soon
-                async def drop_tags():
+                async def drop_tags() -> None:
                     tags = []
                     async for ta in src_repo.get_tags():
                         tags.append(ta["name"])
@@ -329,7 +329,7 @@ async def apis(cfg: attrdict) -> AsyncGenerator[list[API], None]:
         yield res
 
 
-async def mv_repos(cfg: attrdict, all: bool = False, names: Sequence[str] = ()):  # noqa: A002
+async def mv_repos(cfg: attrdict, all: bool = False, names: Sequence[str] = ()) -> None:  # noqa: A002
     """Move many repos off Github.
 
     @all: if False, don't touch repos that have a parent.

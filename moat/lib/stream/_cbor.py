@@ -44,7 +44,7 @@ class _CBORMsgBuf(StackedMsg):
     codec: Codec
     liner: Liner | None = None
 
-    def __init__(self, stream: BaseBuf, cfg: dict):
+    def __init__(self, stream: BaseBuf, cfg: dict) -> None:
         StackedMsg.__init__(self, stream, cfg)
         self.w_lock = Lock()
 
@@ -57,7 +57,7 @@ class _CBORMsgBuf(StackedMsg):
         if cons:
             _CReader.__init__(cast(_CReader, self), cons)
 
-    async def setup(self):
+    async def setup(self) -> None:
         await super().setup()
         if self.cons is False:
             from moat.util.liner import Liner  # noqa:PLC0415

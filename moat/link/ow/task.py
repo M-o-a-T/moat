@@ -112,7 +112,9 @@ class _Devices:
 
     # configuration
 
-    async def watch_cfg(self, *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED):
+    async def watch_cfg(
+        self, *, task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED
+    ) -> None:
         """Watch the configuration, (re)apply what changes."""
         async with self.link.d_watch(self.prefix, subtree=True, mark=True, cls=OwRoot) as mon:
             self.root = mon.nodes

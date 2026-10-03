@@ -69,11 +69,11 @@ class MsgResult(Iterable):
     _a: Sequence
     _kw: dict
 
-    def __init__(self, a: list, kw: dict):
+    def __init__(self, a: list, kw: dict) -> None:
         self._a = a
         self._kw = kw
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self._a} {self._kw}>"
 
     @property
@@ -242,7 +242,7 @@ class MsgLink:
     _remote: MsgLink | None = None
     _end: bool = False
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Link setup. By default does nothing.
 
@@ -279,7 +279,7 @@ class MsgLink:
             if not flags & B_STREAM:
                 self.set_end()
 
-    async def ml_send_error(self, exc):
+    async def ml_send_error(self, exc) -> None:
         """
         Send an exception.
         """
@@ -326,7 +326,7 @@ class MsgLink:
     def remote(self):
         return self._remote
 
-    def stream_detach(self):
+    def stream_detach(self) -> None:
         """
         Called when this stream is done.
 
@@ -336,7 +336,7 @@ class MsgLink:
         """
         pass
 
-    def set_end(self):
+    def set_end(self) -> None:
         "The send side of this stream has ended."
         self._end = True
         if self.end_both:
@@ -345,7 +345,7 @@ class MsgLink:
             self.stream_detach()
             self._remote = None
 
-    async def kill(self):
+    async def kill(self) -> None:
         """
         No further communication is possible.
 
@@ -364,7 +364,7 @@ class MsgLink:
             except Exception:  # noqa:S110
                 pass
 
-    def set_remote(self, remote: MsgLink):
+    def set_remote(self, remote: MsgLink) -> None:
         """
         Set (or change) my remote side.
 
@@ -379,7 +379,7 @@ class MsgLink:
             rem.set_end()
         self._remote = remote
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__}:L{self.link_id} "
             f"r{'=L' + str(self._remote.link_id) if self._remote else '-'}>"
@@ -421,7 +421,7 @@ class Msg(MsgLink, MsgResult):
     _sent_cancel: bool = False
     _got_cancel: bool = False
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Set up the message.
         """
@@ -532,7 +532,7 @@ class Msg(MsgLink, MsgResult):
                 self._stream_in = S_ON
         await super().ml_send(a, kw, flags)
 
-    async def ml_send_error(self, exc):
+    async def ml_send_error(self, exc) -> None:
         """Send an exception, unless it's the peer's own terminal error.
 
         Overrides :meth:`MsgLink.ml_send_error`: if the exception escaping
@@ -948,7 +948,7 @@ class Msg(MsgLink, MsgResult):
             raise RuntimeError("This stream is write only")
         return self
 
-    async def _skipped(self):
+    async def _skipped(self) -> None:
         """
         Test whether incoming data could not be delivered due to the
         receive queue getting full.
@@ -1033,7 +1033,7 @@ class Msg(MsgLink, MsgResult):
         await self._qsize()
         return MsgResult(*res)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__}:L{self.link_id} "
             f"r{'=L' + str(self._remote.link_id) if self._remote else '-'}: "
@@ -1042,7 +1042,9 @@ class Msg(MsgLink, MsgResult):
 
 
 class _Stream:
-    def __init__(self, slf: Msg, a: Sequence, kw: OptDict, flag: int, initial: bool = False):
+    def __init__(
+        self, slf: Msg, a: Sequence, kw: OptDict, flag: int, initial: bool = False
+    ) -> None:
         self.slf = slf
         self.a = a
         self.kw = kw
@@ -1076,7 +1078,7 @@ class _Stream:
             await slf.ml_send(self.a, self.kw, B_STREAM, self.initial)
         return slf
 
-    async def _close(self):
+    async def _close(self) -> None:
         # This code is running inside the handler, which will process the error
         # case. Thus we don't need error handling here.
 
@@ -1103,7 +1105,7 @@ class _Stream:
 
 
 class _EnsureRemote:
-    def __init__(self, slf):
+    def __init__(self, slf) -> None:
         self.slf = slf
 
     async def __aenter__(self):

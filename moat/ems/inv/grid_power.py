@@ -43,7 +43,7 @@ current max charge voltage, as reported by the BMS.
 """,
     )
 
-    async def run(self):
+    async def run(self) -> None:
         "do the work"
         intf = self.intf
         while True:

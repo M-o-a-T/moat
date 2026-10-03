@@ -58,7 +58,7 @@ cfg = dict(
 wlan = None
 
 
-def wifi(cfg: dict | None = None):
+def wifi(cfg: dict | None = None) -> None:
     "setup wifi"
     global wlan
 
@@ -75,7 +75,7 @@ def wifi(cfg: dict | None = None):
     wlan.connect(cfg["SSID"], cfg["PASSWORD"])
 
 
-def mwifi():
+def mwifi() -> None:
     "manually open the wifi link"
     wifi(cfg["wlan"])
     import webrepl  # noqa:PLC0415
@@ -106,13 +106,13 @@ class Gaggenau:
     t_wifi_ok = None
     mp: Multiplex | None = None
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         self.cfg = cfg
         self.mp = Multiplex(cfg["buttons"])
         self._light = Pin(cfg["light"], Pin.OUT, value=1)
         self._fan = Pin(cfg["triac"]["output"], Pin.OUT, value=1)
 
-    def start(self):
+    def start(self) -> None:
         "Setup"
         self.mp.start()
         self._fan(not rtc("fan", 0))
@@ -129,35 +129,35 @@ class Gaggenau:
         if self.light:
             self.mp[B_Light] = True
 
-    def stop(self):
+    def stop(self) -> None:
         "Teardown"
         self.mp.stop()
         self._fan(1)
         self._light(1)
 
     @property
-    def light(self):
+    def light(self) -> bool:
         "Light state"
         return not self._light()
 
     @light.setter
-    def light(self, val):
+    def light(self, val) -> None:
         "Light state"
         self._light(not val)
         RTC.set_sync("light", val)
 
     @property
-    def fan(self):
+    def fan(self) -> bool:
         "Fan state"
         return not self._fan()
 
     @fan.setter
-    def fan(self, val):
+    def fan(self, val) -> None:
         "Fan state"
         self._fan(not val)
         RTC.set_sync("fan", val)
 
-    def run(self):
+    def run(self) -> None:
         "Run loop"
         try:
             print("* MoaT Herd * Task starts *")
@@ -181,7 +181,7 @@ class Gaggenau:
         b = ticks_us()
         return ticks_diff(b, a)
 
-    def step(self):
+    def step(self) -> None:
         "Run one pass"
         tm = ticks_ms()
         for btn, val in self.mp.changes():

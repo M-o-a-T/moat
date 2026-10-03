@@ -15,7 +15,7 @@ class MalformedPublicKey(BaseException):
     damaged in transit.
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "Public key malformed: fails Legendre symbol verification."
 
 
@@ -24,5 +24,5 @@ class RNGError(BaseException):
     Thrown when RNG could not be obtained.
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "RNG could not be obtained. This module currently only works with Python 3."

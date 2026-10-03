@@ -19,7 +19,7 @@ class _CReader:
     A mix-in that processes incoming console data.
     """
 
-    def __init__(self, cons: bool | int):
+    def __init__(self, cons: bool | int) -> None:
         if cons is True:
             cons = 240 if sys.implementation.name == "micropython" else 32768
         self.cevt = Event()
@@ -44,7 +44,7 @@ class _CReader:
             self.cpos = 0
         return n
 
-    def cput(self, b: int):
+    def cput(self, b: int) -> None:
         """store a byte in the console buffer"""
         if self.cpos == len(self.cbuf):
             if len(self.cbuf) > 100:

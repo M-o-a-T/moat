@@ -41,7 +41,7 @@ class Dbus(CtxObj):
         method if they need to be destroyed before the bus context ends.
         """
 
-    def __init__(self, bus=None):
+    def __init__(self, bus=None) -> None:
         self._bus = bus
 
     @asynccontextmanager
@@ -60,7 +60,7 @@ class Dbus(CtxObj):
     def bus(self):  # noqa: D102
         return self._bus
 
-    async def request_name(self, name):  # noqa: D102
+    async def request_name(self, name) -> None:  # noqa: D102
         await self._bus.request_name(name, NameFlag.DO_NOT_QUEUE)
 
     async def exporter(self, *a, **k):  # noqa: D102
@@ -123,7 +123,7 @@ class Dbus(CtxObj):
 
 # Export ourselves as a D-Bus service.
 class DbusService:  # noqa: D101
-    def __init__(self, bus, servicename):
+    def __init__(self, bus, servicename) -> None:
         # dict containing the DbusItemExport objects, with their path as the key.
         self._dbusobjects = {}
         self._dbusnodes = {}
@@ -140,17 +140,17 @@ class DbusService:  # noqa: D101
         # true property instead, but ach..
         self._servicename = servicename
 
-    async def _start(self):
+    async def _start(self) -> None:
         bus = self._dbusconn
         self._dbusnodes["/"] = r = DbusRootExport(self, "/")
         await bus.export("/", r)
 
-    async def setup_done(self):  # noqa: D102
+    async def setup_done(self) -> None:  # noqa: D102
         bus = self._dbusconn
         self._dbusname = await bus.request_name(self._servicename, NameFlag.DO_NOT_QUEUE)
         logger.info("registered ourselves on D-Bus as %s", self._servicename)
 
-    async def close(self):  # noqa: D102
+    async def close(self) -> None:  # noqa: D102
         bus = self._dbusconn
         await bus.unexport("/", self._dbusnodes["/"])
         await bus.release_name(self._servicename)
@@ -208,7 +208,7 @@ class DbusService:  # noqa: D101
         hardwareversion,
         connected,
         serial,
-    ):
+    ) -> None:
         await self.add_path("/Mgmt/ProcessName", processname)
         await self.add_path("/Mgmt/ProcessVersion", processversion)
         await self.add_path("/Mgmt/Connection", connection)
@@ -231,7 +231,7 @@ class DbusService:  # noqa: D101
 
         return self._onchangecallbacks[path](path, newvalue)
 
-    def _item_deleted(self, path):
+    def _item_deleted(self, path) -> None:
         self._dbusobjects.pop(path)
         for np in list(self._dbusnodes.keys()):
             if np != "/":
@@ -245,14 +245,14 @@ class DbusService:  # noqa: D101
     def __getitem__(self, path):
         return self._dbusobjects[path].get_value()
 
-    async def setitem(self, path, newvalue):  # noqa: D102
+    async def setitem(self, path, newvalue) -> None:  # noqa: D102
         await self._dbusobjects[path].set_value(newvalue)
 
-    async def delitem(self, path):  # noqa: D102
+    async def delitem(self, path) -> None:  # noqa: D102
         await self._dbusobjects[path].close()  # Invalidates and then removes the object path
         assert path not in self._dbusobjects
 
-    def __contains__(self, path):
+    def __contains__(self, path) -> bool:
         return path in self._dbusobjects
 
     async def __aenter__(self):
@@ -267,16 +267,16 @@ class DbusService:  # noqa: D101
 
 
 class ServiceContext:  # noqa: D101
-    def __init__(self, parent):
+    def __init__(self, parent) -> None:
         self.parent = parent
         self.changes = {}
 
-    async def set(self, var, newvalue):  # noqa: D102
+    async def set(self, var, newvalue) -> None:  # noqa: D102
         c = await var._set_value(newvalue)  # noqa: SLF001
         if c is not None:
             self.changes[var._path] = c  # noqa: SLF001
 
-    async def flush(self):  # noqa: D102
+    async def flush(self) -> None:  # noqa: D102
         if self.changes:
             # pylint: disable=protected-access
             await self.parent._dbusnodes["/"].ItemsChanged(self.changes)  # noqa: SLF001
@@ -299,30 +299,30 @@ class DbusRootTracker:
 
     _intf: Any | None = None
 
-    def __init__(self, bus, serviceName):
+    def __init__(self, bus, serviceName) -> None:
         self._bus = bus
         self.importers = defaultdict(weakref.WeakSet)
         self.serviceName = serviceName
 
-    async def _start(self):
+    async def _start(self) -> None:
         obj = await self._bus.get_proxy_object(self.serviceName, "/")
         self._intf = await obj.get_interface(BUSITEM_INTF)
         await self._intf.on_items_changed(self._items_changed_handler)
 
-    async def close(self):  # noqa: D102
+    async def close(self) -> None:  # noqa: D102
         assert self._intf is not None
         await self._intf.off_items_changed(self._items_changed_handler)
         self._intf = None
 
-    def add(self, i):  # noqa: D102
+    def add(self, i) -> None:  # noqa: D102
         self.importers[i.path].add(i)
 
-    def remove(self, i):  # noqa: D102
+    def remove(self, i) -> None:  # noqa: D102
         self.importers[i.path].remove(i)
         # TODO we might want to close up the tracker
         # if the list of importers becomes empty
 
-    async def _items_changed_handler(self, items):
+    async def _items_changed_handler(self, items) -> None:
         if not isinstance(items, dict):
             return
 
@@ -397,7 +397,7 @@ class DbusItemImport:  # noqa: D101
     #                       read a value. When leaving it to True, make sure to also
     #                       subscribe to the NameOwnerChanged signal elsewhere.
     #                       See also note some 15 lines up.
-    def __init__(self, bus, serviceName, path, eventCallback=None, createsignal=True):
+    def __init__(self, bus, serviceName, path, eventCallback=None, createsignal=True) -> None:
         # TODO: is it necessary to store _serviceName and _path? Isn't it
         # stored in the bus_getobjectsomewhere?
         assert eventCallback is None or createsignal
@@ -410,7 +410,7 @@ class DbusItemImport:  # noqa: D101
 
         self._match = False
 
-    async def _start(self):
+    async def _start(self) -> None:
         # TODO: _proxy is being used in settingsdevice.py, make a getter for that
         self._proxy = await self._bus.get_proxy_object(self._serviceName, self._path)
 
@@ -432,7 +432,7 @@ class DbusItemImport:  # noqa: D101
         # None, same as when a value is invalid
         await self.refresh()
 
-    async def close(self):  # noqa: D102
+    async def close(self) -> None:  # noqa: D102
         try:
             r = self._roots[self._serviceName]
         except KeyError:
@@ -447,7 +447,7 @@ class DbusItemImport:  # noqa: D101
         self._proxy = None
         self._interface = None
 
-    async def refresh(self):  # noqa: D102
+    async def refresh(self) -> None:  # noqa: D102
         try:
             assert self._interface is not None
             v = await self._interface.call_get_value()
@@ -493,7 +493,7 @@ class DbusItemImport:  # noqa: D101
         return r
 
     ## Resets the item to its default value
-    async def set_default(self):  # noqa: D102
+    async def set_default(self) -> None:  # noqa: D102
         assert self._interface is not None
         await self._interface.call_set_default()
         await self.refresh()
@@ -521,12 +521,12 @@ class DbusItemImport:  # noqa: D101
         return self._eventCallback
 
     @eventCallback.setter
-    def eventCallback(self, eventCallback):
+    def eventCallback(self, eventCallback) -> None:
         self._eventCallback = eventCallback
 
     ## Is called when the value of the imported bus-item changes.
     # Stores the new value in our local cache, and calls the eventCallback, if set.
-    async def _properties_changed_handler(self, changes):
+    async def _properties_changed_handler(self, changes) -> None:
         if "Value" in changes:
             changes["Value"] = changes["Value"].value
             self._cachedvalue = changes["Value"]
@@ -534,7 +534,7 @@ class DbusItemImport:  # noqa: D101
 
 
 class DbusTreeExport(dbus.ServiceInterface):  # noqa: D101
-    def __init__(self, service, path):
+    def __init__(self, service, path) -> None:
         super().__init__(BUSITEM_INTF)
         self._service = service
         self._path = path
@@ -610,7 +610,7 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
         onchangecallback=None,
         gettextcallback=None,
         deletecallback=None,
-    ):
+    ) -> None:
         super().__init__(BUSITEM_INTF)
 
         self._bus = bus
@@ -622,11 +622,11 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
         self._writeable = writeable
         self._deletecallback = deletecallback
 
-    async def _start(self):
+    async def _start(self) -> None:
         await self._bus.export(self._path, self)
 
     # To force immediate deregistering of this dbus object, explicitly call close().
-    async def close(self):  # noqa: D102
+    async def close(self) -> None:  # noqa: D102
         await self._bus.unexport(self._path, self)
         await call(self._deletecallback, self._path)
         await self.set_value(None)
@@ -636,7 +636,7 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     # will be emitted to the dbus. This function is to be used in the python code that
     # is using this class to export values to the dbus.
     # set value to None to indicate that it is Invalid
-    async def set_value(self, newvalue):  # noqa: D102
+    async def set_value(self, newvalue) -> None:  # noqa: D102
         changes = await self._set_value(newvalue)
         if changes is not None:
             await self.PropertiesChanged(changes)

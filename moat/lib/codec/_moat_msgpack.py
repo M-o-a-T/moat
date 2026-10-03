@@ -29,7 +29,7 @@ ExtType = _msgpack.ExtType
 class Codec(_msgpack.Codec):
     "A MsgPack codec with our extensions"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(ext=std_ext, use_attrdict=True)
 
 

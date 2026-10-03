@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def task(chip: GPIOchip, evt=None):  # noqa:D103
+async def task(chip: GPIOchip, evt=None) -> None:  # noqa:D103
     with gpio.open_chip(label=chip.name) as srv:
         try:
             async with anyio.create_task_group() as tg:

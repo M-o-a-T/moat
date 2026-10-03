@@ -60,7 +60,7 @@ def _estimate_tests(config) -> int | None:
     return sum(1 for n in known if wanted(n))
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser) -> None:
     """Add the ``--longfirst`` option."""
     parser.addoption("--longfirst", action="store_true", help="run slowest tests first")
 
@@ -89,7 +89,7 @@ _new: dict[str, float] = {}
 
 
 @pytest.hookimpl(trylast=True)
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config, items) -> None:
     """Sort the items by descending duration of their previous run."""
     if not config.getoption("longfirst") or getattr(config, "cache", None) is None:
         return
@@ -110,7 +110,7 @@ def pytest_collection_modifyitems(config, items):
         items[:] = [it for k in range(n) for it in items[k::n]]
 
 
-def pytest_runtest_logreport(report):
+def pytest_runtest_logreport(report) -> None:
     """Accumulate setup+call+teardown durations per test.
 
     On the xdist controller this also sees every worker's reports.
@@ -118,7 +118,7 @@ def pytest_runtest_logreport(report):
     _new[report.nodeid] = _new.get(report.nodeid, 0.0) + report.duration
 
 
-def pytest_sessionfinish(session):
+def pytest_sessionfinish(session) -> None:
     """Merge this run's durations into the cache."""
     config = session.config
     if getattr(config, "cache", None) is None or hasattr(config, "workerinput"):

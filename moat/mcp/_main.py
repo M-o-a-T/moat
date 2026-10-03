@@ -11,7 +11,7 @@ from moat.lib.run import load_subgroup
 
 @load_subgroup(prefix="moat.mcp")
 @click.pass_obj
-async def cli(obj):
+async def cli(obj) -> None:
     """
     MCP (Model Context Protocol) server for MoaT.
 
@@ -24,7 +24,7 @@ async def cli(obj):
 @cli.command()
 @click.option("-n", "--name", default="moat", help="Server name announced to MCP clients.")
 @click.pass_obj
-async def stdio(obj, name):
+async def stdio(obj, name) -> None:
     """
     Serve MCP requests over stdin/stdout.
 

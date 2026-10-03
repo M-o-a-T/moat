@@ -77,7 +77,7 @@ class LoopLink(BaseCmd):
     q_rce: anyio.Event
     q_rc: bytearray
 
-    async def setup(self):
+    async def setup(self) -> None:
         """Set up the queues based on usage config."""
         p = self.cfg.get("path", None)
         if isinstance(p, str):

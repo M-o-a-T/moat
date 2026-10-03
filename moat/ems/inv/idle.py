@@ -39,7 +39,7 @@ across all phases.
 """,
     )
 
-    async def run(self):
+    async def run(self) -> None:
         "do the work"
         intf = self.intf
 

@@ -18,7 +18,7 @@ from moat.lib.run import AliasedGroup, option_ng
 @click.group(name="feed", cls=AliasedGroup, short_help="Manage water feeds")
 @click.option("--name", "-n", type=str, default=None, help="Feed name")
 @click.pass_obj
-async def cli(obj, name):
+async def cli(obj, name) -> None:
     """Manage irrigation feeds (water sources)."""
     obj.name = name
 
@@ -52,7 +52,7 @@ def _disabled_kw(disable: bool, enable: bool) -> dict:
 
 @cli.command(name="show")
 @click.pass_obj
-async def show_(obj):
+async def show_(obj) -> None:
     """Show one feed, or list all feeds in this site."""
     if obj.name is None:
         seen = False
@@ -69,7 +69,7 @@ async def show_(obj):
 @cli.command()
 @opts
 @click.pass_obj
-async def add(obj, disable, enable, **kw):
+async def add(obj, disable, enable, **kw) -> None:
     """Add a feed to this site."""
     name = require_name(obj, "feed")
     absent(obj, Feed, "feed", site=site_of(obj), name=name)
@@ -84,7 +84,7 @@ async def add(obj, disable, enable, **kw):
 @cli.command(name="set")
 @opts
 @click.pass_obj
-async def set_(obj, disable, enable, **kw):
+async def set_(obj, disable, enable, **kw) -> None:
     """Modify a feed."""
     name = require_name(obj, "feed")
     f = get_one(obj, Feed, "feed", site=site_of(obj), name=name)
@@ -96,7 +96,7 @@ async def set_(obj, disable, enable, **kw):
 
 @cli.command(name="delete")
 @click.pass_obj
-async def delete_(obj):
+async def delete_(obj) -> None:
     """Remove a feed (valves referencing it are deleted too)."""
     name = require_name(obj, "feed")
     f = get_one(obj, Feed, "feed", site=site_of(obj), name=name)

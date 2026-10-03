@@ -28,7 +28,7 @@ class Plugin(NamedTuple):
 
 
 class BaseContext:  # noqa: D101
-    def __init__(self):
+    def __init__(self) -> None:
         self.config = {}  # compat
         self.logger = None
 
@@ -40,7 +40,7 @@ class PluginManager:
     This plugin manager uses coroutines to run plugin call asynchronously in an event queue
     """
 
-    def __init__(self, tg: anyio.abc.TaskGroup, namespace, context):
+    def __init__(self, tg: anyio.abc.TaskGroup, namespace, context) -> None:
         self._tg = tg
 
         self.logger = logging.getLogger(namespace)
@@ -55,7 +55,7 @@ class PluginManager:
     def app_context(self):  # noqa: D102
         return self.context
 
-    def _load_plugins(self, namespace):
+    def _load_plugins(self, namespace) -> None:
         self.logger.debug("Loading plugins for namespace %s", namespace)
         plugs = self.context.config.get("plugins", None)
         for ep in entry_points(group=namespace):
@@ -90,7 +90,7 @@ class PluginManager:
                 return p
         return None
 
-    async def close(self):
+    async def close(self) -> None:
         """
         Free PluginManager resources and cancel pending event methods
         This method call a close() coroutine for each plugin, allowing plugins to close and free resources
@@ -106,7 +106,7 @@ class PluginManager:
         """
         return self._plugins
 
-    async def fire_event(self, event_name, wait=False, *args, **kwargs):  # pylint: disable=W1113
+    async def fire_event(self, event_name, wait=False, *args, **kwargs) -> None:  # pylint: disable=W1113
         """
         Fire an event to plugins.
         PluginManager schedule async calls for each plugin on method called "on_" + event_name
@@ -128,7 +128,7 @@ class PluginManager:
             else:
                 yield self._tg
 
-        async def _schedule_coro(tg, coro):
+        async def _schedule_coro(tg, coro) -> None:
             if kwargs:
                 coro = partial(coro, **kwargs)
             tg.start_soon(coro, *args)
@@ -160,7 +160,7 @@ class PluginManager:
         :return: dict containing return from coro call for each plugin
         """
 
-        async def worker(plugin):
+        async def worker(plugin) -> None:
             res = await coro(plugin, *args, **kwargs)
             ret_dict[plugin] = res
 

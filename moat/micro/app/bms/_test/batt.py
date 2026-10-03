@@ -28,7 +28,7 @@ class Batt(BaseBattery):
     u_d: float = 1.01
     i: float = 0
 
-    def __init__(self, cfg):
+    def __init__(self, cfg) -> None:
         super().__init__(cfg)
         self._rand = random.Random()
 
@@ -44,7 +44,7 @@ class Batt(BaseBattery):
 
     doc_u_d = dict(_d="write u delta", ud="float:voltage delta")
 
-    async def cmd_u_d(self, *, ud: float):
+    async def cmd_u_d(self, *, ud: float) -> None:
         "change delta of battery vs. sum-of-cells voltage"
         self.u_d = ud
 
@@ -63,7 +63,7 @@ class Batt(BaseBattery):
             self.i = i
         return self.i
 
-    async def feed_energy(self):
+    async def feed_energy(self) -> None:
         s = 100  # ms per loop
         while True:
             await sleep_ms(s)
@@ -76,7 +76,7 @@ class Batt(BaseBattery):
                 rnd = 1 + self._random(r * 2) - r if r > 0 else 1
                 await c.cmd_add_p(p=p * f * rnd, t=s)
 
-    async def start_tasks(self, tg):
+    async def start_tasks(self, tg) -> None:
         await super().start_tasks(tg)
         await tg.spawn(self.feed_energy)
 

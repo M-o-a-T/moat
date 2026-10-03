@@ -83,7 +83,7 @@ class Cmd(_Cmd):
 
     doc_log = dict(_d="call log", _0="str:text", _99="any:params", _k="any:params")
 
-    async def cmd_log(self, *a, **k):
+    async def cmd_log(self, *a, **k) -> None:
         """
         Log parameters.
         """
@@ -91,7 +91,7 @@ class Cmd(_Cmd):
 
     doc_stdout = dict(_d="write stdout", _0="str:text", _99="any:params", _k="any:params")
 
-    async def cmd_stdout(self, *a, **k):
+    async def cmd_stdout(self, *a, **k) -> None:
         """
         Print something to stdout.
 
@@ -101,7 +101,7 @@ class Cmd(_Cmd):
 
     doc_stderr = dict(_d="write stderr", _0="str:text", _99="any:params", _k="any:params")
 
-    async def cmd_stderr(self, *a, **k):
+    async def cmd_stderr(self, *a, **k) -> None:
         """
         Print something to stderr.
         """
@@ -114,7 +114,7 @@ class Cmd(_Cmd):
         _t="int:timeout msec(100)",
     )
 
-    async def cmd_boot(self, code, m=0, t=100):
+    async def cmd_boot(self, code, m=0, t=100) -> bool:
         """
         Reboot MoaT.
 
@@ -134,7 +134,7 @@ class Cmd(_Cmd):
         if code != "SysBooT":
             raise RuntimeError("wrong")
 
-        async def _boot(t):
+        async def _boot(t) -> None:
             await sleep_ms(t)
             if m == 0:
                 raise SystemExit(1)

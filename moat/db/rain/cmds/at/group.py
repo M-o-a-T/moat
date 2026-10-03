@@ -38,7 +38,7 @@ from moat.lib.run import AliasedGroup, option_ng
 @click.group(name="group", cls=AliasedGroup, short_help="Manage valve groups")
 @click.option("--name", "-n", type=str, default=None, help="Group name")
 @click.pass_obj
-async def cli(obj, name):
+async def cli(obj, name) -> None:
     """Manage irrigation valve groups."""
     obj.name = name
 
@@ -95,7 +95,7 @@ def _augmented_dump(g: Group) -> dict:
 
 @cli.command(name="show")
 @click.pass_obj
-async def show_(obj):
+async def show_(obj) -> None:
     """Show one group, or list all groups in this site."""
     if obj.name is None:
         seen = False
@@ -113,7 +113,7 @@ async def show_(obj):
 @opts
 @link_opts
 @click.pass_obj
-async def add(obj, valve_add, valve_rm, day_add, day_rm, xday_add, xday_rm, **kw):
+async def add(obj, valve_add, valve_rm, day_add, day_rm, xday_add, xday_rm, **kw) -> None:
     """Add a group, optionally linking valves and day ranges."""
     name = require_name(obj, "group")
     absent(obj, Group, "group", site=site_of(obj), name=name)
@@ -137,7 +137,7 @@ async def add(obj, valve_add, valve_rm, day_add, day_rm, xday_add, xday_rm, **kw
 @opts
 @link_opts
 @click.pass_obj
-async def set_(obj, valve_add, valve_rm, day_add, day_rm, xday_add, xday_rm, **kw):
+async def set_(obj, valve_add, valve_rm, day_add, day_rm, xday_add, xday_rm, **kw) -> None:
     """Modify a group (scalars, valve links, day-range links)."""
     name = require_name(obj, "group")
     g = get_one(obj, Group, "group", site=site_of(obj), name=name)
@@ -157,7 +157,7 @@ async def set_(obj, valve_add, valve_rm, day_add, day_rm, xday_add, xday_rm, **k
 
 @cli.command(name="delete")
 @click.pass_obj
-async def delete_(obj):
+async def delete_(obj) -> None:
     """Remove a group (and its overrides/adjusters)."""
     name = require_name(obj, "group")
     g = get_one(obj, Group, "group", site=site_of(obj), name=name)
@@ -179,14 +179,14 @@ def _group_of(obj) -> Group:
 @cli.group(name="override", cls=AliasedGroup, short_help="Manage this group's overrides")
 @click.option("--start", "-s", type=str, default=None, help="Override start (ISO timestamp)")
 @click.pass_obj
-async def override_cli(obj, start):
+async def override_cli(obj, start) -> None:
     """Allow or block the group's schedule for a time window."""
     obj.start = start
 
 
 @override_cli.command(name="show")
 @click.pass_obj
-async def override_show(obj):
+async def override_show(obj) -> None:
     """Show one override, or list all overrides of this group."""
     g = _group_of(obj)
     if obj.start is None:
@@ -205,7 +205,7 @@ async def override_show(obj):
 @click.option("--allow", "allow_set", is_flag=True, help="Allow watering in this window")
 @click.option("--no-allow", "allow_clr", is_flag=True, help="Block watering in this window")
 @click.pass_obj
-async def override_add(obj, allow_set, allow_clr, **kw):
+async def override_add(obj, allow_set, allow_clr, **kw) -> None:
     """Add an override to this group."""
     g = _group_of(obj)
     if obj.start is None:
@@ -231,7 +231,7 @@ async def override_add(obj, allow_set, allow_clr, **kw):
 @click.option("--allow", "allow_set", is_flag=True, help="Allow watering in this window")
 @click.option("--no-allow", "allow_clr", is_flag=True, help="Block watering in this window")
 @click.pass_obj
-async def override_set(obj, allow_set, allow_clr, **kw):
+async def override_set(obj, allow_set, allow_clr, **kw) -> None:
     """Modify an override of this group."""
     g = _group_of(obj)
     if obj.start is None:
@@ -245,7 +245,7 @@ async def override_set(obj, allow_set, allow_clr, **kw):
 
 @override_cli.command(name="delete")
 @click.pass_obj
-async def override_delete(obj):
+async def override_delete(obj) -> None:
     """Remove an override from this group."""
     g = _group_of(obj)
     if obj.start is None:
@@ -260,14 +260,14 @@ async def override_delete(obj):
 @cli.group(name="adjust", cls=AliasedGroup, short_help="Manage this group's adjusters")
 @click.option("--start", "-s", type=str, default=None, help="Adjuster start (ISO timestamp)")
 @click.pass_obj
-async def adjust_cli(obj, start):
+async def adjust_cli(obj, start) -> None:
     """Manage dated demand multipliers for this group."""
     obj.start = start
 
 
 @adjust_cli.command(name="show")
 @click.pass_obj
-async def adjust_show(obj):
+async def adjust_show(obj) -> None:
     """Show one adjuster, or list all adjusters of this group."""
     g = _group_of(obj)
     if obj.start is None:
@@ -281,7 +281,7 @@ async def adjust_show(obj):
 @adjust_cli.command(name="add")
 @option_ng("--factor", "-f", type=float, help="Demand multiplier")
 @click.pass_obj
-async def adjust_add(obj, **kw):
+async def adjust_add(obj, **kw) -> None:
     """Add an adjuster to this group."""
     g = _group_of(obj)
     if obj.start is None:
@@ -301,7 +301,7 @@ async def adjust_add(obj, **kw):
 @adjust_cli.command(name="set")
 @option_ng("--factor", "-f", type=float, help="Demand multiplier")
 @click.pass_obj
-async def adjust_set(obj, **kw):
+async def adjust_set(obj, **kw) -> None:
     """Modify an adjuster of this group."""
     g = _group_of(obj)
     if obj.start is None:
@@ -314,7 +314,7 @@ async def adjust_set(obj, **kw):
 
 @adjust_cli.command(name="delete")
 @click.pass_obj
-async def adjust_delete(obj):
+async def adjust_delete(obj) -> None:
     """Remove an adjuster from this group."""
     g = _group_of(obj)
     if obj.start is None:

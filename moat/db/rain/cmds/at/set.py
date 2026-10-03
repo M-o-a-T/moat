@@ -12,7 +12,7 @@ from moat.db.rain.model import Site
 @click.command()
 @site_opts
 @click.pass_obj
-async def cli(obj, **kw):
+async def cli(obj, **kw) -> None:
     """Modify an irrigation site."""
     site = get_one(obj, Site, "site", name=obj.site_name)
     scale_site_rate(kw)

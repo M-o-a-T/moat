@@ -12,7 +12,7 @@ _fm = _gc.mem_free()
 _fa = _gc.mem_alloc()
 
 
-def go(state=None, cmd=True):
+def go(state=None, cmd=True) -> bool | None:
     """
     Start MoaT.
 
@@ -60,7 +60,7 @@ def go(state=None, cmd=True):
 
     import machine  # noqa: PLC0415
 
-    def log(s, *x, err=None):
+    def log(s, *x, err=None) -> None:
         if x:
             s = s % x
         print(s, file=sys.stderr)
@@ -197,6 +197,6 @@ def go(state=None, cmd=True):
         sys.exit(0)
 
 
-def g():
+def g() -> None:
     "shortcut for ``go('once')``"
     go("once")

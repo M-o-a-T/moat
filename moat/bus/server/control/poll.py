@@ -86,25 +86,25 @@ class PollControl(Processor):
 
     CODE = 1
 
-    def __init__(self, server, dkv, interval=100, timeout=5):
+    def __init__(self, server, dkv, interval=100, timeout=5) -> None:
         dkv  # noqa:B018
         self.logger = logging.getLogger(f"{__name__}.{server.my_id}")
         self.interval = interval
         self.timeout = timeout
         super().__init__(server, 0)
 
-    async def setup(self):  # noqa:D102
+    async def setup(self) -> None:  # noqa:D102
         await super().setup()
         await self.spawn(self._poller)
         await self.spawn(self._fwd)
 
-    async def _fwd(self, *, task_status=trio.TASK_STATUS_IGNORED):
+    async def _fwd(self, *, task_status=trio.TASK_STATUS_IGNORED) -> None:
         task_status.started()
         with self.objs.watch() as w:
             async for evt in w:
                 await self.put(evt)
 
-    async def process(self, msg):
+    async def process(self, msg) -> None:
         """Code zero"""
         # All Code-0 messages must include a serial
         aa = aa_record.unpack(msg, logger=self.logger)
@@ -155,14 +155,14 @@ class PollControl(Processor):
     #   elif o.client_id != msg.dest:
     #       await self.q_w.put(OldDevice(obj))
 
-    async def _process_request(self, aa):
+    async def _process_request(self, aa) -> None:
         """
         Control broadcast>broadcast
         AA: request
         """
         serial, flags, timer = aa.serial, aa.flags, aa.t_continue
 
-        async def accept(cid, code=0, timer=0):
+        async def accept(cid, code=0, timer=0) -> None:
             self.logger.info("Accept x%x for %d:%r", code, cid, serial)
             await self.send(
                 src=self.my_id,
@@ -171,7 +171,7 @@ class PollControl(Processor):
                 data=build_aa_data(serial, code, timer),
             )
 
-        async def reject(err, dly=0):
+        async def reject(err, dly=0) -> None:
             self.logger.info("Reject x%x for %r", err, serial)
             await self.send(src=self.my_id, dst=-4, code=0, data=build_aa_data(serial, err, dly))
 
@@ -182,7 +182,7 @@ class PollControl(Processor):
             await self.objs.register(obj)
         if timer:
 
-            async def do_dly(obj):
+            async def do_dly(obj) -> None:
                 await trio.sleep(byte2mini(timer))
                 await accept(obj.client_id, 0)
 
@@ -190,27 +190,27 @@ class PollControl(Processor):
         else:
             await accept(obj.client_id, 0)
 
-    async def _process_inter_server(self, msg):
+    async def _process_inter_server(self, msg) -> None:
         """
         Inter-server sync for AA. Reserved.
         AA: nack
         """
         self.logger.debug("Not implemented: inter-server-sync %r", msg)
 
-    async def _process_nack(self, msg):
+    async def _process_nack(self, msg) -> None:
         """
         Control server>broadcast
         AA: nack
         """
         self.logger.debug("Not implemented: server nack %r", msg)
 
-    async def _process_client_nack(self, msg):
+    async def _process_client_nack(self, msg) -> None:
         """
         Control client>broadcast; NACK by client, addr collision
         """
         self.logger.warning("Not implemented: control_cb %r", msg)
 
-    async def _process_client_reply(self, client, serial, flags, timer):
+    async def _process_client_reply(self, client, serial, flags, timer) -> None:
         """
         Client>server
         """
@@ -250,23 +250,23 @@ class PollControl(Processor):
             await objs.deregister(obj2)
             await objs.register(obj2)
 
-    async def _process_client_reply_mon(self, msg):
+    async def _process_client_reply_mon(self, msg) -> None:
         self.logger.warning("Not implemented: reply_mon %r", msg)
 
-    async def _process_client_direct(self, msg):
+    async def _process_client_direct(self, msg) -> None:
         """
         Control client>client
         """
         self.logger.warning("Not implemented: client_direct %r", msg)
 
-    async def _poller(self, *, task_status=trio.TASK_STATUS_IGNORED):
+    async def _poller(self, *, task_status=trio.TASK_STATUS_IGNORED) -> None:
         task_status.started()
         await trio.sleep(1)
         while True:
             await self._send_poll()
             await trio.sleep(self.interval)
 
-    async def _send_poll(self):
+    async def _send_poll(self) -> None:
         """
         Send a poll request
 

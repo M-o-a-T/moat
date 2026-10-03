@@ -31,7 +31,7 @@ re_oserror = re.compile(r"OSError: (\[Errno )?(\d+)(\] )?")
 re_exceptions = re.compile(r"(ValueError|KeyError|ImportError): (.*)")
 
 
-async def _noop_hook(ser):
+async def _noop_hook(ser) -> None:
     pass
 
 
@@ -62,7 +62,7 @@ class DirectREPL(SingleAnyioBuf):
             raise TypeError(f"Not a serial stream: {ser!r}")
         self.serial = ser
 
-        async def out_():
+        async def out_() -> None:
             ser = self._serial()
             with anyio.fail_after(0.5):
                 await ser.send(b"\x02\x03\x03")
@@ -98,7 +98,7 @@ class DirectREPL(SingleAnyioBuf):
                 await self.exec_raw("print(3)")
         return ser
 
-    async def flush_in(self, timeout=0.1):
+    async def flush_in(self, timeout=0.1) -> None:
         "flush incoming data"
         started = False
         b = b""
@@ -116,7 +116,7 @@ class DirectREPL(SingleAnyioBuf):
             logger.debug("Flush: IN\n%s", b.decode("utf-8"))
         self._srbuf()._buffer = bytearray()  # noqa:SLF001 pylint: disable=protected-access
 
-    def _parse_error(self, text):
+    def _parse_error(self, text) -> None:
         """Read the error message and convert exceptions"""
         lines = text.splitlines()
         if lines[0].startswith("Traceback"):
@@ -201,13 +201,13 @@ class DirectREPL(SingleAnyioBuf):
         """
         return ast.literal_eval(await self.exec(cmd, quiet=quiet))
 
-    async def reset(self):
+    async def reset(self) -> None:
         """
         Send a hard reset command
         """
         await self.exec_raw("import machine; machine.reset()", timeout=0, quiet=False)
 
-    async def soft_reset(self, run_main: bool = True):
+    async def soft_reset(self, run_main: bool = True) -> None:
         """
         :param bool run_main: select if program should be started
 

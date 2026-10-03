@@ -7,10 +7,10 @@ from functools import partial
 
 
 class EventLoggerPlugin:  # noqa: D101
-    def __init__(self, context):
+    def __init__(self, context) -> None:
         self.context = context
 
-    async def log_event(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def log_event(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         self.context.logger.info(
             "### '%s' EVENT FIRED ###",
             kwargs["event_name"].replace("old", ""),
@@ -22,10 +22,10 @@ class EventLoggerPlugin:  # noqa: D101
 
 
 class PacketLoggerPlugin:  # noqa: D101
-    def __init__(self, context):
+    def __init__(self, context) -> None:
         self.context = context
 
-    async def on_mqtt_packet_received(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def on_mqtt_packet_received(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         packet = kwargs.get("packet")
         session = kwargs.get("session")
         if session:
@@ -33,7 +33,7 @@ class PacketLoggerPlugin:  # noqa: D101
         else:
             self.context.logger.debug("<-in-- %r", packet)
 
-    async def on_mqtt_packet_sent(self, *args, **kwargs):  # pylint: disable=unused-argument  # noqa: ARG002, D102
+    async def on_mqtt_packet_sent(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument  # noqa: ARG002, D102
         packet = kwargs.get("packet")
         session = kwargs.get("session")
         if session:

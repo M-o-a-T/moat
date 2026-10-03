@@ -32,7 +32,7 @@ async def dev_poll(
     *,
     this_file: FSPath | None = None,
     task_status=anyio.TASK_STATUS_IGNORED,
-):
+) -> None:
     """
     Run a device task on this set of devices, as configured by the config.
 
@@ -66,7 +66,7 @@ async def dev_poll(
             await dev.load(data=v)
 
             # return await scope.spawn_service(dev.as_scope)
-            async def task(dev: ClientDevice, *, task_status):
+            async def task(dev: ClientDevice, *, task_status) -> None:
                 async with dev:
                     task_status.started(dev)
                     await anyio.sleep_forever()
@@ -98,7 +98,7 @@ async def dev_poll(
 
             srv.add_ignored_unit(*s.get("ignored", ()))
 
-        def do_attach(v, dev):
+        def do_attach(v, dev) -> None:
             p = v.get("server", None)
             if p is None:
                 return
@@ -130,7 +130,7 @@ async def dev_poll(
             # Recursively find all Register objects in the dev.data tree and add them to the unit
             # This ensures transformations are applied when serving
             # Only add if the register doesn't already exist (server registers take precedence)
-            def add_registers(d):
+            def add_registers(d) -> None:
                 from .device import Register  # noqa: PLC0415
 
                 if isinstance(d, Register):

@@ -74,12 +74,12 @@ class RetryCmd(BaseFwdCmd):
             await app.wait_ready()
         return await super().handle(*a, **k)
 
-    async def reload(self):
+    async def reload(self) -> None:
         """Reload configuration."""
         self._load()
         await super().reload()
 
-    def _load(self):
+    def _load(self) -> None:
         self.retry = self.cfg.get("retry", 0)
         self.timeout = self.cfg.get("timeout", 100)
         self.always = self.cfg.get("always", False)
@@ -107,7 +107,7 @@ class RetryCmd(BaseFwdCmd):
 
             return res
 
-    async def run_app(self):
+    async def run_app(self) -> None:
         """
         Runs the sub-app and handles restarting and error shielding.
         """

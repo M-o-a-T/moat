@@ -40,7 +40,7 @@ positive = inverter, negaive = charger.
 """,
     )
 
-    async def run(self):
+    async def run(self) -> None:
         "do the work"
         intf = self.intf
 

@@ -49,7 +49,7 @@ def _make_out_device(srv: XKNX, addr: GroupAddress, mode: str, name: str):
     if mode == "binary":
         sw = Switch(**args)
 
-        async def set_val(dev, val):
+        async def set_val(dev, val) -> None:
             if val:
                 await dev.set_on()
             else:
@@ -59,7 +59,7 @@ def _make_out_device(srv: XKNX, addr: GroupAddress, mode: str, name: str):
 
     dev = ExposeSensor(value_type=mode, **args)
 
-    async def set_val(dev, val):
+    async def set_val(dev, val) -> None:
         await dev.set(val)
 
     return dev, set_val, lambda d: d.sensor_value.value

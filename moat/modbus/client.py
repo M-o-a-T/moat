@@ -36,8 +36,7 @@ __all__ = [
 
 # seconds to wait when disconnecting/reconnecting TCP for different unitID
 DISCONNECT_DELAY = 0.1
-RECONNECT_TIMEOUT = 10
-CHECK_STREAM_TIMEOUT = 0.001
+RECONNECT_TIMEOUT = 30
 
 # RTU inter-frame timeout: if the framer's accumulator is non-empty
 # (a prior handleFrame left used==0 with bytes still buffered) and no
@@ -429,9 +428,22 @@ class Host(HostCommon, CtxObj):
             except Exception:  # pylint: disable=broad-except
                 _logger.exception("Re-Write")
 
+        # Signal readiness immediately: the host context is usable as soon
+        # as the reader task is running.  Actual I/O gates on
+        # ``self._connected`` (see ``send``/``execute``), so callers simply
+        # wait until a connection succeeds.  This keeps the host alive when
+        # the peer is unreachable at startup instead of crashing the daemon
+        # via the ``tg.start(self._reader)`` handshake.
+        if task_status is not None:
+            task_status.started()
+            task_status = None
+
+        reconnect_delay = DISCONNECT_DELAY
+
         while True:
+            connecting = self.stream is None
             try:
-                if self.stream is None:
+                if connecting:
                     with anyio.fail_after(self.timeout):
                         self.stream = await anyio.connect_tcp(self.addr, self.port)
                         # set so_linger to force sending RST instead of FIN
@@ -443,10 +455,9 @@ class Host(HostCommon, CtxObj):
                         # re-send open requests
                         await _send_trans()
                         self._connected.set()
-                        if task_status is not None:
-                            task_status.started()
-                            task_status = None
                     self.framer.resetFrame()
+                    # Up and healthy again: reset the reconnect backoff.
+                    reconnect_delay = DISCONNECT_DELAY
 
                 chunk = await self.stream.receive(4096)
                 # pylint: disable=logging-not-lazy
@@ -469,8 +480,7 @@ class Host(HostCommon, CtxObj):
 
             except (
                 IncompleteRead,
-                ConnectionRefusedError,
-                ConnectionResetError,
+                OSError,  # incl. ConnectionRefused/Reset, host/network/DNS down
                 ClosedResourceError,
                 ModbusIOError,
                 anyio.BrokenResourceError,
@@ -483,6 +493,9 @@ class Host(HostCommon, CtxObj):
                 if t:
                     for req in t.values():
                         req._response_value.set_error(exc)  # noqa: SLF001
+                elif connecting:
+                    # Nothing was pending; the connect itself failed.
+                    _logger.warning("Connect to %s:%d failed: %r", self.addr, self.port, exc)
                 else:
                     _logger.error(
                         "Read from %s:%d: %r (%d)",
@@ -496,8 +509,16 @@ class Host(HostCommon, CtxObj):
                 if s:
                     await s.aclose()
 
-                # delay somewhat, to give the device the chance to reinitialize
-                await anyio.sleep(DISCONNECT_DELAY)
+                # Brief pause after a dropped live connection; exponential
+                # backoff (capped at RECONNECT_TIMEOUT) when the host is
+                # unreachable, so we don't pound a downed gateway.
+                if connecting:
+                    reconnect_delay = min(
+                        RECONNECT_TIMEOUT, max(DISCONNECT_DELAY, 1 + reconnect_delay * 1.3)
+                    )
+                else:
+                    reconnect_delay = DISCONNECT_DELAY
+                await anyio.sleep(reconnect_delay)
 
             except anyio.get_cancelled_exc_class():
                 raise

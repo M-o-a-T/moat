@@ -4,7 +4,9 @@ Basic client/server tests
 
 from __future__ import annotations
 
+import anyio
 import pytest
+import socket
 
 from moat.lib.modbus import ExcCodes, ExceptionResponse
 from moat.modbus.client import ModbusClient, ModbusError, _is_transient
@@ -106,3 +108,37 @@ def test_modbus_error_messages_and_classification():
     # getValues()/readValues() produce.
     nested = ExceptionGroup("outer", [ExceptionGroup("inner", [unit_gone])])
     assert _is_transient(nested)
+
+
+def _dead_port() -> int:
+    """Return a TCP port that nothing is listening on."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+    finally:
+        s.close()
+
+
+@pytest.mark.anyio
+async def test_unreachable_host_backoffs_instead_of_crashing(autojump_clock):  # noqa:ARG001
+    """A host that can't be reached must not crash the client; the reader
+    retries with backoff and the host context stays usable.
+
+    Regression: previously ``connect_tcp`` raised a bare ``OSError`` that
+    escaped ``tg.start(self._reader)`` and tore the whole daemon down.
+    """
+    port = _dead_port()
+    # Entering the host context must succeed even though nothing answers.
+    async with (
+        ModbusClient() as cli,
+        cli.host("127.0.0.1", port, timeout=0.2) as clh,
+    ):
+        assert not clh._connected.is_set()  # noqa:SLF001
+        # Yield so the reader task gets to attempt (and fail) a couple of
+        # connects.  With the autojump clock the backoff sleeps cost nothing.
+        for _ in range(5):
+            await anyio.sleep(0.5)
+        # Still alive, still not connected, still retrying.
+        assert not clh._connected.is_set()  # noqa:SLF001
+    # Exiting the context cleanly proves the host didn't crash mid-flight.

@@ -13,12 +13,12 @@ classifiers = [
 	]
 dependencies = [
 	"moat-util ~= 0.64.0",
-	"moat-db ~= 0.2.7",
+	"moat-db ~= 0.3.1",
 	"moat-db-label ~= 0.0.5",
 	"moat-db-thing ~= 0.0.3",
 	"moat-lib-run ~= 0.2.0",
 	]
-version = "0.0.5"
+version = "0.0.6"
 keywords = [ "MoaT",]
 requires-python = ">=3.11"
 name = "moat-db-box"

@@ -21,7 +21,7 @@ dependencies = [
 	"moat-lib-run ~= 0.2.0",
 	"moat-lib-rpc ~= 0.7.0",
 	]
-version = "0.2.12"
+version = "0.2.13"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-ems"

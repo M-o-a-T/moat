@@ -16,7 +16,7 @@ dependencies = [
         "aiocaldav",
         "moat-lib-config ~= 0.2.0",
 ]
-version = "0.1.10"
+version = "0.1.11"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-cal"

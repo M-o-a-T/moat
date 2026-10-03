@@ -31,7 +31,7 @@ dependencies = [
     "stamina >= 24.2.0",
     "typing-extensions >= 4.0; python_version < '3.11'",
 ]
-version = "0.8.4"
+version = "0.8.5"
 
 [project.urls]
 Documentation = "https://M-o-a-T.org/moat.lib.mqtt"
@@ -43,14 +43,14 @@ websockets = [
     "httpx-ws >= 0.6.0"
 ]
 test = [
-    "moat-lib-mqtt[websockets]",
+    "moat-lib-mqtt[websockets] ~= 0.8.5",
     "anyio[trio]",
     "coverage >= 7",
     "pytest >= 8.0",
 ]
 doc = [
     "enum_tools[sphinx] >= 0.12.0",
-    "moat-lib-mqtt[websockets]",
+    "moat-lib-mqtt[websockets] ~= 0.8.5",
     "packaging",
     "sphinx-autodoc-typehints >= 2.1.1",
     "sphinx-tabs >= 3.3.1",

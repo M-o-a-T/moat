@@ -1,3 +1,9 @@
+moat-kv-knx (0.13.4-1) unstable; urgency=medium
+
+  * New release for 26.4.26
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 03 Oct 2026 12:52:36 +0200
+
 moat-kv-knx (0.13.3-3) unstable; urgency=medium
 
   * New release for 26.4.8

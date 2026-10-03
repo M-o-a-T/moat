@@ -1,3 +1,9 @@
+moat-link-metrics-backend-victoria (0.0.7-1) unstable; urgency=medium
+
+  * New release for 26.4.26
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 03 Oct 2026 12:54:40 +0200
+
 moat-link-metrics-backend-victoria (0.0.6-1) unstable; urgency=medium
 
   * New release for 26.2.13

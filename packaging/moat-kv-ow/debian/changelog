@@ -1,3 +1,9 @@
+moat-kv-ow (0.9.18-1) unstable; urgency=medium
+
+  * New release for 26.4.26
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 03 Oct 2026 12:52:42 +0200
+
 moat-kv-ow (0.9.17-3) unstable; urgency=medium
 
   * New release for 26.4.8

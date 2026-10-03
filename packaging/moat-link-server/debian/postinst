@@ -1,0 +1,55 @@
+#!/bin/sh
+# Post-installation script for moat-link-server
+#
+# Seeds an initial MoaT-Link save file when none exists yet.  The server
+# only starts its background saver once the save directory is present, and a
+# fresh cluster needs seed data to boot; "moat link raw init" provides both.
+set -e
+
+# The service runs as this user/group (see moat-link-server.service).
+SRV_USER=MoaT-Link
+SRV_GROUP=MoaT
+
+# Compiled-in default when the config doesn't say otherwise.
+DEFAULT_SAVE_DIR=/var/lib/moat/link/data
+
+seed_save_dir() {
+    if ! command -v moat >/dev/null 2>&1; then
+        echo "moat-link-server: 'moat' not found; skipping initial save file creation." >&2
+        return 0
+    fi
+
+    # Locate the save directory from the current configuration.
+    SAVE_DIR=$(moat util cfg moat.link.server.save.dir 2>/dev/null || true)
+    if [ -z "$SAVE_DIR" ]; then
+        SAVE_DIR=$DEFAULT_SAVE_DIR
+    fi
+
+    mkdir -p "$SAVE_DIR"
+
+    # Seed only when no save file exists yet.  Files may live in dated
+    # subdirectories (e.g. 2026-01/01/00-00.moat), so search recursively.
+    if find "$SAVE_DIR" -type f -name '*.moat' | grep -q .; then
+        return 0
+    fi
+
+    if moat link raw init ; then
+        :
+    else
+        echo "moat-link-server: could not create initial save file."
+        return 0
+    fi
+
+    # The server (running as $SRV_USER) must be able to write here.
+    chown -R "$SRV_USER":"$SRV_GROUP" "$SAVE_DIR" 2>/dev/null || true
+}
+
+case "$1" in
+    configure)
+        seed_save_dir
+        ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+esac
+
+#DEBHELPER#

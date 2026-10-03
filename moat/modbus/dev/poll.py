@@ -20,14 +20,15 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pathlib import Path as FSPath
 
-    from moat.link.client import HostCommon, Link
+    from moat.link.client import Link
+    from moat.modbus.client import HostCommon
 
 logger = logging.getLogger(__name__)
 
 
 async def dev_poll(
     cfg: dict,
-    link: Link,
+    link: Link | None,
     *,
     this_file: FSPath | None = None,
     task_status=anyio.TASK_STATUS_IGNORED,
@@ -144,10 +145,8 @@ async def dev_poll(
                     register_num = srv_reg if isinstance(srv_reg, int) else d.register
 
                     # Check if this register already exists in the unit
-                    try:
-                        existing = unit_ctx.store[d.reg_type.key].get(register_num + 1)
-                    except (KeyError, AttributeError):
-                        existing = None
+                    store = unit_ctx.store[d.reg_type.key]
+                    existing = None if register_num + 1 not in store else store[register_num + 1]  # noqa:SIM401
 
                     # Only add if it doesn't exist
                     if existing is None:

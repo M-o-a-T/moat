@@ -85,7 +85,8 @@ class ServerUnitContext(UnitContext):
                         slots_to_check.add(slot)
                     else:
                         try:
-                            reg = self.store[reg_type_key].get(offset + 1)
+                            block = self.store[reg_type_key]
+                            reg = block[offset + 1] if offset + 1 in block else None  # noqa:SIM401
                             if reg is not None:
                                 has_unslotted = True
                         except (KeyError, AttributeError):
@@ -115,7 +116,8 @@ class ServerUnitContext(UnitContext):
                             # Register has no slot - update or create it
                             # Note: DataBlock dict keys are 0-indexed (Modbus addresses)
                             try:
-                                server_reg = self.store[reg_type_key].get(offset)
+                                block = self.store[reg_type_key]
+                                server_reg = block[offset] if offset in block else None  # noqa:SIM401
                                 if server_reg is not None:
                                     # Register exists, update it
                                     server_reg.decode([val])

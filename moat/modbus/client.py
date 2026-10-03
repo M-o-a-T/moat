@@ -9,7 +9,7 @@ import logging
 import socket
 import struct
 from anyio import ClosedResourceError, IncompleteRead
-from anyio.abc import SocketAttribute
+from anyio.abc import ByteStream, CancelScope, SocketAttribute, TaskGroup
 from contextlib import asynccontextmanager, suppress
 from functools import partial
 from pathlib import Path as FSPath
@@ -20,12 +20,17 @@ from moat.util.exc import exc_iter, ungroup
 
 from .types import MAX_REQ_LEN, BaseValue, DataBlock, TypeCodec
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-try:
+if TYPE_CHECKING:
     from anyio_serial import Serial
-except ImportError:
-    Serial = None
+
+    from collections.abc import Callable
+else:
+    try:
+        from anyio_serial import Serial
+    except ImportError:
+        Serial = None  # type:ignore[invalid-assignment]
 
 _logger = logging.getLogger(__name__)
 
@@ -52,7 +57,7 @@ class ModbusClient(CtxObj):
         ...
     """
 
-    _tg = None
+    _tg: TaskGroup | None = None
 
     def __init__(self):
         self.hosts = {}
@@ -90,6 +95,7 @@ class ModbusClient(CtxObj):
         """Run a TCP client in a background task."""
         if not port:
             port = 502
+        assert self._tg is not None
         return await self._tg.start(self._host, addr, port)
 
     def serial(self, /, port, **ser):
@@ -107,6 +113,7 @@ class ModbusClient(CtxObj):
 
     async def serial_service(self, port, **ser):
         """Run a serial client in a background task."""
+        assert self._tg is not None
         return await self._tg.start(self._serial, port, ser)
 
     def conn(self, cfg):
@@ -247,11 +254,18 @@ def _log_read_error(slot, exc: BaseException, *, backoff: bool) -> None:
 
 
 class HostCommon:
-    stream = None
+    stream: ByteStream | None = None
     framer: FramerTCP | FramerRTU  # set by subclasses in __init__
+    _tg: TaskGroup | None = None
+    _read_scope: CancelScope | None = None
 
-    def _trace(*_x):
-        return None  # overridden
+    def _nextTID(self) -> int:
+        raise NotImplementedError
+
+    async def _reader(self, *, task_status) -> None:
+        raise NotImplementedError
+
+    _trace: Callable[..., None] = staticmethod(lambda *_x: None)  # overridden per-host
 
     def __init__(self, gate, timeout, cap):
         self.gate = gate
@@ -284,6 +298,7 @@ class HostCommon:
     async def unit_scope(self, unit):
         """Run a unit in an `AsyncScope`"""
         # return await scope.service(f"MH_{num2id(self)}:{unit}", self._unit, unit)
+        assert self._tg is not None
         return await self._tg.start(self._unit, unit)
 
     @property
@@ -321,6 +336,7 @@ class HostCommon:
         packet = self.framer.buildFrame(msg)
         await self._connected.wait()
         async with self._send_lock:
+            assert self.stream is not None
             await self.stream.send(packet)
 
     async def execute(self, request):
@@ -422,6 +438,7 @@ class Host(HostCommon, CtxObj):
                 for request in tr:
                     packet = self.framer.buildFrame(request)
                     async with self._send_lock:
+                        assert self.stream is not None
                         await self.stream.send(packet)
                 if tr:
                     _logger.warning("Resend done")
@@ -558,7 +575,7 @@ class Host(HostCommon, CtxObj):
 
         s, self.stream = self.stream, None
         if s:
-            await s.close()
+            await s.aclose()
 
 
 class SerialHost(HostCommon, CtxObj):
@@ -844,17 +861,17 @@ class Slot(CtxObj):
     for possible collation.
     """
 
-    _get_scope = None
-    _set_scope = None
-    delay: float = None
-    t_read = None
-    _scope = None
+    _get_scope: CancelScope | None = None
+    _set_scope: CancelScope | None = None
+    delay: float | None = None
+    t_read: float | None = None
+    _scope: CancelScope | None = None
     _running = False
 
     def __init__(
         self,
-        unit,
-        slot,
+        unit: Unit,
+        slot: str,
         read_delay: float | None = None,
         read_align: bool = False,
         write_delay: float | None = None,
@@ -874,7 +891,7 @@ class Slot(CtxObj):
         self.read_lock = anyio.Lock()
         self.read_trigger = anyio.Event()
 
-        self.run_lock: anyio.Event = None
+        self.run_lock: anyio.Event | None = None
 
         self.modes = {}
         self.mqtt_registers = set()  # Link Registers with dest configured
@@ -957,9 +974,9 @@ class Slot(CtxObj):
 
     async def _stop_run(self):
         if self._get_scope is not None:
-            await self._get_scope.cancel()
+            self._get_scope.cancel()
         if self._set_scope is not None:
-            await self._set_scope.cancel()
+            self._set_scope.cancel()
 
     def close(self):
         """
@@ -1032,6 +1049,7 @@ class Slot(CtxObj):
         Caller must hold self.read_lock.
         """
         if self.age is not None:
+            assert self.t_read is not None
             current_time = anyio.current_time()
             age_threshold = self.t_read + self.age
             if current_time < age_threshold:
@@ -1172,17 +1190,19 @@ class ValueList(DataBlock):
 
     """
 
-    def __init__(self, slot, kind):
+    slot: Slot | None
+
+    def __init__(self, slot: Slot, kind: TypeCodec):
         super().__init__(
             max_rd_len=slot.unit.host.max_rd_len,
             max_wr_len=slot.unit.host.max_wr_len,
         )
         self.slot = slot
-        assert hasattr(kind, "encoder_m")
         self.kind = kind
         self.do_write = anyio.Event()
 
     def trigger_send(self):
+        assert self.slot is not None
         self.slot.trigger_send()
 
     async def readValues(self, *, res=None):
@@ -1210,6 +1230,7 @@ class ValueList(DataBlock):
         """Send one message, decode the reply"""
         if res is None:
             res = {}
+        assert self.slot is not None
         u = self.slot.unit
         msg = self.kind.encoder(address=start, count=length, unit_id=u.unit)
 
@@ -1233,6 +1254,7 @@ class ValueList(DataBlock):
 
     async def writeBlock(self, start, length):
         """encode one message and send it"""
+        assert self.slot is not None
         u = self.slot.unit
         values = []
         off = start
@@ -1259,4 +1281,3 @@ class ValueList(DataBlock):
         if self.slot is None:
             return
         self.slot = None
-        self.values = None

@@ -7,7 +7,7 @@ from __future__ import annotations
 import anyio
 import logging
 import socket
-from anyio.abc import SocketAttribute
+from anyio.abc import ByteStream, SocketAttribute
 from binascii import b2a_hex
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -276,6 +276,8 @@ class SerialModbusServer(BaseModbusServer):
         unit = request.unit_id
         tid = request.transaction_id
 
+        assert self._serial is not None
+
         try:
             if self.broadcast_enable and not request.unit_id:
                 broadcast = True
@@ -352,6 +354,12 @@ class RelayServer:
     """
 
     single = True
+
+    # Provided by the concrete server class this mix-in is combined with
+    # (e.g. :class:`SerialModbusServer`).  Declared here so the attribute
+    # accesses in :meth:`_process` type-check.
+    framer: FramerRTU
+    _serial: ByteStream
 
     def __init__(self, client, *a, **k):
         self._client = client

@@ -9,6 +9,7 @@ import logging
 import struct
 
 from moat.lib.modbus.pdu import (
+    PDU,
     ReadCoilsRequest,
     ReadCoilsResponse,
     ReadDiscreteInputsRequest,
@@ -27,14 +28,21 @@ from moat.lib.modbus.pdu import (
     WriteSingleRegisterResponse,
 )
 
+from typing import TYPE_CHECKING, TypeVar
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 MAX_REQ_LEN = 30
 
 logger = logging.getLogger(__name__)
 
 
-def _singleton(x):
-    x = x()
-    return x
+_T = TypeVar("_T")
+
+
+def _singleton(cls: type[_T]) -> _T:
+    return cls()
 
 
 class BaseValue:
@@ -49,8 +57,8 @@ class BaseValue:
     _value = None
     _changed = False  # Set when value changes on read, for MQTT notification
     gen = 0
-    block: DataBlock = None
-    to_write: int = None
+    block: DataBlock | None = None
+    to_write: int | None = None
 
     def __init__(self, value=None, *, offset=None, idem=True):
         self.changed = anyio.Event()
@@ -75,7 +83,7 @@ class BaseValue:
         return self._value
 
     @value.setter
-    def value(self, val: float):
+    def value(self, val: float | None):
         "sets the value that's read from the bus"
         self._value = self._constrain(val)
 
@@ -154,7 +162,7 @@ class BaseValue:
         return ValueIterator(self)
 
 
-class _Signed:
+class _Signed(BaseValue):
     """A mix-in for signed integers."""
 
     # pylint: disable=no-member,abstract-method
@@ -171,7 +179,7 @@ class _Signed:
         return super()._encode(value)
 
 
-class _Swapped:
+class _Swapped(BaseValue):
     """A mix-in to byteswap the Modbus data."""
 
     # pylint: disable=no-member,abstract-method
@@ -412,6 +420,14 @@ class TypeCodec:
 
     typ = None
     acc = None
+    key: str
+    # Request/response PDU factories; set by the concrete subclasses.
+    encoder: Callable[..., PDU]
+    decoder: Callable[..., PDU]
+    encoder_s: Callable[..., PDU]
+    decoder_s: Callable[..., PDU]
+    encoder_m: Callable[..., PDU]
+    decoder_m: Callable[..., PDU]
 
     def __repr__(self):
         return self.__class__.__name__

@@ -40,11 +40,13 @@ def main(info, fn, fo):  # noqa: D103
         next(r)  # heading
         for r in csv.reader(f, dialect=csv.excel_tab):
             p = P(r[4].lower())
-            pa = p[1].split("_")
+            seg = p[1]
+            assert isinstance(seg, str)
+            pa = seg.split("_")
             if pa[0] in ("i", "sw", "o", "do", "di"):
                 p = P(p[0]) + Path.build(pa) + p[2:]
             elif pa[0] in ("alarme", "anlage", "modbus"):
-                pa = p[1].split("_", 1)
+                pa = seg.split("_", 1)
                 p = P(p[0]) + Path.build(pa) + p[2:]
             if r[8] in ("system_yes_no_t", "system_ein_aus_t"):
                 tt = "bit"

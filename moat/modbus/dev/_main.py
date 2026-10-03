@@ -28,7 +28,7 @@ def cli():
 @cli.command()
 @click.option("-r", "--raw", is_flag=True, help="don't postprocess")
 @click.option("-R", "--no-refs", is_flag=True, help="don't process references")
-@click.argument("path", type=click.Path("r"))
+@click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=FSPath))
 def dump(path, raw, no_refs):
     """Dump a postprocessed file"""
     path = FSPath(path)

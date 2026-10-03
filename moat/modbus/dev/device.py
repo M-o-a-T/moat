@@ -16,13 +16,20 @@ from moat.util import CtxObj, attrdict, combine_dict, merge, yload
 from moat.lib.path import P, Path
 from moat.modbus.server import UnitContext
 from moat.modbus.typemap import get_kind, get_type2
-from moat.modbus.types import Coils, DiscreteInputs, InputRegisters, IntValue, LongValue
+from moat.modbus.types import (
+    BaseValue,
+    Coils,
+    DiscreteInputs,
+    InputRegisters,
+    IntValue,
+    LongValue,
+)
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.modbus.client import Host, ModbusClient, SerialHost, Slot, Unit
+    from moat.modbus.client import HostCommon, ModbusClient, Slot, Unit
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +80,8 @@ def fixup_i(d, this_file=None):
             elif not isinstance(inc, list):
                 inc = [inc]
             for i, dd in enumerate(inc):
+                if not isinstance(dd, str):
+                    raise TypeError(f"include: not a path: {dd!r}")
                 candidates = [_data / dd]
                 if this_file is not None:
                     candidates.append(this_file.parent / dd)
@@ -199,7 +208,7 @@ def fixup_(
     return d
 
 
-class Register:
+class Register(BaseValue):
     """A single modbus device's register.
 
     This class duck-types as a moat.modbus.types.BaseValue."""
@@ -207,15 +216,15 @@ class Register:
     last_gen = -1
     block = None
 
-    def __init__(self, d: dict, path, unit=None):
+    def __init__(self, d: attrdict, path, unit=None):
         try:
-            self.reg_type = get_kind(d.reg_type)
-        except AttributeError:
+            self.reg_type = get_kind(d["reg_type"])
+        except KeyError:
             self.reg_type = InputRegisters
 
         try:
-            s = d.type
-        except AttributeError:
+            s = d["type"]
+        except KeyError:
             if self.reg_type is DiscreteInputs or self.reg_type is Coils:
                 s = "bit"
             else:
@@ -227,8 +236,8 @@ class Register:
                 raise RuntimeError(f"Coils/Discretes must be BitValue, at {path}")
 
         try:
-            ln = d.len
-        except AttributeError:
+            ln = d["len"]
+        except KeyError:
             if s in {"bit", "invbit", "int", "uint"}:
                 ln = 1
             elif s == "float":
@@ -238,10 +247,10 @@ class Register:
 
         self.reg = get_type2(s, ln)()
 
-        self.register = d.register
+        self.register = d["register"]
 
         if "slot" in d and unit is not None:
-            slot = unit.slot(d.slot)
+            slot = unit.slot(d["slot"])
             try:
                 slot.add(self.reg_type, offset=self.register, cls=self.reg)
             except ValueError:
@@ -255,7 +264,7 @@ class Register:
 
         # Handle const parameter - set initial value if it's a scalar
         if "const" in d:
-            const_val = d.const
+            const_val = d["const"]
             # If const is a scalar, set it as the value
             # If it's a Path, it will be handled by link.py
             if not isinstance(const_val, Path):
@@ -321,7 +330,7 @@ class Register:
         try:
             return self.__encode()
         except (ValueError, TypeError) as exc:
-            logger.error("Encode: %r: %r", self.data.src, exc)
+            logger.error("Encode: %r: %r", self.data["src"], exc)
             raise
 
     def __encode(self):
@@ -398,9 +407,9 @@ class BaseDevice:
     registers, e.g. with different storage backends.
     """
 
-    data: attrdict = None
-    cfg: attrdict = None
-    cfg_path: FSPath = None
+    data: attrdict | None = None
+    cfg: attrdict | None = None
+    cfg_path: FSPath | None = None
 
     def __init__(self, factory=Register):
         self.factory = factory
@@ -412,21 +421,23 @@ class BaseDevice:
 
         if path is None:
             d = attrdict()
+            fpath: FSPath | None = None
         else:
-            path = _data / path
-            d = yload(path, attr=True)
+            fpath = _data / path
+            d = yload(fpath, attr=True)
         if data is not None:
             d = merge(d, data)
         self.cfg = d
-        self.cfg_path = path
+        self.cfg_path = fpath
 
     def get(self, path: Path):
         """Fetch the register at a subpath.
 
         Raises an error if there's no register there.
         """
+        assert self.data is not None
         dev = self.data._get(path)  # pylint: disable=protected-access  # noqa: SLF001
-        if not isinstance(dev, Register):
+        if dev is None or not isinstance(dev, Register):
             raise NotARegisterError(path)
         return dev
 
@@ -436,12 +447,12 @@ class ClientDevice(CtxObj, BaseDevice):
     A client device, i.e. one that mirrors some Modbus master's unit
     """
 
-    unit: Unit = None
+    unit: Unit | None = None
 
     def __init__(
         self,
         client: ModbusClient,
-        host: Host | SerialHost,
+        host: HostCommon,
         factory: type = Register,
     ):
         super().__init__(factory)
@@ -451,6 +462,7 @@ class ClientDevice(CtxObj, BaseDevice):
     @asynccontextmanager
     async def _ctx(self):
         self.unit = await self.host.unit_scope(self.cfg.src.unit)
+        assert self.unit is not None
         self.data = fixup(self.cfg, root=self.cfg, path=Path(), this_file=self.cfg_path)
         await self.add_slots()
         await self.add_registers()
@@ -464,6 +476,7 @@ class ClientDevice(CtxObj, BaseDevice):
 
     async def add_slots(self):
         """Add configured slots to this instance"""
+        assert self.unit is not None
         if "slots" not in self.data:
             logger.warning("No slots in %r", self)
             return
@@ -474,6 +487,7 @@ class ClientDevice(CtxObj, BaseDevice):
 
     async def add_registers(self):
         """Replace entries w/ register/slot members with Register instances"""
+        assert self.unit is not None
 
         async def a_r(d, path=Path()):
             seen = False
@@ -502,6 +516,7 @@ class ClientDevice(CtxObj, BaseDevice):
     @property
     def slots(self):
         """The slots of this unit"""
+        assert self.unit is not None
         return self.unit.slots
 
     async def update(self, slot: Slot, proc=None):
@@ -528,6 +543,7 @@ class ClientDevice(CtxObj, BaseDevice):
         if task_status is not None:
             task_status.started()
 
+        assert self.unit is not None
         sl = self.unit.slots[slot]
         sl.start()
 
@@ -535,6 +551,7 @@ class ClientDevice(CtxObj, BaseDevice):
 
     async def poll(self, slots: set | None = None, *, task_status=None):
         """Task to periodically poll all slots"""
+        assert self.unit is not None
         if slots is None:
             slots = self.data.slots.keys()
         for slot in slots:

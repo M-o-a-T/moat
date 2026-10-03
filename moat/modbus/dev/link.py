@@ -12,6 +12,13 @@ from moat.lib.path import Path
 
 from .device import Register as BaseRegister
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
+
+    from moat.link.client import Link
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,7 +27,7 @@ class Register(BaseRegister):
     One possibly-complex Modbus register that's mirrored from and/or to MoaT-Link
     """
 
-    def __init__(self, *a, link=None, tg=None, is_server=False, **kw):
+    def __init__(self, *a, link: Link, tg: TaskGroup, is_server: bool = False, **kw):
         super().__init__(*a, **kw)
         self._link = link
         self.tg = tg
@@ -97,14 +104,17 @@ class Register(BaseRegister):
     def dest(self):  # noqa: D102
         return self.data.get("dest")
 
-    def set(self, val):  # noqa: D102
-        self.reg.set(val)
+    def set(self, val: float | None, idem: bool = False) -> None:  # noqa: D102
+        self.reg.set(val, idem=idem)
 
     async def _watch_datablock_changes(self):
         """Wait on DataBlock.changed event and notify if this register changed."""
-        # Wait for register to be added to a DataBlock
+        # The register must have been added to a DataBlock before this watcher
+        # is started (see ServerDevice.add_registers).
+        block = self.block
+        assert block is not None
         while True:
-            await self.block.changed.wait()
+            await block.changed.wait()
             # DataBlock.changed fires for ANY register change
             # Check if this specific register changed
             if self.reg._changed:  # noqa: SLF001  # Flag set by BaseValue.decode

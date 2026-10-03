@@ -1102,7 +1102,7 @@ class Slot(CtxObj):
                         # Exponential backoff, capped at ~1 minute.
                         backoff = min(60, 1 + backoff * 1.5)
                     else:
-                        backoff = 0
+                        raise
                 else:
                     backoff = 0
                     # Only update t_read if we actually read

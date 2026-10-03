@@ -672,3 +672,43 @@ async def test_server_cleanup_integration(cfg: Any, tmp_path: Any) -> None:
     # (the current open one + the anchor).
     moat_files = list(data_dir.rglob("*.moat"))
     assert len(moat_files) <= 2, f"Too many state files: {moat_files}"
+
+
+@pytest.mark.anyio
+async def test_server_snapshot_only(cfg: Any, tmp_path: Any) -> None:
+    """With ``save.incremental: false`` every rotated file is a full snapshot.
+
+    The server must not stream incremental tails between rotations; each
+    file stands alone with header ``mode == "full"``.
+    """
+    from moat.link._test import Scaffold  # noqa: PLC0415
+    from moat.util.dict import combine_dict  # noqa: PLC0415
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    save_cfg = {
+        "dir": str(data_dir),
+        "name": "%Y-%m/%d/%H-%M-%S.moat",
+        "interval": 0.3,
+        "rewrite": 5,  # irrelevant in snapshot-only mode
+        "errors": 10,
+        "keep": [10],
+        "incremental": False,
+    }
+    override = attrdict(link=attrdict(server=attrdict(save=attrdict(**save_cfg))))
+    merged_cfg = combine_dict(override, cfg, cls=attrdict)
+
+    async with Scaffold(merged_cfg, use_servers=True, tempdir=str(tmp_path)) as sf:
+        await sf.server(init={"test": 1})
+        # Let several save cycles run.
+        await anyio.sleep(1.2)
+
+    moat_files = list(data_dir.rglob("*.moat"))
+    assert moat_files, f"No state files in {data_dir}"
+
+    # Snapshot-only mode writes a stand-alone full file at every rotation;
+    # there must be no incremental tails.
+    for fn in moat_files:
+        _ts, mode = await _read_state_header(anyio.Path(fn))
+        assert mode == "full", f"Snapshot-only mode must write 'full' files, got {mode!r} for {fn}"

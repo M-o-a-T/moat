@@ -1847,6 +1847,7 @@ class Server(MsgHandler):
         """
         save = self.cfg.server.save
         dest = anyio.Path(save.dir)
+        incremental = save.incremental
         rewrite = 0
         kw: dict[str, Any] = {}
 
@@ -1856,8 +1857,19 @@ class Server(MsgHandler):
             await self._cleanup_state_files(state_files, save)
 
         prev_fn: anyio.Path | None = None
+        # Snapshot-only mode: an event signaled when the in-flight one-shot
+        # ``save`` finishes, so we can await its completion before rotating
+        # to the next file (lest we read a half-written header).
+        snap_task: anyio.Event | None = None
 
         while True:
+            # In snapshot-only mode the previous snapshot must be finished
+            # before we rotate, lest we read a half-written header.
+            if snap_task is not None:
+                with anyio.move_on_after(5):
+                    await snap_task.wait()
+                snap_task = None
+
             if save.get("use_local_time", False):
                 now = datetime.fromtimestamp(mtime.time(), UTC).astimezone()
             else:
@@ -1876,8 +1888,27 @@ class Server(MsgHandler):
                         break
                     counter += 1
 
-            # Starting the new saver sends a STOP to the previous one.
-            await self.run_saver(path=fn, save_state=rewrite == 0, **kw)
+            if incremental:
+                # Continuous saving: each file starts with a snapshot (every
+                # ``rewrite``-th rotation) and then streams incremental
+                # changes until the next rotation replaces it.
+                #
+                # Starting the new saver sends a STOP to the previous one.
+                await self.run_saver(path=fn, save_state=rewrite == 0, **kw)
+            else:
+                # Snapshot-only saving: write a full snapshot and stop.
+                # No incremental tail; the next rotation writes a fresh
+                # snapshot. ``rewrite`` is meaningless here.
+                snap_done = anyio.Event()
+
+                async def _snap(_fn=fn, _kw=kw, _done=snap_done) -> None:
+                    try:
+                        await self.save(_fn, **_kw)
+                    finally:
+                        _done.set()
+
+                self._tg.start_soon(_snap)
+                snap_task = snap_done
 
             task_status.started()
             task_status = anyio.TASK_STATUS_IGNORED
@@ -1901,8 +1932,11 @@ class Server(MsgHandler):
             prev_fn = fn
 
             await anyio.sleep(save.interval)
-            rewrite = (rewrite or save.rewrite) - 1
-            kw["prev"] = self._name_for_file(fn)
+            if incremental:
+                rewrite = (rewrite or save.rewrite) - 1
+                kw["prev"] = self._name_for_file(fn)
+            else:
+                kw.pop("prev", None)
 
     async def run_saver(self, path: PathType | None, save_state: bool = True, **kw) -> None:
         """

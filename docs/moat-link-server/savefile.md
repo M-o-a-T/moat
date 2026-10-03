@@ -17,6 +17,19 @@ Files are named according to the `link.server.save.name` strftime pattern
 seconds.  Every `link.server.save.rewrite`-th file is a full snapshot; the
 files in between are incremental.
 
+## Snapshots only
+
+By default the server runs in *incremental* mode (`link.server.save.incremental: true`):
+each rotated file starts with a snapshot and then keeps recording every change
+until the next rotation replaces it, producing a mix of full and incremental
+files chained by their `prev` pointer.
+
+Set `link.server.save.incremental: false` to disable continuous change logging.
+The server then writes a stand-alone full snapshot at every rotation and does
+not stream incremental updates in between.  `link.server.save.rewrite` has no
+effect in this mode (every file is a full snapshot), and the files do not
+reference a predecessor.
+
 ## File format
 
 Each file is a stream of CBOR records:

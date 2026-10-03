@@ -5,6 +5,8 @@ save:
   rewrite: 5
   errors: 10  #   unlink error files ZZ
   use_local_time: false
+  incremental: true
+  # False: only save snapshots
   keep:
   - 10
   - 1 day

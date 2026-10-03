@@ -196,14 +196,20 @@ class Path(Sequence[PathElem]):
         if mark:
             warnings.warn("Marking a path is deprecated")
 
-        if _warn and a:
+        if not a:
+            pass
+        elif decoded and isinstance(a[0], RootPath) and prefix is None:
+            prefix = a[0]
+            a = a[1:]
+        elif isinstance(a[0], Path):
+            if len(a) > 1:
+                raise ValueError("Can't build a path this way")
+            a = a[0].as_tuple()
+        elif len(a) != 1 and _warn:
             warnings.warn(
                 "Call 'Path.build(args)', not 'Path(*args)'", DeprecationWarning, stacklevel=2
             )
 
-        if decoded and a and isinstance(a[0], RootPath) and prefix is None:
-            prefix = a[0]
-            a = a[1:]
         for x in a:
             if not isinstance(x, PathElemI):  # pyright:ignore[reportArgumentType]
                 raise TypeError(f"{x!r} cannot be in a path")

@@ -87,7 +87,7 @@ class BaseCmdMsg(BaseCmd):
         prefix.send(Path): Prefix for outgoing messages
 
     If the configuration has an ``auth`` item, this will redirect
-    all messages through a :py.cls:`~moat.lib.rpc.Auth` instance.
+    all messages through a :py:class:`~moat.lib.rpc.Auth` instance.
     """
 
     tg: object | None = None
@@ -249,7 +249,7 @@ class BaseCmdMsg(BaseCmd):
         Args:
             root: The MsgSender to route incoming commands to.
 
-        The stream to use is retrieved by calling :py.meth:`stream`.
+        The stream to use is retrieved by calling :py:meth:`stream`.
         """
         try:
             self.s = await self.stream()

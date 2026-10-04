@@ -1223,6 +1223,9 @@ class Slot(CtxObj):
                     _log_read_error(self, exc, retry=transient)
                     # Record every failure, transient or permanent.
                     await _report_exc(self._link, self.err_path, exc)
+                    # Schedule the next attempt relative to now, so the
+                    # backoff actually delays it.
+                    tn = tn_next
                     if transient:
                         # Exponential backoff, capped at ~1 minute.
                         backoff = min(60, 1 + backoff * 1.5)

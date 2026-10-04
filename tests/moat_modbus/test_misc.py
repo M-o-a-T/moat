@@ -164,3 +164,43 @@ def test_ranges_limited():
     assert list(blk.ranges(lo=11, hi=13)) == [(10, 3)]
     assert list(blk.ranges(lo=1, hi=2)) == [(0, 2)]
     assert list(blk.ranges(lo=3, hi=10)) == []
+
+
+@pytest.mark.anyio
+async def test_repeated_request():
+    """A TCP request retransmitted during or right after its reply is ignored."""
+    async with ModbusServer(address="127.0.0.1", port=0, repeat=0.2) as srv:
+        sru = srv.add_unit(1)
+        sru.add(HoldingRegisters, 10, IntValue(42))
+
+        def req(tid: int, reg: int = 10) -> bytes:
+            return bytes.fromhex(f"{tid:04x}00000006010300{reg:02x}0001")
+
+        async def replies(conn) -> list[int]:
+            tids = []
+            with anyio.move_on_after(0.1):
+                buf = b""
+                while True:
+                    buf += await conn.receive()
+                    while len(buf) >= 11:
+                        tids.append(int.from_bytes(buf[0:2], "big"))
+                        buf = buf[11:]
+            return tids
+
+        async with await anyio.connect_tcp("127.0.0.1", srv.port) as conn:
+            # overlapping retransmission
+            await conn.send(req(1) + req(1))
+            assert await replies(conn) == [1]
+
+            # retransmission right after the reply
+            await conn.send(req(1))
+            assert await replies(conn) == []
+
+            # same request, new transaction ID: not a retransmission
+            await conn.send(req(2) + req(3) + req(3, 11))
+            assert await replies(conn) == [2, 3, 3]
+
+            # retransmission after the window
+            await anyio.sleep(0.2)
+            await conn.send(req(3, 11))
+            assert await replies(conn) == [3]

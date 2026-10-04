@@ -98,7 +98,14 @@ server:
           ...
     ignored:            # Units to silently ignore
       - 99
+    repeat: 2           # see below
 ```
+
+Some broken clients re-send a request on the same TCP connection, with
+the same transaction ID, when they think it has timed out. Such a
+retransmission is ignored if it arrives while the original is being
+processed, or less than `repeat` seconds (default: 2) after the reply
+has been sent.
 
 ### Unit Configuration
 

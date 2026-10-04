@@ -260,12 +260,14 @@ class SerialModbusServer(BaseModbusServer):
                     self.framer.resetFrame()
                 t = t2
                 msgs: list[PDU] = []
+                # The framer buffers its input: feed new data only once.
+                feed = bytes(data)
                 while True:
-                    used, pdu = self.framer.handleFrame(bytes(data))
-                    data = data[used:]
+                    _used, pdu = self.framer.handleFrame(feed)
                     if pdu is None:
                         break
                     msgs.append(pdu)
+                    feed = b""
 
                 for msg in msgs:
                     with anyio.fail_after(2):
@@ -392,17 +394,23 @@ class ModbusServer(BaseModbusServer):
     :param identity: An optional identity structure
     :param address: An optional address to bind to.
     :param port: the TCP port to listen on.
+    :param repeat: A request that's identical to the previous one on the
+        same connection, including the transaction ID, is a retransmission
+        by a broken client. It is ignored if it arrives while the original
+        is being processed, or within this many seconds after its reply has
+        been sent.
     """
 
     taskgroup = None
     single = False
 
-    def __init__(self, identity=None, address=None, port=None) -> None:
+    def __init__(self, identity=None, address=None, port=None, repeat: float = 2.0) -> None:
         super().__init__(identity=identity)
 
         self.framer_cls = FramerTCP
         self.address = address or "localhost"
         self.port = port if port is not None else 502
+        self.repeat = repeat
 
     async def serve(self, opened: anyio.Event | None = None) -> None:
         """Run this server.
@@ -434,28 +442,37 @@ class ModbusServer(BaseModbusServer):
     async def _serve_one(self, conn) -> None:
         reset_frame = False
         framer = FramerTCP(True)
+        last_req: tuple[int, int, bytes] | None = None
+        t_last = 0.0
 
         while True:
             try:
                 data = await conn.receive(4096)
                 if data == b"":
                     break
+                t_rcv = anyio.current_time()
                 if _logger.isEnabledFor(logging.DEBUG):
                     _logger.debug(  # pylint: disable=logging-not-lazy
                         "Handling data: " + b2a_hex(data).decode(),  # noqa:G003
                     )
 
                 reqs: list[PDU] = []
+                # The framer buffers its input: feed new data only once.
+                feed = bytes(data)
                 while True:
-                    used, pdu = framer.handleFrame(bytes(data))
-                    data = data[used:]
+                    _used, pdu = framer.handleFrame(feed)
                     if pdu is None:
                         break
                     reqs.append(pdu)
+                    feed = b""
 
                 for request in reqs:
                     unit = request.unit_id
                     tid = request.transaction_id
+                    key = (unit, tid, request.encode_frame())
+                    if key == last_req and t_rcv - t_last < self.repeat:
+                        _logger.info("Ignored repeated request: unit %d tid %d", unit, tid)
+                        continue
                     try:
                         with ungroup:
                             response = await self.process_request(request)
@@ -480,6 +497,8 @@ class ModbusServer(BaseModbusServer):
                     if _logger.isEnabledFor(logging.DEBUG):
                         _logger.debug("send: %s", b2a_hex(pdu))
                     await conn.send(pdu)
+                    last_req = key
+                    t_last = anyio.current_time()
 
             except TimeoutError as msg:
                 _logger.debug("Socket timeout occurred: %r", msg)

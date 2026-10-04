@@ -4,13 +4,15 @@ Device file handling, with a basic multi-device client
 
 from __future__ import annotations
 
+import anyio
 import logging
 from contextlib import nullcontext
+from functools import partial
 from pathlib import Path as FSPath
 
 import asyncclick as click
 
-from moat.util import yload, yprint
+from moat.util import as_service, yload, yprint
 from moat.lib.run import AliasedGroup
 
 from .device import fixup
@@ -43,7 +45,10 @@ def dump(path, raw, no_refs) -> None:
 @click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=FSPath))
 @click.pass_context
 async def poll(ctx, path) -> None:
-    """Poll Modbus devices as directed via YAML."""
+    """Poll Modbus devices as directed via YAML.
+
+    Readiness is signalled to systemd as soon as the servers are running.
+    """
     obj = ctx.obj
 
     with path.open("r") as f:
@@ -57,5 +62,5 @@ async def poll(ctx, path) -> None:
     else:
         ln_ctx = nullcontext(None)
 
-    async with ln_ctx as mt_ln:
-        await dev_poll(cfg, link=mt_ln, this_file=path)
+    async with ln_ctx as mt_ln, as_service(obj) as srv:
+        await dev_poll (cfg, link=mt_ln, this_file=path, task_status=srv)

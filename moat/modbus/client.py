@@ -653,7 +653,7 @@ class SerialHost(HostCommon, CtxObj):
         gate,
         /,
         port,
-        timeout=10,
+        timeout=0.5,
         debug=False,
         monitor=None,
         max_rd_len=MAX_REQ_LEN,

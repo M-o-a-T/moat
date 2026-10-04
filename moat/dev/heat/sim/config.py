@@ -37,6 +37,7 @@ class _Cfg:
         """Build an instance, recursing into nested config classes."""
         if not data:
             return cls()
+        assert is_dataclass(cls)
         kw = {}
         ftypes = {f.name: f for f in fields(cls)}
         for k, v in data.items():

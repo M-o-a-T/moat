@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import os
 from anyio import ContextManagerMixin
-from contextlib import contextmanager, suppress
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import IntEnum
 
 from moat.api._dll import DLL
 
-from typing import TYPE_CHECKING, Protocol, Self, cast, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, Self, runtime_checkable
 
 if TYPE_CHECKING:
     from cffi import FFI
@@ -559,8 +559,8 @@ class BMV080(ContextManagerMixin):
         status = self._lib.bmv080_get_sensor_id(self._handle, id_buf)
         self._check_status(status)
         res = self._ffi.string(id_buf)
-        with suppress(AttributeError):
-            res = cast(bytes, res).decode("ascii")
+        if isinstance(res, bytes):
+            res = res.decode("ascii")
         return res
 
     def set_parameter(self, key: str, value: bool | float | str) -> None:
@@ -672,8 +672,8 @@ class BMV080(ContextManagerMixin):
         status = self._lib.bmv080_get_parameter(self._handle, key_bytes, val_ptr)
         self._check_status(status)
         res = self._ffi.string(val_ptr)
-        with suppress(AttributeError):
-            res = cast(bytes, res).decode("utf-8", errors="surrogateescape")
+        if isinstance(res, bytes):
+            res = res.decode("utf-8", errors="surrogateescape")
         return res
 
     def start_continuous_measurement(self) -> None:

@@ -56,6 +56,7 @@ async def _cool_down(link: LinkSender, cfg: EmergencyCfg) -> bool:
             return False
         return r_out.value - r_in.value < cfg.stop_delta  # ty:ignore[unsupported-operator]
 
+    result = False
     async with anyio.create_task_group() as tg:
         await tg.start(r_in.run)
         await tg.start(r_out.run)
@@ -65,10 +66,10 @@ async def _cool_down(link: LinkSender, cfg: EmergencyCfg) -> bool:
                     # values change, and they also age
                     with anyio.move_on_after(1):
                         await r_out.wait_changed()
-                return True
-            return False
+                result = True
         finally:
             tg.cancel_scope.cancel()
+    return result
 
 
 async def emergency_shutdown(
@@ -128,5 +129,8 @@ async def emergency_shutdown(
             stop = FlowRequest(mode=FlowMode.OFF, seq=seq + 1)
             await link.d_set(cfg.flow_request, stop.to_link(), retain=True)
     if result == "total_timeout":
-        _logger.error("Emergency shutdown did not finish in %s s", cfg.total_timeout)
+        _logger.error(
+            "Emergency shutdown did not finish in %s s",
+            cfg.total_timeout if cfg else 30,
+        )
     return result

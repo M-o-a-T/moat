@@ -553,12 +553,12 @@ class DbusTreeExport(dbus.ServiceInterface):  # noqa: D101
         return r
 
     @dbus.method()
-    async def GetValue(self) -> DbusType["v"]:  # noqa: D102,F821,UP037
+    async def GetValue(self) -> DbusType["v"]:  # noqa: D102,F821,UP037  # ty: ignore[invalid-type-form]
         value = await self._get_value_handler(self._path)
         return wrap_dbus_value(value)
 
     @dbus.method()
-    async def GetText(self) -> DbusType["v"]:  # noqa: D102,F821,UP037
+    async def GetText(self) -> DbusType["v"]:  # noqa: D102,F821,UP037  # ty: ignore[invalid-type-form]
         value = await self._get_value_handler(self._path, True)
         return wrap_dbus_value(value)
 
@@ -568,11 +568,11 @@ class DbusTreeExport(dbus.ServiceInterface):  # noqa: D101
 
 class DbusRootExport(DbusTreeExport):  # noqa: D101
     @dbus.signal()
-    def ItemsChanged(self, changes) -> DbusType["a{sa{sv}}"]:  # noqa: D102,F722
+    def ItemsChanged(self, changes) -> DbusType["a{sa{sv}}"]:  # noqa: D102,F722  # ty: ignore[invalid-type-form]
         return changes
 
     @dbus.method()
-    async def GetItems(self) -> DbusType["a{sa{sv}}"]:  # noqa: D102,F722
+    async def GetItems(self) -> DbusType["a{sa{sv}}"]:  # noqa: D102,F722  # ty: ignore[invalid-type-form]
         return {
             path: {
                 "Value": wrap_dbus_value(item.get_value()),
@@ -666,7 +666,7 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     # @param value The new value.
     # @return completion-code When successful a 0 is return, and when not a -1 is returned.
     @dbus.method()
-    async def SetValue(self, newvalue: DbusType["v"]) -> DbusType["i"]:  # noqa: D102,F821,UP037
+    async def SetValue(self, newvalue: DbusType["v"]) -> DbusType["i"]:  # noqa: D102,F821,UP037  # ty: ignore[invalid-type-form]
         if not self._writeable:
             return 1  # NOT OK
 
@@ -689,7 +689,7 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     # @param length Lenght of the language string.
     # @return description
     @dbus.method()
-    def GetDescription(self, language: DbusType["s"], length: DbusType["i"]) -> DbusType["s"]:  # noqa: D102,F821,UP037
+    def GetDescription(self, language: DbusType["s"], length: DbusType["i"]) -> DbusType["s"]:  # noqa: D102,F821,UP037  # ty: ignore[invalid-type-form]
         language, length  # noqa: B018
         return self._description if self._description is not None else "No description given"
 
@@ -697,14 +697,14 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     # Returns the value.
     # @return the value when valid, and otherwise an empty array
     @dbus.method()
-    def GetValue(self) -> DbusType["v"]:  # noqa: D102,F821,UP037
+    def GetValue(self) -> DbusType["v"]:  # noqa: D102,F821,UP037  # ty: ignore[invalid-type-form]
         return wrap_dbus_value(self._value)
 
     ## Dbus exported method GetText
     # Returns the value as string of the dbus-object-path.
     # @return text A text-value. '---' when local value is invalid
     @dbus.method()
-    def GetText(self) -> DbusType["s"]:  # noqa: D102,F821,UP037
+    def GetText(self) -> DbusType["s"]:  # noqa: D102,F821,UP037  # ty: ignore[invalid-type-form]
         return self.get_text()
 
     async def get_text(self):  # noqa: D102
@@ -723,7 +723,7 @@ class DbusItemExport(dbus.ServiceInterface):  # noqa: D101
     # Other processes connected to this BusItem object will have subscribed to the
     # event when they want to track our state.
     @dbus.signal()
-    def PropertiesChanged(self, changes) -> DbusType["a{sv}"]:  # noqa: D102,F722
+    def PropertiesChanged(self, changes) -> DbusType["a{sv}"]:  # noqa: D102,F722  # ty: ignore[invalid-type-form]
         return changes
 
 

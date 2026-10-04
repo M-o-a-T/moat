@@ -23,7 +23,7 @@ except ImportError:
     try:
         from systemd.daemon import notify
     except ImportError:
-        notify = None  # ty:ignore[conflicting-declarations]
+        notify = None
 
 
 class RunMsg:

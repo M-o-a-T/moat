@@ -98,7 +98,7 @@ class Cmd(BaseCmd):
         mode = cfg.get("mode", 0)
         bits = cfg.get("bits", 8)
 
-        self._spi = spi = cast("_SpiDevProto", spidev.SpiDev())
+        self._spi = spi = spidev.SpiDev()
         spi.open(bus, dev)
         spi.max_speed_hz = f
         spi.mode = mode

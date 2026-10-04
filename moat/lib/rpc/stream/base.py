@@ -142,7 +142,7 @@ class HandlerStream(MsgHandler):
         # such early internal warnings per link-id and replay them once the
         # link is assembled (see ``msg_in``).
         self._pending: dict[int, list[tuple[list, OptDict, int]]] = {}
-        self._send_q = Queue(9)
+        self._send_q = Queue(9)  # ty: ignore[invalid-assignment]
         self._recv_q = Queue(99)
         self._sender = sender
 
@@ -467,7 +467,7 @@ class HandlerStream(MsgHandler):
             await evt1.wait()
             await evt2.wait()
             if L:
-                self._dly_q = Queue(999)
+                self._dly_q = Queue(999)  # ty: ignore[invalid-assignment]
                 await acm(self._dly_q.close_sender)
                 tg.start_soon(self._dly)
             return self

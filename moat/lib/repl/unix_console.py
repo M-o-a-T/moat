@@ -54,7 +54,7 @@ else:
 try:
     import posix
 except ImportError:
-    posix = None  # ty:ignore[invalid-assignment]
+    posix = None
 
 __all__ = ["UnixConsole"]
 

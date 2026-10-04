@@ -413,7 +413,7 @@ async def install_(cfg, dest: str | anyio.Path | None = None) -> None:
     env["PYTHONPATH"] = str(await anyio.Path.absolute(mydir))
 
     try:
-        if build_tmp:
+        if build_tmp:  # ty: ignore[redundant-condition]
             await (build_tmp).symlink_to(build_dir)
         if board_tmp:
             await run_sync_thread(copytree_fs, str(board_dir), str(board_tmp))
@@ -441,7 +441,7 @@ async def install_(cfg, dest: str | anyio.Path | None = None) -> None:
         )
     finally:
         with anyio.move_on_after(2, shield=True):
-            if build_tmp:
+            if build_tmp:  # ty: ignore[redundant-condition]
                 with suppress(OSError), ungroup:
                     await (portdir / build_tmp).unlink()
             if board_tmp:

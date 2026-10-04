@@ -31,7 +31,9 @@ else:
 # get the current version
 import subprocess
 
-version = subprocess.check_output(["git", "describe"]).decode("utf-8", errors="surrogateescape").strip()
+version = (
+    subprocess.check_output(["git", "describe"]).decode("utf-8", errors="surrogateescape").strip()
+)
 try:
     _idx = version.index("-")
 except IndexError:
@@ -132,7 +134,14 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".ipynb_checkpoints", "**/ARCHITECTURE.md", "**/PLAN*.md"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    ".ipynb_checkpoints",
+    "**/ARCHITECTURE.md",
+    "**/PLAN*.md",
+]
 
 
 # -- Options for HTML output -------------------------------------------------

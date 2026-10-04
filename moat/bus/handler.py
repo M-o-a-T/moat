@@ -123,7 +123,7 @@ class BaseHandler:
     no_backoff: bool
     tries: int = None  # ty:ignore[invalid-assignment]
 
-    last_zero: int | None
+    last_zero: float | None
     flapping: int
 
     state: S

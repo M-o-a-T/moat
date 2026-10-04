@@ -1,5 +1,5 @@
 _:
-  new: 26.4.27
+  new: 26.4.28
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -14,9 +14,10 @@ ext:
     github: M-o-a-T/xknx.git
     rev: bef67394dc9c51328e0e778338e805923d56ced9
 moat:
-  deb: 0.12.4-1
+  deb: 0.12.4-2
   new: 0.12.4
-  pkg: 1
+  pkg: 2
+  pkgrev: 5a08dc9446695e0b470a246a9bff97dfd4a3815a
   pypi: 0.12.4
   rev: 715a75b8dc7ec3a13563b5b9ab7ea4253b69b5be
   tag: 0.12.4
@@ -477,12 +478,12 @@ moat-micro:
   rev: 715a75b8dc7ec3a13563b5b9ab7ea4253b69b5be
   tag: 0.22.4
 moat-modbus:
-  deb: 0.9.10-1
-  new: 0.9.10
+  deb: 0.9.11-1
+  new: 0.9.11
   pkg: 1
   pypi: 0.9.9
-  rev: fbe5ac1dabd6203d90ceda1f6dc405b8723e2690
-  tag: 0.9.10
+  rev: 5a08dc9446695e0b470a246a9bff97dfd4a3815a
+  tag: 0.9.11
 moat-modbus-dev-_data:
   deb: 0.8.9-1
   new: 0.8.9

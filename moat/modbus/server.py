@@ -489,7 +489,7 @@ class ModbusServer(BaseModbusServer):
                 return
             except anyio.get_cancelled_exc_class():
                 raise
-            except anyio.BrokenResourceError:
+            except (anyio.BrokenResourceError, anyio.ClosedResourceError, anyio.EndOfStream):
                 return
             except Exception:  # pylint: disable=broad-except
                 _logger.exception("Server error")

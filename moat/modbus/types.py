@@ -583,13 +583,25 @@ class DataBlock:
         self[offset] = val
         val.block = self
 
-    def ranges(self, changed=False, max_len=MAX_REQ_LEN):
+    def ranges(
+        self,
+        changed: bool = False,
+        max_len: int = MAX_REQ_LEN,
+        lo: int | None = None,
+        hi: int | None = None,
+    ):
         """Iterate over to-be-retrieved/sent range(s).
 
-        If @changed is set, skip unmodified items.
+        Args:
+            changed: skip unmodified items.
+            max_len: maximum length of a single range.
+            lo: skip items that end at or before this offset.
+            hi: skip items that start at or after this offset.
         """
         start, cur = None, None
         for offset, val in sorted(self.items()):
+            if (lo is not None and offset + val.len <= lo) or (hi is not None and offset >= hi):
+                continue
             if isinstance(val, InaccessibleValue):
                 if start is not None:
                     yield (start, cur - start)

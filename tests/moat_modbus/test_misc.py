@@ -11,7 +11,14 @@ import socket
 from moat.lib.modbus import ExcCodes, ExceptionResponse
 from moat.modbus.client import ModbusClient, ModbusError, _is_transient
 from moat.modbus.server import ModbusServer
-from moat.modbus.types import FloatValue, HoldingRegisters, LongValue, StringValue
+from moat.modbus.types import (
+    DataBlock,
+    FloatValue,
+    HoldingRegisters,
+    IntValue,
+    LongValue,
+    StringValue,
+)
 from moat.util.exc import exc_iter
 
 
@@ -142,3 +149,18 @@ async def test_unreachable_host_backoffs_instead_of_crashing(autojump_clock):  #
         # Still alive, still not connected, still retrying.
         assert not clh._connected.is_set()  # noqa:SLF001
     # Exiting the context cleanly proves the host didn't crash mid-flight.
+
+
+def test_ranges_limited():
+    """`DataBlock.ranges` only covers values overlapping the requested range."""
+    blk = DataBlock()
+    blk.add(0, LongValue())
+    blk.add(2, IntValue())
+    blk.add(10, FloatValue())
+    blk.add(12, IntValue())
+    blk.add(20, IntValue())
+
+    assert list(blk.ranges()) == [(0, 3), (10, 3), (20, 1)]
+    assert list(blk.ranges(lo=11, hi=13)) == [(10, 3)]
+    assert list(blk.ranges(lo=1, hi=2)) == [(0, 2)]
+    assert list(blk.ranges(lo=3, hi=10)) == []

@@ -1095,6 +1095,19 @@ class Slot(CtxObj):
         finally:
             self._get_scope = None
 
+    async def read_range(self, kind: str, start: int, count: int) -> None:
+        """Read those of this slot's values that overlap a register range.
+
+        Args:
+            kind: the register type key (``c``, ``d``, ``i``, ``h``).
+            start: the first register to read.
+            count: the number of registers to read.
+        """
+        async with anyio.create_task_group() as tg:
+            for typ, vl in self.modes.items():
+                if typ.key == kind:
+                    tg.start_soon(partial(vl.readValues, lo=start, hi=start + count))
+
     async def setValues(self, changed=False) -> None:
         """
         Send a message writing the values in this block to the bus.
@@ -1297,16 +1310,21 @@ class ValueList(DataBlock):
         assert self.slot is not None
         self.slot.trigger_send()
 
-    async def readValues(self, *, res=None):
+    async def readValues(self, *, res=None, lo: int | None = None, hi: int | None = None):
         """
         Send messages reading these values to the bus.
+
+        Args:
+            res: dict to store the results in.
+            lo: only read values that end after this offset.
+            hi: only read values that start before this offset.
 
         Returns a (offset,value) dict.
         """
         if res is None:
             res = {}
         async with anyio.create_task_group() as tg:
-            for start, length in self.ranges(max_len=self.max_rd_len):
+            for start, length in self.ranges(max_len=self.max_rd_len, lo=lo, hi=hi):
                 tg.start_soon(partial(self.readBlock, start, length, res=res))
         return res
 

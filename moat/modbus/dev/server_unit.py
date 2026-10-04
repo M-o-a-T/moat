@@ -46,6 +46,8 @@ class ServerUnitContext(UnitContext):
         slots_to_check = set()
         # Track if we found any unslotted registers
         has_unslotted = False
+        # The register range being read
+        reg_type_key, address, count = "", 0, 0
 
         # Handle read operations
         if function_code in (1, 2, 3, 4):  # Read Coils, Discrete, Holding, Input
@@ -79,6 +81,7 @@ class ServerUnitContext(UnitContext):
 
             if read_address is not None and read_count > 0:
                 reg_type_key = "h"  # Always holding registers for FC23
+                address, count = read_address, read_count
                 for offset in range(read_address, read_address + read_count):
                     slot = self._slot_cache.get((reg_type_key, offset))
                     if slot is not None:
@@ -149,12 +152,13 @@ class ServerUnitContext(UnitContext):
                 should_read = False
 
                 if slot.read_delay is None:
-                    # On-demand read (no periodic task)
-                    should_read = True
+                    # On-demand read (no periodic task): fetch only the
+                    # requested registers, not the whole slot.
                     logger.debug(
                         "Server request triggered on-demand read for %s (no read_delay)",
                         slot,
                     )
+                    await slot.read_range(reg_type_key, address, count)
                 elif slot.age is not None:
                     # Age-based refresh for periodically-read slots
                     current_time = anyio.current_time()

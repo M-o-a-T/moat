@@ -23,7 +23,7 @@ name = "moat-ems-inv"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.md"
-version = "0.2.18"
+version = "0.2.19"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

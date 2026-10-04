@@ -29,6 +29,7 @@ dependencies = [
     "asyncwebsockets",
     "cffi",
     "cryptography",
+    "cysystemd",
     "fpdf2",
     "gitpython",
     "httpx",

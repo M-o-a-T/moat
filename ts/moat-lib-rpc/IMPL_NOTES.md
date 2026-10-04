@@ -42,6 +42,7 @@ def i_f2wire(id, flag):
         id -= 1
     return (id << 2) | (flag & 3)
 
+
 def wire2i_f(w):
     f = w & 3
     id = w >> 2
@@ -279,11 +280,11 @@ when the class is known, or a `DProxy` when unknown.
 The originator maintains three tiers of free-ID sets (`HandlerStream.__init__`):
 
 ```python
-self._id1: set[int] = set()       # ids < 6
+self._id1: set[int] = set()  # ids < 6
 if L:
-    self._id2: set[int] = set()   # ids < 64 (L build only)
-self._id3: set[int] = set()       # rest
-self._id = 0                      # monotonic counter
+    self._id2: set[int] = set()  # ids < 64 (L build only)
+self._id3: set[int] = set()  # rest
+self._id = 0  # monotonic counter
 ```
 
 **Allocation** (`_gen_id`): allocate from the smallest tier first:
@@ -581,7 +582,7 @@ async def handle(self, msg: Msg, rcmd: list[PathElem]):
     if not rcmd:
         if not msg.can_stream and (cmd := getattr(self, "cmd", None)):
             return await msg.call_simple(cmd)
-        elif (cmd := getattr(self, "stream", None)):
+        elif cmd := getattr(self, "stream", None):
             return await msg.call_stream(cmd)
         else:
             raise ShortCommandError(msg.cmd)
@@ -596,7 +597,7 @@ async def handle(self, msg: Msg, rcmd: list[PathElem]):
     if len(rcmd) == 1:
         if not msg.can_stream and (cmd := getattr(self, f"cmd_{rcmd[0]}", None)):
             return await msg.call_simple(cmd)
-        if (cmd := getattr(self, f"stream_{rcmd[0]}", None)):
+        if cmd := getattr(self, f"stream_{rcmd[0]}", None):
             return await msg.call_stream(cmd)
 
     # 4. Readiness check: "rdy_"
@@ -656,8 +657,7 @@ class MsgSender(BaseMsgHandler):
 
 ```python
 class Caller:
-    def __init__(self, sender, data: tuple[cmd, args, kw], _list=NotGiven):
-        ...
+    def __init__(self, sender, data: tuple[cmd, args, kw], _list=NotGiven): ...
 
     def __await__(self):
         """Direct RPC call: `res = await sender.cmd("foo", 42)`"""
@@ -703,21 +703,21 @@ Returned to callers. Simultaneously a list (positional args) and dict (keywords)
 
 ```python
 class MsgResult(Iterable):
-    _a: Sequence    # positional args (read-only)
-    _kw: dict       # keyword args
+    _a: Sequence  # positional args (read-only)
+    _kw: dict  # keyword args
 
     @property
-    def args(self) -> Sequence: ...     # positional args
+    def args(self) -> Sequence: ...  # positional args
     @property
     def kw(self) -> MutableMapping: ...  # keyword args
 
-    def __getitem__(self, k): ...        # int → args[k], str → kw[k]
-    def __len__(self): ...               # len(positional)
-    def __iter__(self): ...              # iterate positional
+    def __getitem__(self, k): ...  # int → args[k], str → kw[k]
+    def __len__(self): ...  # len(positional)
+    def __iter__(self): ...  # iterate positional
     def get(self, k, default=None): ...  # safe access
-    def keys(self): ...                  # kw keys
-    def values(self): ...                # kw values
-    def items(self): ...                 # kw items
+    def keys(self): ...  # kw keys
+    def values(self): ...  # kw values
+    def items(self): ...  # kw items
 ```
 
 ### 4.6 `HandlerStream` — the sans-IO multiplexer
@@ -726,8 +726,8 @@ class MsgResult(Iterable):
 class HandlerStream(MsgHandler):
     def __init__(self, sender: BaseMsgHandler | None, logger=None):
         self._msgs: dict[int, StreamLink] = {}
-        self._send_q = Queue(9)     # outbound frame queue
-        self._recv_q = Queue(99)    # inbound dispatch queue
+        self._send_q = Queue(9)  # outbound frame queue
+        self._recv_q = Queue(99)  # inbound dispatch queue
         self._sender = sender
         self.closing = True
         # ID pools
@@ -787,8 +787,10 @@ class StreamLink(MsgLink):
 class BaseConnIter:
     async def accept(self) -> Never:
         """Override: accept connections, call self.add_conn(conn)."""
+
     def add_conn(self, c) -> Awaitable:
         return self.q.put(c)
+
     async def __aiter__(self):
         """Yields incoming BaseConn objects."""
 ```
@@ -799,8 +801,7 @@ Concrete implementations: `TcpIter`, `UnixIter`, `WsIter`.
 
 ```python
 class AioStream(HandlerStream):
-    def __init__(self, cmd, stream, codec=None, **kw):
-        ...
+    def __init__(self, cmd, stream, codec=None, **kw): ...
     async def read_stream(self):
         """Read from stream, feed to msg_in."""
         while True:
@@ -808,6 +809,7 @@ class AioStream(HandlerStream):
             codec.feed(buf)
             for msg in codec:
                 await self.msg_in(msg)
+
     async def write_stream(self):
         """Pull from msg_out, write to stream."""
         while True:
@@ -847,10 +849,13 @@ These tie the command tree to a `BaseMsg` stream:
 class BaseListenOneCmd(BaseLayerCmd):
     def listener(self) -> BaseConnIter:
         """Override: return a connection iterator."""
+
     def wrapper(self, conn) -> BaseMsg:
         """Wrap connection in a stream stack (default: serial_stack)."""
+
     async def handler(self, conn):
         """Create ExtCmdMsg, attach, run, wait for stop."""
+
     async def task(self):
         """Accept loop: async for conn in conns: tg.start_soon(handler, conn)."""
 ```

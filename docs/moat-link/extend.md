@@ -51,6 +51,7 @@ link da` resolves to `moat link data` if no ambiguity exists.
 
    ```python
    from moat.lib.config import register as _register
+
    _register(__name__)
    ```
 
@@ -60,6 +61,7 @@ link da` resolves to `moat link data` if no ambiguity exists.
    import asyncclick as click
    from moat.lib.run import AliasedGroup
    from moat.link.client import Link
+
 
    @click.group(cls=AliasedGroup, short_help="Manage MyThing.")
    @click.pass_context
@@ -107,9 +109,11 @@ For typed monitoring, subclass `moat.link.node.Node` and override
 from attrs import define
 from moat.link.node import Node
 
+
 @define
 class MyEntry(Node):
     """One entry."""
+
 
 @define
 class MyRoot(Node):

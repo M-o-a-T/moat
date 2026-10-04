@@ -109,5 +109,5 @@ def gen_ssl(
     )
     if "key" in ctx:
         d = {k: v for k, v in ctx.items()}
-        ctx_.load_cert_chain(d["cert"], d["key"])  # ty:ignore[invalid-argument-type]  # values are str at runtime
+        ctx_.load_cert_chain(d["cert"], d["key"])  # values are str at runtime
     return ctx_

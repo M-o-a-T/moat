@@ -234,9 +234,7 @@ One side must be designated as the server by passing `is_server=True`;
 the other side is the client (the default).
 
 ```python
-async with msg.stream(), rpc_on_rpc(
-    MyHandler(), msg, auth=auth_cfg, is_server=True
-) as cmdo:
+async with msg.stream(), rpc_on_rpc(MyHandler(), msg, auth=auth_cfg, is_server=True) as cmdo:
     # cmdo.auth is now populated
     result = await MsgSender(cmdo).cmd("some_command", ...)
 ```

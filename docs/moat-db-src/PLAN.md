@@ -586,14 +586,25 @@ fixture, async CLI driver wrapping `moat.src.test.run`):
 
 Representative driver calls:
 ```python
-await R("src","list")
-await R("src","add","moat-util","--comment","x")
-await R("src","archive","add","upstream","--rank","1")
-await R("src","branch","add","main")
-await R("src","at","moat-util","remote","add","github",
-        "--role","upstream","--url","https://example/x.git","--default")
-await R("src","at","moat-util","branch","add","devel","--status","ok")
-await R("src","at","nope","list", ee=1)        # unknown SPKG
+await R("src", "list")
+await R("src", "add", "moat-util", "--comment", "x")
+await R("src", "archive", "add", "upstream", "--rank", "1")
+await R("src", "branch", "add", "main")
+await R(
+    "src",
+    "at",
+    "moat-util",
+    "remote",
+    "add",
+    "github",
+    "--role",
+    "upstream",
+    "--url",
+    "https://example/x.git",
+    "--default",
+)
+await R("src", "at", "moat-util", "branch", "add", "devel", "--status", "ok")
+await R("src", "at", "nope", "list", ee=1)  # unknown SPKG
 ```
 
 ---

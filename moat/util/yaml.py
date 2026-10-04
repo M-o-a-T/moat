@@ -50,8 +50,8 @@ if TYPE_CHECKING:
 try:
     from moat.lib.proxy import DProxy, Proxy
 except ImportError:
-    Proxy = None  # ty:ignore[invalid-assignment, misc]  # optional import
-    DProxy = None  # ty:ignore[invalid-assignment, misc]  # optional import
+    Proxy = None  # ty:ignore[misc]  # optional import
+    DProxy = None  # ty:ignore[misc]  # optional import
 
 __all__ = [
     "add_repr",

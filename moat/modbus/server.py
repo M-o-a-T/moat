@@ -231,7 +231,7 @@ class SerialModbusServer(BaseModbusServer):
         self.framer = FramerRTU(True)
 
     async def serve(self, opened=None) -> None:  # noqa: D102
-        from anyio_serial import Serial  # pylint: disable=import-outside-toplevel  # noqa:PLC0415,I001
+        from anyio_serial import Serial  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
         async with Serial(**self.args) as ser:
             self._serial = ser

@@ -420,7 +420,7 @@ class AuthCmdIn(BaseCmd):
                 return await msg.call_stream(self._handle_cmd)
             rcmd.pop()
             name = rcmd.pop()
-            return await cast(_SubAuthType, self.modes[name]).handle(msg, rcmd)
+            return await self.modes[name].handle(msg, rcmd)
 
         pad = self.parent._auth_done  # noqa:SLF001
         if pad is not None:

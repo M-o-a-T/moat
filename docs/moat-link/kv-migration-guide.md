@@ -39,13 +39,16 @@ Example (from ``moat.link.metrics``):
 @define
 class MetricsEntry(Node):
     """One series mapping."""
+
     ...
+
 
 @define
 class MetricsServer(Node):
     def add_child(self, item):
         self._sub[item] = s = MetricsEntry()
         return s
+
 
 @define
 class MetricsRoot(Node):

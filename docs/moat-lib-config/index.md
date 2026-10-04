@@ -34,13 +34,12 @@ from moat.lib.config import CfgStore
 cfg = CfgStore(
     name="myotherapp",
     preload={"debug": True},
-    load_all=False  # Stop after the first config file found
+    load_all=False,  # Stop after the first config file found
 )
 
 # Access values
 database_host = cfg.database.host
 cache_size = cfg["cache"]["size"]
-
 ```
 
 You can use them to replace the `CFG` object's context, e.g. to run two
@@ -58,7 +57,6 @@ with CFG.with_config_(cfg):
 # Access myotherapp's config data
 assert CFG.env.foo.bar == "baz"
 print(CFG.database.host)  # fails if 'myapp.cfg' doesn't contain that
-
 ```
 
 
@@ -297,16 +295,19 @@ JSON mode.
 from moat.lib.config.base import BaseModel
 from moat.lib.path import Path
 
+
 class UnitCfg(BaseModel):
     power_path: Path
     mode_path: Path
+
 
 # YAML config (via from_cfg) requires !P or a list:
 #   power_path: !P heat.s.pump.cmd.power
 #   mode_path: [heat, s, pump, cmd, mode]
 # Direct / JSON validation also accepts a string:
-cfg = UnitCfg(power_path="heat.s.pump.cmd.power",
-              mode_path=Path.build(("heat","s","pump","cmd","mode")))
+cfg = UnitCfg(
+    power_path="heat.s.pump.cmd.power", mode_path=Path.build(("heat", "s", "pump", "cmd", "mode"))
+)
 isinstance(cfg.power_path, Path)  # True
 ```
 
@@ -318,8 +319,8 @@ from a {py:class}`~moat.lib.config.CfgStore` validates without manual
 conversion:
 
 ```python
-sub = CFG.dev.heat.target          # an attrdict
-m = UnitCfg.model_validate(sub)     # nested attrdicts validated too
+sub = CFG.dev.heat.target  # an attrdict
+m = UnitCfg.model_validate(sub)  # nested attrdicts validated too
 ```
 
 ### Loading and live reload

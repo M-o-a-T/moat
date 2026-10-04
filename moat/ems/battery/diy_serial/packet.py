@@ -161,7 +161,7 @@ class PacketHeader:
         "encode me, plus some packets, to a message"
         if not isinstance(pkt, (list, tuple)):
             pkt = [pkt]
-        pkts: list[_Request] = list(pkt)  # ty: ignore[invalid-assignment]
+        pkts: list[_Request] = list(pkt)
         if self.command is None:
             self.command = pkts[0].T
         for p in pkts:

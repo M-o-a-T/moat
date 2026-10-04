@@ -20,15 +20,15 @@ async def pling(line):  # noqa: D103
 
 async def main():  # noqa: D103
     async with anyio.create_task_group() as n:
-        with gpio.Chip(0) as c:
-            with (
-                c.line(19).open(direction=gpio.Direction.OUTPUT) as out_,
-                c.line(20).open(direction=gpio.Direction.INPUT) as in_,
-            ):
-                await n.spawn(pling, out_)
-                while True:
-                    print(in_.value)
-                    await anyio.sleep(0.3)
+        with (
+            gpio.Chip(0) as c,
+            c.line(19).open(direction=gpio.Direction.OUTPUT) as out_,
+            c.line(20).open(direction=gpio.Direction.INPUT) as in_,
+        ):
+            await n.spawn(pling, out_)
+            while True:
+                print(in_.value)
+                await anyio.sleep(0.3)
 
 
 if __name__ == "__main__":

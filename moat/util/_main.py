@@ -296,7 +296,7 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw) -
                     elif isinstance(data, Mapping) and "path" in data:
                         assert isinstance(data, Mapping)
                         d, p = cast(PathShortener, short).short(  # noqa:PLW2901
-                            data["path"]  # ty:ignore[invalid-argument-type]
+                            data["path"]
                         )
                         data["depth"] = d  # ty:ignore[index,invalid-assignment]  # data is Mapping after isinstance check
                         data["path"] = p  # ty:ignore[index,invalid-assignment]  # data is Mapping after isinstance check

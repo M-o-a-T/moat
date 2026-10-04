@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 try:
     from weakref import WeakSet
 except ImportError:
-    WeakSet = set  # ty:ignore[invalid-assignment]
+    WeakSet = set
 
 TData = TypeVar("TData")
 

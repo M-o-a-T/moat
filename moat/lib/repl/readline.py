@@ -585,7 +585,7 @@ def _setup(namespace: Mapping[str, Any]) -> None:
     if not isinstance(namespace, dict):
         namespace = dict(namespace)
     _wrapper.config.module_completer = ModuleCompleter(namespace)
-    _wrapper.config.readline_completer = RLCompleter(namespace).complete  # ty:ignore[invalid-argument-type]
+    _wrapper.config.readline_completer = RLCompleter(namespace).complete
 
     # this is not really what readline.c does.  Better than nothing I guess
     import builtins  # noqa: PLC0415

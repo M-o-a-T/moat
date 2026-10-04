@@ -244,20 +244,20 @@ def _is_transient(exc: BaseException) -> bool:
     return False
 
 
-def _log_read_error(slot, exc: BaseException, *, backoff: bool) -> None:
+def _log_read_error(slot, exc: BaseException, *, retry: bool) -> None:
     """Log a read error, unwrapping exception groups for clarity.
 
     The two nested task groups in :meth:`Slot.getValues`/:meth:`ValueList.readValues`
     wrap a single :class:`ModbusError` in two layers of ``ExceptionGroup``;
     showing those verbatim is useless.  Flatten to the underlying error(s)
-    and report them directly, noting whether we\'ll back off.
+    and report them directly, noting whether the read will be retried.
     """
     errs = list(exc_iter(exc)) or [exc]
     for e in errs:
-        if backoff:
-            _logger.warning("Read error %s (retrying with backoff): %s", slot, e)
+        if retry:
+            _logger.warning("Read error %s (retrying): %r", slot, e)
         else:
-            _logger.error("Read error %s (not retried): %s", slot, e)
+            _logger.error("Read error %s (not retried): %r", slot, e)
 
 
 async def _report_exc(link: LinkSender | None, path: Path, exc: Exception, **kw) -> None:
@@ -1170,7 +1170,7 @@ class Slot(CtxObj):
         try:
             await self.read()
         except Exception as exc:  # pylint:disable=broad-except
-            _log_read_error(self, exc, backoff=False)
+            _log_read_error(self, exc, retry=True)
             await _report_exc(self._link, self.err_path, exc)
         else:
             # Notify MQTT tasks after initial read
@@ -1220,7 +1220,7 @@ class Slot(CtxObj):
                     did_read = await self.read_if_stale()
                 except Exception as exc:  # pylint:disable=broad-except
                     transient = _is_transient(exc)
-                    _log_read_error(self, exc, backoff=transient)
+                    _log_read_error(self, exc, retry=transient)
                     # Record every failure, transient or permanent.
                     await _report_exc(self._link, self.err_path, exc)
                     if transient:

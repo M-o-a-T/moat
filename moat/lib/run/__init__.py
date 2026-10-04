@@ -358,7 +358,7 @@ def process_args(
             if no_path:
                 vv = tuple(vv)
             yield k, vv
-        if proxy_:
+        if proxy_:  # ty: ignore[truthiness-test-of-iterable]
             if Proxy is None:
                 raise ImportError("No Proxy")
             for k, pv in proxy_:
@@ -369,7 +369,7 @@ def process_args(
         for v in args_:
             yield ((None, None), s_eval(str(v)))
 
-    if set_:
+    if set_:  # ty: ignore[truthiness-test-of-iterable]
         dd = data()
     else:
         dd = [(len(k), k, v) for k, v in data()]

@@ -197,7 +197,7 @@ async def server_monitor(obj, force: bool) -> None:
     except KeyError:
         raise click.UsageError(f"Server {name!r} does not exist.") from None
     async with as_service(obj) as srv:
-        await task(obj.conn, obj.cfg, (name,), force=force, crash=True, task_status=srv)
+        await task(obj.conn, obj.cfg, (name,), force=force, crash=True, task_status=srv)  # ty: ignore[invalid-argument-type]
 
 
 # Families, devices, attributes
@@ -427,4 +427,4 @@ async def monitor(obj, servers: tuple[str, ...], force: bool) -> None:
     from .task import task  # noqa: PLC0415
 
     async with as_service(obj) as srv:
-        await task(obj.conn, obj.cfg, servers, force=force, task_status=srv)
+        await task(obj.conn, obj.cfg, servers, force=force, task_status=srv)  # ty: ignore[invalid-argument-type]

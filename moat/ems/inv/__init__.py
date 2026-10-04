@@ -101,7 +101,7 @@ class InvInterface(DbusInterface):
         super().__init__(ctrl.bus, "/Control", "inv")
 
     @method()
-    async def GetModes(self) -> DbusType["as"]:  # noqa:F722
+    async def GetModes(self) -> DbusType["as"]:  # noqa:F722  # ty: ignore[invalid-type-form]
         """
         Return a list of available methods.
         name => (ident#, descr)
@@ -109,7 +109,7 @@ class InvInterface(DbusInterface):
         return [m._name for m in InvControl.MODES.values()]  # noqa:SLF001
 
     @method()
-    async def GetModeInfo(self, mode: DbusType["s"]) -> DbusType["a{ss}"]:  # noqa:F722,UP037,F821
+    async def GetModeInfo(self, mode: DbusType["s"]) -> DbusType["a{ss}"]:  # noqa:F722,UP037,F821  # ty: ignore[invalid-type-form]
         """
         Return information on a specific method
         """
@@ -117,21 +117,21 @@ class InvInterface(DbusInterface):
         return m._doc  # noqa:SLF001
 
     @method()
-    async def SetMode(self, mode: DbusType["s"], args: DbusType["a{sv}"]) -> DbusType["b"]:  # noqa:F722,UP037,F821
+    async def SetMode(self, mode: DbusType["s"], args: DbusType["a{sv}"]) -> DbusType["b"]:  # noqa:F722,UP037,F821  # ty: ignore[invalid-type-form]
         """
         Change the inverter mode, set parameters
         """
         return await self.ctrl.change_mode(mode, unwrap_dbus_dict(args))
 
     @method()
-    async def SetModeParam(self, param: DbusType["s"], value: DbusType["v"]) -> DbusType["b"]:  # noqa:UP037,F821
+    async def SetModeParam(self, param: DbusType["s"], value: DbusType["v"]) -> DbusType["b"]:  # noqa:UP037,F821  # ty: ignore[invalid-type-form]
         """
         Set a specific parameter
         """
         return await self.ctrl.change_mode_param(param, unwrap_dbus_value(value))
 
     @method()
-    async def GetState(self) -> DbusType["a{sv}"]:  # noqa:F722
+    async def GetState(self) -> DbusType["a{sv}"]:  # noqa:F722  # ty: ignore[invalid-type-form]
         """
         Return the state of the current inverter controller.
         """
@@ -473,7 +473,7 @@ class InvControl(BusVars):
         """
         Calculate a running average of the last four battery current values.
         """
-        b_last = [None, None, None, None]
+        b_last: list[Any] = [None, None, None, None]
         while True:
             b_last.pop(0)
             b_last.append(self.i_batt)

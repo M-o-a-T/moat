@@ -56,5 +56,5 @@ async def cli(obj: Any, units: tuple[str, ...]) -> None:
             units or DEFAULT,
             force=bool(units),
             retry=not units,
-            task_status=srv,
+            task_status=srv,  # ty: ignore[invalid-argument-type]
         )

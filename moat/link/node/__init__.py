@@ -415,7 +415,7 @@ class NodeFinder:
                 continue
             yield n, m, sub
 
-    def copy(self) -> Self:
+    def copy(self) -> NodeFinder:
         """
         Create a clone with the current path.
         """

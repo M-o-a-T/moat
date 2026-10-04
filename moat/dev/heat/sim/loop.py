@@ -254,7 +254,7 @@ class ClosedLoop:
         if state is None:
             state = unit.state_model()
         adapter = unit.__new__(unit)
-        adapter.link = None
+        adapter.link = None  # ty: ignore[invalid-assignment]
         readers = adapter.make_inputs(cfg)
         core = adapter.make_core(cfg, state, self.now)
         return self.add_core(unit.name, core, readers, cfg=cfg, state=state, local=unit.local_time)

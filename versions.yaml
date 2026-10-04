@@ -1,5 +1,5 @@
 _:
-  new: 26.4.29
+  new: 26.4.30
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -478,12 +478,12 @@ moat-micro:
   rev: 715a75b8dc7ec3a13563b5b9ab7ea4253b69b5be
   tag: 0.22.4
 moat-modbus:
-  deb: 0.9.11-1
-  new: 0.9.11
+  deb: 0.9.12-1
+  new: 0.9.12
   pkg: 1
-  pypi: 0.9.11
-  rev: 5a08dc9446695e0b470a246a9bff97dfd4a3815a
-  tag: 0.9.11
+  pypi: 0.9.12
+  rev: 45a069e11bcfb94e6da6f924d47a9e1522d53ec8
+  tag: 0.9.12
 moat-modbus-dev-_data:
   deb: 0.8.9-1
   new: 0.8.9

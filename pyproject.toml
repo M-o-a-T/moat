@@ -124,7 +124,7 @@ dev = [
     "smbus3",
     "systemd",
     "transforms3d",
-    "ty == 0.0.75",
+    "ty == 0.0.84",
     "uv",
     "wheel",
 ]

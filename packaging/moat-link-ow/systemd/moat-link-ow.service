@@ -1,7 +1,6 @@
 [Unit]
 Description=MoaT-Link 1-Wire connector
 After=moat-link-server.service
-Requires=moat-link-server.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

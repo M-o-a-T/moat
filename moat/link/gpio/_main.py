@@ -57,9 +57,8 @@ async def list_(obj, path) -> None:
     if len(path) > 3:
         raise click.UsageError("Only up to three path elements (host.chip:pin) allowed")
 
-    async with obj.conn.d_walk(obj.gpio_prefix + path, min_depth=1, max_depth=1) as mon:
-        async for p, _d in mon:
-            print(p[-1], file=obj.stdout)
+    async for p in obj.conn.d_list(obj.gpio_prefix + path):
+        print(p, file=obj.stdout)
 
 
 @cli.command("attr")

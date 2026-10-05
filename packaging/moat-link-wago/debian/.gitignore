@@ -1,8 +1,6 @@
 /files
 /*.log
 /*.debhelper
-/*.debhelper-build-stamp
 /*.substvars
-/debhelper-build-stamp
+/*-stamp
 /moat-link-wago
-/moat-link-wago@.service

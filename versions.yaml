@@ -1,5 +1,5 @@
 _:
-  new: 26.4.34
+  new: 26.4.35
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -380,12 +380,12 @@ moat-link-gate:
   rev: ed7ee39cc0a0899b3ae5af84873dfaafab04063d
   tag: 0.1.2
 moat-link-gpio:
-  deb: 0.2.0-1
-  new: 0.2.0
+  deb: 0.2.1-1
+  new: 0.2.1
   pkg: 1
-  pypi: 0.2.0
-  rev: a44710c2b57ba26fd6346851896f43df6945329a
-  tag: 0.2.0
+  pypi: 0.2.1
+  rev: 43a24d8913b3c444c825ff453ccc3357a098dfc7
+  tag: 0.2.1
 moat-link-ha:
   new: 0.1.0
   pkg: 1

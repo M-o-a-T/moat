@@ -1,3 +1,9 @@
+moat-link-gpio (0.2.1-1) unstable; urgency=medium
+
+  * New release for 26.4.35
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 Oct 2026 15:35:59 +0200
+
 moat-link-gpio (0.2.0-1) unstable; urgency=medium
 
   * New release for 26.4.33

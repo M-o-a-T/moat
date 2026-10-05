@@ -1,0 +1,20 @@
+[Unit]
+Description=MoaT-Link GPIO connector
+After=moat-link-server.service
+
+ConditionFileNotEmpty=/etc/moat/moat.yaml
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat link gpio monitor
+
+EnvironmentFile=-/etc/moat/link.env
+
+TimeoutSec=300
+WatchdogSec=10
+
+Restart=always
+RestartSec=30

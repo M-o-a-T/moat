@@ -4,10 +4,8 @@ Device file handling, with a basic multi-device client
 
 from __future__ import annotations
 
-import anyio
 import logging
 from contextlib import nullcontext
-from functools import partial
 from pathlib import Path as FSPath
 
 import asyncclick as click
@@ -63,4 +61,4 @@ async def poll(ctx, path) -> None:
         ln_ctx = nullcontext(None)
 
     async with ln_ctx as mt_ln, as_service(obj) as srv:
-        await dev_poll (cfg, link=mt_ln, this_file=path, task_status=srv)
+        await dev_poll(cfg, link=mt_ln, this_file=path, task_status=srv)

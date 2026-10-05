@@ -6,5 +6,6 @@ export PYBUILD_NAME=moat-link-gpio
 
 override_dh_auto_install:
 	dh_auto_install
+	mkdir -p debian/moat-link-gpio/usr/lib/systemd/system/
 	install -D -m 644 systemd/*.service \
 		debian/moat-link-gpio/usr/lib/systemd/system/

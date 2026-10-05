@@ -1,5 +1,5 @@
 _:
-  new: 26.4.33
+  new: 26.4.34
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -523,9 +523,9 @@ moat-thing:
   rev: 2694daeade9824dec1a00bba4e6fc3afe35ef4c3
   tag: 0.2.3
 moat-util:
-  deb: 0.64.3-1
-  new: 0.64.3
+  deb: 0.64.4-1
+  new: 0.64.4
   pkg: 1
-  pypi: 0.64.3
-  rev: 92eacfb2c38efd0bb4f610dd37fecaf04b4a9b52
-  tag: 0.64.3
+  pypi: 0.64.4
+  rev: f5266770386937c34541db58d860572e076ed8ed
+  tag: 0.64.4

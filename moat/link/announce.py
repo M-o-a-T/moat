@@ -106,6 +106,7 @@ class SetReady:
     path: Path = field()
     force: bool = field(default=False)
     service_path: Path | None = field(default=None)
+    task_status: TaskStatus[None] | None = field(default=None)
 
     evt: anyio.Event = field(init=False, factory=anyio.Event)
     ready: anyio.Event | None = field(kw_only=True, default=None, repr=False)
@@ -119,6 +120,8 @@ class SetReady:
         if self.up:
             raise RuntimeError("can only start once")
         self.up = True
+        if self.task_status is not None:
+            self.task_status.started()
         self.evt.set()
 
     def started(self, value: Any = None) -> None:
@@ -215,6 +218,7 @@ async def announcing(
     via: anyio.Event | None = None,
     value: Any = None,
     wait: bool = False,
+    task_status: TaskStatus | None = None,
     on_wait: Callable[[str | None], None] | None = None,
 ):
     """
@@ -292,7 +296,7 @@ async def announcing(
                 try:
                     if service:
                         await tg.start(_delegate, service_path, service)
-                    srv = SetReady(link, path, force, service_path)
+                    srv = SetReady(link, path, force, service_path, task_status)
                     if value is not None:
                         srv.value = value
                     await tg.start(srv.monitor)

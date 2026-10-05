@@ -8,17 +8,24 @@ each chip contains integer-numbered lines.
 
 from __future__ import annotations
 
+import anyio
 import contextlib
 import logging
+import platform
 
 import asyncclick as click
 
-from moat.util import attrdict, yprint
+from moat.util import as_service, attrdict, yprint
 from moat.lib.path import P
 from moat.lib.run import AliasedGroup, attr_args
 from moat.link._data import data_get, node_attr
-from moat.link.announce import as_service
+from moat.link.announce import announcing
 from moat.link.client import Link
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from anyio.abc import TaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -167,21 +174,74 @@ async def port(obj, path, typ, mode, attr) -> None:
 
 
 @cli.command("monitor")
-@click.argument("name", nargs=1)
-@click.argument("chip", nargs=1)
+@click.argument("name", nargs=1, required=False)
+@click.argument("chips", nargs=-1)
 @click.pass_obj
-async def monitor(obj, name, chip) -> None:
-    """Stand-alone task to monitor a single GPIO chip.
+async def monitor(obj, name, chips) -> None:
+    """Stand-alone task to monitor GPIO chips.
 
-    The first argument is the host name, the second the chip name.
+    The first argument is the host name; it defaults to this machine's
+    node name.  The remaining arguments are chip names to monitor; if
+    none are given, every chip configured for this host in MoaT-Link is
+    monitored.
+
+    Readiness is signalled to systemd once every chip's announcement has
+    been acquired.  Each chip is announced individually under
+    ``run.host.<host>.gpio.<chip>``.
+
+    \b
+    Announcement flags:
+      no chip named      wait for a competing announcer to go away
+      exactly one chip   replace any existing announcer (force)
+      multiple chips     fail if a chip is already announced
     """
     from .task import task  # noqa: PLC0415
 
-    async with as_service(obj, host=False, wait=True) as srv:
-        await task(
-            obj.conn,
-            obj.gpio_cfg,
-            name,
-            chip,
-            task_status=srv,
-        )
+    if name is None:
+        name = platform.uname().node
+
+    if not chips:
+        chips = [c async for c in obj.conn.d_list(obj.gpio_prefix + P(name))]
+        if not chips:
+            raise click.UsageError(f"No GPIO chips configured for host {name!r}.")
+        wait = True
+        force = False
+    elif len(chips) == 1:
+        wait = False
+        force = True
+    else:
+        wait = False
+        force = False
+
+    async def _run_chip(
+        chip: str,
+        *,
+        task_status: TaskStatus[None],
+    ) -> None:
+        async with (
+            announcing(
+                obj.conn,
+                host=name,
+                name=P("gpio") / chip,
+                force=force,
+                wait=wait,
+                task_status=task_status,
+            ) as ann,
+            obj.conn.e_wrap(P("gpio") / name / chip),
+        ):
+            await task(
+                obj.conn,
+                obj.gpio_cfg,
+                name,
+                chip,
+                task_status=ann,
+            )
+
+    async with (
+        as_service(obj) as srv,
+        anyio.create_task_group() as tg,
+    ):
+        for chip in chips:
+            await tg.start(_run_chip, chip)
+        srv.set()
+        await anyio.sleep_forever()

@@ -50,7 +50,10 @@ async def task(
     prefix = Path.build(cfg["prefix"])
     chip_path = prefix / host_name / chip_name
 
-    chip_data = await link.d_get(chip_path)
+    try:
+        chip_data = await link.d_get(chip_path)
+    except KeyError:
+        chip_data = {}
     if not isinstance(chip_data, dict):
         chip_data = {}
 

@@ -51,7 +51,8 @@ class RunMsg:
     def started(self, value: None = None) -> None:
         """mock task_status.started"""
         if value is not None:
-            raise ValueError("value is ignored")
+            pass
+            # raise ValueError("value is ignored")
         self.set()
 
 

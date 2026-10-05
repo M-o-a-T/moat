@@ -33,7 +33,7 @@ moat link gpio list PATH                    # list the next stage
 moat link gpio attr PATH [-s key value …]   # set/get/delete attributes
 moat link gpio delete PATH                  # delete a port
 moat link gpio port PATH -t TYPE -m MODE [-a NAME VALUE …]  # add/modify
-moat link gpio monitor HOST CHIP             # run the connector
+moat link gpio monitor [HOST [CHIP…]]       # run the connector
 ```
 
 ```{toctree}

@@ -7,6 +7,9 @@ Run through :py:meth:`moat.link._test.Scaffold.run` so the entire
 from __future__ import annotations
 
 import pytest
+import re
+
+import asyncclick as click
 
 import moat.link.gpio  # noqa:F401 - register cfg
 from moat.lib.path import P
@@ -80,3 +83,39 @@ async def test_attr_modify(cfg):
 
         data = await c.d_get(prefix + P("myhost.chip0:7"))
         assert data["low"] is True
+
+
+async def test_monitor_no_chips_unknown_host(cfg):
+    """`monitor` with no chip args discovers chips from the link.
+
+    An unknown host has no chips configured, so the command refuses to
+    start instead of trying to open GPIO hardware.
+    """
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        with pytest.raises(click.UsageError, match="No GPIO chips configured"):
+            await sf.run("link gpio monitor no-such-host")
+        await c.i_sync()
+
+
+async def test_monitor_discovers_named_chips(cfg):
+    """`monitor` with no chip args picks up chips set up via `port`.
+
+    The command proceeds past discovery; with no real GPIO hardware it
+    fails when opening the chip, which we accept as proof that discovery
+    found the configured chip and tried to run it.
+    """
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        await sf.run("link gpio port disc-host.chipA:1 -t input -m read -a dest sensors.x")
+        await c.i_sync()
+
+        with pytest.raises(RuntimeError, match=re.escape("GPIO chip 'chipA' not found")):
+            await sf.run("link gpio monitor disc-host")
+        await c.i_sync()

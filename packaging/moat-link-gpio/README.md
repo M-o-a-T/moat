@@ -29,6 +29,13 @@ directions.  It replaces the legacy ``moat-kv-gpio`` package.
    moat link gpio monitor myhost 0
    ```
 
+   The host name defaults to this machine's node name; omit the chip
+   name(s) to monitor every chip configured for the host:
+
+   ```shell
+   moat link gpio monitor
+   ```
+
 ## Deprecation
 
 This package supersedes ``moat-kv-gpio``.  The address tree now lives in

@@ -1,0 +1,6 @@
+/files
+/*.log
+/*.debhelper
+/*.substvars
+/*-stamp
+/moat-link-gpio

@@ -382,7 +382,7 @@ moat-link-gate:
   rev: ed7ee39cc0a0899b3ae5af84873dfaafab04063d
   tag: 0.1.2
 moat-link-gpio:
-  new: 0.1.1
+  new: 0.2.0
   pkg: 1
   pypi: 0.1.1
   rev: 715a75b8dc7ec3a13563b5b9ab7ea4253b69b5be

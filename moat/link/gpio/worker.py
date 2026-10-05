@@ -381,17 +381,17 @@ async def run_out(
 
     with chip.line(line_num).open(direction=gpio.Direction.OUTPUT) as line:
         if mode == "write":
-            await _with_output(link, line, src, _set_value, state, negate, subpath)
+            await _with_output(link, line, src, _set_value, state, negate)
         elif mode == "oneshot":
             if t_on is None:
                 logger.warning("t_on not set at %s", subpath)
                 return
-            await _with_output(link, line, src, _oneshot_value, state, negate, subpath, t_on)
+            await _with_output(link, line, src, _oneshot_value, state, negate, t_on)
         elif mode == "pulse":
             if t_on is None or t_off is None:
                 logger.warning("t_on/t_off not set at %s", subpath)
                 return
-            await _with_output(link, line, src, _pulse_value, state, negate, subpath, t_on, t_off)
+            await _with_output(link, line, src, _pulse_value, state, negate, t_on, t_off)
         else:
             logger.warning("Unknown output mode %r at %s", mode, subpath)
 
@@ -403,16 +403,18 @@ async def _with_output(
     proc: Any,
     *args: Any,
 ) -> None:
-    """Watch a MoaT-Link source and call *proc* for each value change."""
+    """Watch a MoaT-Link source and call *proc* for each value change.
+
+    Errors raised by *proc* are logged at ``ERROR`` level with a traceback;
+    a :class:`TypeError` typically signals a programmer mistake rather than
+    a transient runtime condition.
+    """
     async with link.d_watch(src, mark=False, state=False) as wp:
         async for val in wp:
             if val is NotGiven:
                 continue
             if val in (False, True, 0, 1):
-                try:
-                    await proc(link, line, bool(val), *args)
-                except Exception as exc:
-                    logger.warning("Output error at %s: %r", src, exc)
+                await proc(link, line, bool(val), *args)
             else:
                 logger.warning("Bad value %r at %s", val, src)
 

@@ -97,7 +97,7 @@ async def task(
 
             runner = run_in if entry.type_ == "in" else run_out
             if initial is None:
-                initial = entry.type_ == "in"
+                initial = entry.data.get("initial", entry.type_ == "in")
 
             async def _run(
                 *,

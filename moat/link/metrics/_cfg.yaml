@@ -2,4 +2,3 @@ prefix: !P metrics
 backend: victoria
 server_default:
   host: localhost
-  port: 8282

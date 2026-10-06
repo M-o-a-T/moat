@@ -1,3 +1,9 @@
+moat-link-knx (0.21.3-1) unstable; urgency=medium
+
+  * New release for 26.4.36
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 Oct 2026 19:50:19 +0200
+
 moat-link-knx (0.21.2-2) unstable; urgency=medium
 
   * New release for 26.4.33

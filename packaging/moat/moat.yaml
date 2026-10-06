@@ -1,9 +1,59 @@
-# Install this file as /etc/moat/moat.yaml
-# to read the old `moat.cfg` file
-$base:
-  - moat: "/etc/moat/moat.cfg"
-  - logging:
-    - "/etc/moat/moat.cfg"
-    - !P logging
+# BUILT BY ANSIBLE
+#
 moat:
-  logging: !R _
+  link:
+    client:
+      init_timeout: 2
+      path: /run/moat/link/socket
+      local_only: false
+    backend:
+      driver: mqtt
+      host: 10.1.1.11
+      port: 1883
+      codec: std-cbor
+    root: !P moat.tld.example
+    # use moat.org.foo, not foo.org
+    main: main-box
+    # hostname of one always-on system
+    server:
+      local_only: false
+      ports:
+        local:
+          port: /run/moat/link/socket
+        main:
+          host: 0.0.0.0
+          port: 27587
+      save:
+        # online data backup
+        incremental: true
+        interval: 900
+        rewrite: 5
+        errors: 3
+        keep:
+        - 5
+        - 1 hr
+        - 5
+        - 1 day
+        - 5
+        - 1 week
+        - 1 month
+        - 15
+        - 1 year
+        - 5
+
+    notify:
+      ntfy:
+        url: "http://ntfy.example.tld"
+        topic: example
+        token: tk_whatever
+      keepalive:
+        msg: "Broken"
+        prio: fatal
+        ok:
+          msg: "OK"
+          prio: info
+
+logging:
+  loggers:
+    transitions:
+      level: WARNING

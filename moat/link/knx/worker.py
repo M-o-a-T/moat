@@ -18,6 +18,8 @@ from moat.lib.xknx.devices import BinarySensor, ExposeSensor, Sensor, Switch
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskStatus
+
     from moat.lib.path import Path
     from moat.lib.xknx import XKNX
     from moat.lib.xknx.telegram import GroupAddress
@@ -73,8 +75,12 @@ async def run_in(
     subpath: Path,
     *,
     initial: bool = False,
+    task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Forward KNX bus telegrams to a MoaT-Link destination.
+
+    Readiness is signalled once the XKNX device is registered (and
+    optionally synced).
 
     Args:
         link: Active MoaT-Link sender.
@@ -83,6 +89,7 @@ async def run_in(
         addr: Group address to listen on.
         subpath: Path of this entry relative to the server (for naming).
         initial: If true, request the current value on startup.
+        task_status: Signalled when the worker is up.
     """
     mode = entry.mode
     dest = entry.dest
@@ -107,6 +114,7 @@ async def run_in(
     try:
         if initial:
             await device.sync()
+        task_status.started()
         while True:
             await evt.wait()
             evt = anyio.Event()
@@ -123,6 +131,7 @@ async def run_out(
     subpath: Path,
     *,
     initial: bool = False,
+    task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Forward MoaT-Link source updates onto the KNX bus.
 
@@ -133,6 +142,8 @@ async def run_out(
     command on startup when other bus actors changed the device state
     in the meantime.
 
+    Readiness is signalled once the source watch is established.
+
     Args:
         link: Active MoaT-Link sender.
         srv: Connected XKNX gateway.
@@ -140,6 +151,7 @@ async def run_out(
         addr: Group address to write on.
         subpath: Path of this entry relative to the server (for naming).
         initial: If true, fetch the current MoaT-Link value on startup.
+        task_status: Signalled when the worker is up.
     """
     mode = entry.mode
     src = entry.src
@@ -155,6 +167,7 @@ async def run_out(
         async with link.d_watch(
             src, meta=True, mark=initial_phase, state=None if initial else False
         ) as wp:
+            task_status.started()
             async for msg in wp:
                 if msg is None:
                     # End of initial-state replay; no more stale-suppression.

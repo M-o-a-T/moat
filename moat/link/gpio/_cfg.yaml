@@ -8,3 +8,12 @@ skip: True      # ignore signals < t_bounce
 t_idle: 1.5     # input/button: max pulse width
 t_clear: 30     # button: set to None after this
 t_bounce: 0.05  # input/button: min pulse width
+
+# Per-line worker retry / back-off. Passed to `LinkSender.retrying`.
+# See `moat.link.client.LinkSender.retrying` for the full key list.
+backoff:
+  initial: 0.5   # delay before the first retry (sec)
+  max: 300       # maximum delay between retries (sec)
+  exp: 1.4       # exponential back-off exponent
+  wait: 30       # time for a worker to reach readiness (sec)
+  up: 5          # sec a worker must stay up before reporting OK

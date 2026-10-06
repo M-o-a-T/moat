@@ -39,8 +39,12 @@ async def run_in(
     card: int,
     port: int,
     subpath: Path,
+    *,
+    task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Forward Wago input changes to a MoaT-Link destination.
+
+    Readiness is signalled once the input monitor is established.
 
     Args:
         link: Active MoaT-Link sender.
@@ -49,6 +53,7 @@ async def run_in(
         card: Card number.
         port: Port number.
         subpath: Path of this entry relative to the server (for naming).
+        task_status: Signalled when the worker is up.
     """
     mode = entry.mode
     dest = entry.dest
@@ -59,6 +64,7 @@ async def run_in(
 
     if mode == "read":
         async with srv.monitor_input(card, port) as mon:
+            task_status.started()
             async for val in mon:
                 await link.d_set(dest, val != rest)
     elif mode == "count":
@@ -72,6 +78,7 @@ async def run_in(
         except KeyError:
             pass
         async with srv.count_input(card, port, direction=direc, interval=intv) as mon:
+            task_status.started()
             async for val in mon:
                 await link.d_set(dest, val + delta)
     else:
@@ -85,8 +92,12 @@ async def run_out(
     card: int,
     port: int,
     subpath: Path,
+    *,
+    task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Forward MoaT-Link source updates to a Wago output.
+
+    Readiness is signalled once the source watch is established.
 
     Args:
         link: Active MoaT-Link sender.
@@ -95,6 +106,7 @@ async def run_out(
         card: Card number.
         port: Port number.
         subpath: Path of this entry relative to the server (for naming).
+        task_status: Signalled when the worker is up.
     """
     mode = entry.mode
     src = entry.src
@@ -106,6 +118,7 @@ async def run_out(
 
     if mode == "write":
         async with link.d_watch(src, mark=False, state=False) as wp:
+            task_status.started()
             async for raw in wp:
                 if raw is NotGiven:
                     continue
@@ -174,6 +187,7 @@ async def run_out(
                 logger.warning("Cannot resume oneshot at %s: %s", subpath, exc)
 
         async with link.d_watch(src, mark=False, state=False) as wp:
+            task_status.started()
             async for val in wp:
                 if not isinstance(val, bool):
                     continue
@@ -253,6 +267,7 @@ async def run_out(
                 logger.warning("Cannot resume pulse at %s: %s", subpath, exc)
 
         async with link.d_watch(src, mark=False, state=False) as wp:
+            task_status.started()
             async for val in wp:
                 if not isinstance(val, bool):
                     continue

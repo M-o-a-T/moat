@@ -30,10 +30,10 @@ if TYPE_CHECKING:
 
     from .client import LinkSender
 
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
     from typing import Any, Unpack
 
-__all__ = ["announcing"]
+__all__ = ["MinReady", "announcing"]
 
 logger = logging.getLogger(__name__)
 
@@ -96,20 +96,14 @@ async def get_service_path(host: Path | str | bool, name: Path | None = None):
 
 
 @define
-class SetReady:
-    """A handler to signal readiness.
+class MinReady:
+    """A minimal handler to signal readiness.
 
     This duck-types `anyio.abc.TaskStatus` and `anyio.Event`.
     """
 
-    link: LinkSender = field()
     path: Path = field()
-    force: bool = field(default=False)
-    service_path: Path | None = field(default=None)
-    task_status: TaskStatus[None] | None = field(default=None)
-
     evt: anyio.Event = field(init=False, factory=anyio.Event)
-    ready: anyio.Event | None = field(kw_only=True, default=None, repr=False)
     up: bool = field(init=False, default=False, repr=False)
     _value: Any = field(kw_only=True, default=None)
 
@@ -120,13 +114,11 @@ class SetReady:
         if self.up:
             raise RuntimeError("can only start once")
         self.up = True
-        if self.task_status is not None:
-            self.task_status.started()
         self.evt.set()
 
     def started(self, value: Any = None) -> None:
         """
-        This mimics `TaskStatus.started`. The value, if any, is added to
+        This mimics :meth:`anyio.abc.TaskStatus.started`. The value, if any, is added to
         the announcement message as its ``value`` item.
         """
         if value is not None:
@@ -135,6 +127,7 @@ class SetReady:
 
     @property
     def value(self) -> Any:
+        "Get the announced value"
         return self._value
 
     @value.setter
@@ -142,6 +135,33 @@ class SetReady:
         "Set the value to announce"
         self._value = value
         self.evt.set()
+
+    def wait(self) -> Awaitable[None]:
+        "wait for readiness"
+        return self.evt.wait()
+
+
+@define
+class SetReady(MinReady):
+    """A handler to signal readiness.
+
+    This duck-types `anyio.abc.TaskStatus` and `anyio.Event`.
+    """
+
+    link: LinkSender = field()
+    force: bool = field(default=False)
+    service_path: Path | None = field(default=None)
+    task_status: TaskStatus[None] | None = field(default=None)
+
+    ready: anyio.Event | None = field(kw_only=True, default=None, repr=False)
+
+    def set(self) -> None:
+        """
+        We started up.
+        """
+        super().set()
+        if self.task_status is not None:
+            self.task_status.started()
 
     async def monitor(self, *, task_status) -> None:
         """
@@ -296,7 +316,13 @@ async def announcing(
                 try:
                     if service:
                         await tg.start(_delegate, service_path, service)
-                    srv = SetReady(link, path, force, service_path, task_status)
+                    srv = SetReady(
+                        link=link,
+                        path=path,
+                        force=force,
+                        service_path=service_path,
+                        task_status=task_status,
+                    )
                     if value is not None:
                         srv.value = value
                     await tg.start(srv.monitor)

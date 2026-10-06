@@ -107,10 +107,22 @@ async def task(
                     workers[p] = sc
                     task_status.started()
                     assert initial is not None  ## typing *sigh*
-                    try:
-                        await runner(link, srv, entry, addr, p, initial=initial)
-                    except Exception:
-                        logger.exception("Worker for %s failed", p)
+
+                    # Retry transient failures with back-off and report
+                    # problems via the link's error subsystem.
+                    # Non-tolerated errors fall through. The worker signals
+                    # readiness once its setup is complete.
+                    await link.retrying(
+                        cfg.get("backoff"),
+                        p,
+                        runner,
+                        link,
+                        srv,
+                        entry,
+                        addr,
+                        p,
+                        initial=initial,
+                    )
 
             await tg.start(_run)
 

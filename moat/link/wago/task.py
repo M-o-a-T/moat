@@ -111,9 +111,22 @@ async def task(
                             workers[p] = sc
                             task_status.started()
                             try:
-                                await runner(link, srv, entry, card, port_num, p)
-                            except Exception:
-                                logger.exception("Worker for %s failed", p)
+                                # Retry transient failures with back-off and
+                                # report problems via the link's error
+                                # subsystem. Non-tolerated errors fall through.
+                                # The worker signals readiness once its setup
+                                # is complete.
+                                await link.retrying(
+                                    cfg.get("backoff"),
+                                    p,
+                                    runner,
+                                    link,
+                                    srv,
+                                    entry,
+                                    card,
+                                    port_num,
+                                    p,
+                                )
                             finally:
                                 if workers.get(p) is sc:
                                     del workers[p]

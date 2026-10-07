@@ -31,13 +31,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _make_in_device(srv: XKNX, addr: GroupAddress, mode: str, name: str, cb):
+def _make_in_device(srv: XKNX, addr: GroupAddress, mode: str, name: str, cb, sync_state: bool):
     """Build the XKNX device used by a ``type=in`` worker."""
     args: dict = dict(
         xknx=srv,
         group_address_state=addr,
         name=name,
         device_updated_cb=cb,
+        sync_state=sync_state,
     )
     if mode == "binary":
         return BinarySensor(ignore_internal_state=True, **args), lambda d: d.is_on()
@@ -45,7 +46,7 @@ def _make_in_device(srv: XKNX, addr: GroupAddress, mode: str, name: str, cb):
     return dev, lambda d: d.sensor_value.value
 
 
-def _make_out_device(srv: XKNX, addr: GroupAddress, mode: str, name: str):
+def _make_out_device(srv: XKNX, addr: GroupAddress, mode: str, name: str, _sync_state: bool):
     """Build the XKNX device used by a ``type=out`` worker."""
     args: dict = dict(xknx=srv, group_address=addr, name=name)
     if mode == "binary":
@@ -74,7 +75,7 @@ async def run_in(
     addr: GroupAddress,
     subpath: Path,
     *,
-    initial: bool = False,
+    sync_state: bool = False,
     task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Forward KNX bus telegrams to a MoaT-Link destination.
@@ -88,7 +89,7 @@ async def run_in(
         entry: Configuration entry for this address.
         addr: Group address to listen on.
         subpath: Path of this entry relative to the server (for naming).
-        initial: If true, request the current value on startup.
+        sync_state: If true, request the current value on startup / every hour.
         task_status: Signalled when the worker is up.
     """
     mode = entry.mode
@@ -109,11 +110,9 @@ async def run_in(
     def _cb(_dev) -> None:
         evt.set()
 
-    device, get_val = _make_in_device(srv, addr, mode, name, _cb)
+    device, get_val = _make_in_device(srv, addr, mode, name, _cb, sync_state)
     srv.devices.async_add(device)
     try:
-        if initial:
-            await device.sync()
         task_status.started()
         while True:
             await evt.wait()
@@ -130,7 +129,7 @@ async def run_out(
     addr: GroupAddress,
     subpath: Path,
     *,
-    initial: bool = False,
+    sync_state: bool = False,
     task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Forward MoaT-Link source updates onto the KNX bus.
@@ -150,7 +149,7 @@ async def run_out(
         entry: Configuration entry for this address.
         addr: Group address to write on.
         subpath: Path of this entry relative to the server (for naming).
-        initial: If true, fetch the current MoaT-Link value on startup.
+        sync_state: If true, fetch the current MoaT-Link value on startup.
         task_status: Signalled when the worker is up.
     """
     mode = entry.mode
@@ -160,17 +159,17 @@ async def run_out(
     state_path = entry.state
 
     name = f"{mode}." + ".".join(str(x) for x in subpath)
-    device, set_val, _get_val = _make_out_device(srv, addr, mode, name)
+    device, set_val, _get_val = _make_out_device(srv, addr, mode, name, sync_state)
     srv.devices.async_add(device)
-    initial_phase = initial and state_path is not None
+    initial_phase = sync_state and state_path is not None
     try:
         async with link.d_watch(
-            src, meta=True, mark=initial_phase, state=None if initial else False
+            src, meta=True, mark=initial_phase, state=None if sync_state else False
         ) as wp:
             task_status.started()
             async for msg in wp:
                 if msg is None:
-                    # End of initial-state replay; no more stale-suppression.
+                    # End of sync_state replay; no more stale-suppression.
                     initial_phase = False
                     continue
                 raw, meta = msg

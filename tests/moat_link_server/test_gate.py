@@ -140,7 +140,7 @@ async def test_gate_kv(cfg, autojump_clock):  # noqa: D103
         cm = await sf.client()
         await sf.tg.start(mon, cm)
 
-        URI = f"mqtt+unix://{sf.cfg.backend.port}"
+        URI = f"mqtt+unix://{sf.cfg.backend.path}"
 
         async def mock_get_host_port(kvs, host):  # noqa: ARG001
             return "127.0.0.1", 1
@@ -674,7 +674,7 @@ async def test_gate_mqtt_backend(cfg):
             backend=attrdict(
                 driver="mqtt",
                 transport="unix",
-                port=ext_sock,
+                path=ext_sock,
                 codec="json",
                 keep_alive=9999,
             )
@@ -698,7 +698,7 @@ async def test_gate_mqtt_backend(cfg):
                 backend=dict(
                     driver="mqtt",
                     transport="unix",
-                    port=ext_sock,
+                    path=ext_sock,
                     codec="json",
                     keep_alive=9999,
                 ),

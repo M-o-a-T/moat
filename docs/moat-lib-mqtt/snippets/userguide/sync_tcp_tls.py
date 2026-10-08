@@ -2,5 +2,5 @@ from __future__ import annotations
 
 from moat.lib.mqtt.sync_client import MQTTClient
 
-with MQTTClient(host_or_path="localhost", ssl=True) as client:
+with MQTTClient(host="localhost", ssl=True) as client:
     ...

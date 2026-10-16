@@ -64,12 +64,12 @@ async def _server(host, port, debug, args) -> None:
     """
     Basic Modbus server, for static tests.
     """
-    if debug:
-        log.setLevel(logging.DEBUG)
+    from moat.modbus.server import ModbusServer  # noqa:PLC0415
+
     if not args:
         raise click.UsageError("You didn't add any values to serve")
-
-    from moat.modbus.server import ModbusServer  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    if debug:
+        log.setLevel(logging.DEBUG)
 
     s = ModbusServer(address=host, port=port)
     unit = None
@@ -152,10 +152,10 @@ async def _client(
     """
     Basic Modbus-TCP client.
     """
+    from moat.modbus.client import ModbusClient  # noqa:PLC0415
+
     if debug:
         log.setLevel(logging.DEBUG)
-
-    from moat.modbus.client import ModbusClient  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
     c = {}
     if maxlen:
@@ -252,10 +252,10 @@ async def _serclient(
     """
     Basic Modbus-RTU client.
     """
+    from moat.modbus.client import ModbusClient  # noqa:PLC0415
+
     if debug:
         log.setLevel(logging.DEBUG)
-
-    from moat.modbus.client import ModbusClient  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
     c = {}
     if maxlen:

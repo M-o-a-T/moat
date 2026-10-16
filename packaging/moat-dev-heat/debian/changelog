@@ -1,0 +1,5 @@
+moat-dev-heat (0.1.1-1) unstable; urgency=medium
+
+  * New package: the MoaT heating controller.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 28 Sep 2026 13:50:00 +0200

@@ -3,6 +3,7 @@ from __future__ import annotations  # noqa: D100
 import anyio
 import logging
 import pytest
+import re
 import time
 
 from moat.util import NotGiven
@@ -444,3 +445,17 @@ async def test_link_only(cfg):
             assert r.args == ["乓", "test"]
             # Verify we connected to the expected server
             assert c.link.server_name == server_name
+
+
+@pytest.mark.anyio
+async def test_cmd_dir_lists_subhandlers(cfg):
+    """ "link cmd dir_" reports the server's delegated sub-handlers."""
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init={"test": 1})
+
+        r = await sf.run("link cmd dir_")
+        # the server's root handler delegates d/e/s/i and defines cl/srv
+        m = re.search(r"^d:\n((?:  \w+: .*\n)+)", r.stdout, re.MULTILINE)
+        assert m is not None, r.stdout
+        d = dict(ln.strip().split(": ", 1) for ln in m.group(1).splitlines())
+        assert set(d) >= {"d", "e", "s", "i", "cl", "srv"}, d

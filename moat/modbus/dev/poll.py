@@ -44,7 +44,7 @@ async def dev_poll(
     """
     sl = cfg.setdefault("slots", attrdict())
     sl.setdefault("write", attrdict())
-    sl._apply_default = True  # pylint:disable=protected-access  # noqa: SLF001
+    sl._apply_default = True  # noqa:SLF001
     cfg = fixup(cfg, this_file=this_file)
 
     s = cfg.setdefault("src", attrdict())
@@ -74,12 +74,12 @@ async def dev_poll(
             return await tg.start(task, dev)
 
         if link is None:
-            from .device import Register as Reg  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+            from .device import Register as Reg  # noqa:PLC0415
 
             RegS = Reg
         else:
             # The MoaT-Link client must live longer than the taskgroup
-            from .link import Register  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+            from .link import Register  # noqa:PLC0415
 
             Reg = partial(Register, link=link, tg=tg)
             RegS = partial(Register, link=link, tg=tg, is_server=True)

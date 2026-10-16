@@ -181,7 +181,7 @@ async def test_batt(tmp_path):
         log(f"u={xu2:.3f} … {nu2:.3f}")
 
         # continue until low voltage reached
-        for _ in range(10):
+        for _ in range(15):
             xux = xu2
             await anyio.sleep(2)
             uu = await b.all("u")

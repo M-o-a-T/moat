@@ -177,7 +177,7 @@ class Scaffold(CtxObj):
             ):
                 bsock = await tg.start(run_broker, self.cfg)
                 self.cfg.backend.transport = "unix"
-                self.cfg.backend.port = bsock
+                self.cfg.backend.path = bsock
                 try:
                     yield self
                 finally:
@@ -318,7 +318,7 @@ class Scaffold(CtxObj):
         transport = bcfg.get("transport", "tcp")
         pre.extend(("-s", "moat.link.backend.transport", str(transport)))
         if transport == "unix":
-            pre.extend(("-s", "moat.link.backend.port", str(bcfg.port)))
+            pre.extend(("-s", "moat.link.backend.path", str(bcfg.path)))
         else:
             pre.extend((
                 "-s",

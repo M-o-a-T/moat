@@ -210,6 +210,7 @@ html_domain_indices = True
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "anyio": ("https://anyio.readthedocs.io/en/stable/", None),
+    "stamina": ("https://stamina.hynek.me/en/latest/", None),
     # "asyncdbus": ("https://M-o-a-T.org/docs/asyncdbus/", None),
     # "asyncclick": ("https://M-o-a-T.org/docs/asyncclick/", None),
     # "pyfuse3": ("https://M-o-a-T.org/docs/asyncclick/", None),

@@ -106,13 +106,11 @@ class Backend(_Backend):
         kw["client_id"] = self.name
 
         if kw.get("transport") == "unix":
-            # Unix socket path is stored as 'port' (the endpoint selector),
-            # not 'host' (the network address). It becomes the positional
-            # ``host_or_path`` argument of ``AsyncMQTTClient``.
-            a = (kw.pop("port"),) if "port" in kw else ()
-            kw.pop("host", None)  # discard stale TCP host
+            # Unix socket path is stored as 'path' (the endpoint selector).
+            kw.pop("host", None)  # discard stale TCP host + port
+            kw.pop("port", None)
         else:
-            a = (kw.pop("host"),) if "host" in kw else ()
+            kw.pop("path", None)  # discard stale path
         self.codec = get_codec(codec)
         self.mcodec = get_codec("std-cbor")
 
@@ -131,7 +129,7 @@ class Backend(_Backend):
                 qos=will.get("qos", 1),
                 retain=will.get("retain", data == b""),
             )
-        self.a, self.kw = a, kw
+        self.a, self.kw = (), kw
         self.client = None
         # Topics where we've already logged a UTF-8 problem in str payloads.
         # MQTT 5 marks ``str`` payloads with PAYLOAD_FORMAT_INDICATOR=1 and

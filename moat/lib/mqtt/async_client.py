@@ -216,12 +216,12 @@ class AsyncMQTTClient:
 
     Must be used as an asynchronous context manager.
 
-    :param host_or_path: host name or UNIX socket path on the file system (defaults to
-        ``localhost`` for TCP based connections; must be provided for UNIX socket
-        connections)
+    :param host: host name (defaults to ``localhost`` for TCP based connections)
     :param port: port number to connect to in case of the ``tcp`` transport (defaults to
         1883 or 8883 for direct MQTT depending on the ``ssl`` parameter; 80 or 443 for
         websocket connections)
+    :param path: UNIX socket path on the file system (must be provided for
+        UNIX socket connections)
     :param transport: either ``tcp`` (TCP) or ``unix`` (UNIX domain sockets)
     :param websocket_path: the URL path in the HTTP request when using websockets to
         connect to the MQTT broker (**must** be set to use websockets instead of direct
@@ -242,8 +242,9 @@ class AsyncMQTTClient:
         time
     """
 
-    host_or_path: str | None = field(default=None, validator=optional(instance_of(str)))
+    host: str | None = field(default=None, validator=optional(instance_of(str)))
     port: int | None = field(default=None, validator=optional([gt(0), lt(65536)]))
+    path: str | None = field(default=None, validator=optional(instance_of(str)), kw_only=True)
     transport: Literal["tcp", "unix"] = field(  # ty:ignore[call-overload]
         kw_only=True, default="tcp", validator=in_({"tcp", "unix"})
     )
@@ -289,13 +290,14 @@ class AsyncMQTTClient:
     _conn_scope: CancelScope | None = field(init=False, default=None)
 
     def __attrs_post_init__(self) -> None:
-        if not self.host_or_path:
-            if self.transport == "unix":
-                raise ValueError(
-                    "host_or_path must be a filesystem path when using the 'unix' transport"
-                )
+        if self.transport == "unix" and not self.path:
+            if self.host:
+                self.path = self.host
+                self.host = None
             else:
-                self.host_or_path = "localhost"
+                raise ValueError("path must be a filesystem path when using the 'unix' transport")
+        if self.transport == "tcp" and not self.host:
+            self.host = "localhost"
 
         if not self.port and self.transport != "unix":
             if self.websocket_path:
@@ -502,22 +504,24 @@ class AsyncMQTTClient:
         self,
     ) -> AsyncGenerator[tuple[ByteStream, tuple[type[Exception]]], None]:
         stream: ByteStream
-        assert self.host_or_path
         ssl_context = self.ssl if isinstance(self.ssl, SSLContext) else None
 
         async for attempt in stamina.retry_context(on=(OSError, SSLError)):
             with attempt:
                 if self.transport == "unix":
-                    stream = await connect_unix(self.host_or_path)
+                    assert self.path
+                    stream = await connect_unix(self.path)
                 else:
+                    assert self.host
                     assert self.port
-                    stream = await connect_tcp(self.host_or_path, self.port)
+                    stream = await connect_tcp(self.host, self.port)
 
                 if self.ssl:
+                    assert self.host
                     try:
                         stream = await TLSStream.wrap(
                             stream,
-                            hostname=self.host_or_path,
+                            hostname=self.host,
                             ssl_context=ssl_context,
                         )
                     except BaseException:
@@ -535,7 +539,7 @@ class AsyncMQTTClient:
         from httpx_ws import WebSocketNetworkError, aconnect_ws  # noqa:PLC0415
 
         scheme = "wss" if self.ssl else "ws"
-        uri = f"{scheme}://{self.host_or_path}:{self.port}{self.websocket_path}"
+        uri = f"{scheme}://{self.host}:{self.port}{self.websocket_path}"
 
         # MQTT-6.0.0-3
         async with AsyncExitStack() as exit_stack:

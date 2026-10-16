@@ -3,3 +3,12 @@ server_default:
   port: 3671
 poll: 10
 count: true
+
+# Per-address worker retry / back-off. Passed to `LinkSender.retrying`.
+# See `moat.link.client.LinkSender.retrying` for the full key list.
+backoff:
+  initial: 0.5   # delay before the first retry (sec)
+  max: 300       # maximum delay between retries (sec)
+  exp: 1.4       # exponential back-off exponent
+  wait: 30       # time for a worker to reach readiness (sec)
+  up: 5          # sec a worker must stay up before reporting OK

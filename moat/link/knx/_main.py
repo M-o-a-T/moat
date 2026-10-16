@@ -341,9 +341,8 @@ async def set_at(obj, **kw) -> None:
 
 @cli.command()
 @click.option("-l", "--local-ip", default=None, help="Force this local IP address.")
-@click.option("-i", "--initial", is_flag=True, help="Push existing outgoing states.")
 @click.pass_obj
-async def monitor(obj, local_ip, initial) -> None:
+async def monitor(obj, local_ip) -> None:
     """Stand-alone task to talk to a single KNX gateway."""
     from .task import task  # noqa: PLC0415
 
@@ -355,6 +354,5 @@ async def monitor(obj, local_ip, initial) -> None:
             obj.knx_cfg,
             obj.knx_name,
             local_ip=local_ip,
-            initial=initial,
             task_status=srv,
         )

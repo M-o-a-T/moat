@@ -18,6 +18,8 @@ from .model import MetricPoint
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskStatus
+
     from moat.link.client import LinkSender
 
     from .backend import Backend
@@ -31,8 +33,12 @@ async def run_entry(
     entry: MetricsEntry,
     backend: Backend,
     subpath: Path,
+    *,
+    task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Watch one source value and forward it to the metrics backend.
+
+    Readiness is signalled once the source watch is established.
 
     Args:
         link: an active MoaT-Link sender.
@@ -40,6 +46,7 @@ async def run_entry(
         backend: the metrics backend connection.
         subpath: path of this entry relative to the server node
             (used for error reporting).
+        task_status: Signalled when the worker is up.
     """
     source_data = entry.source
     assert source_data is not None
@@ -56,6 +63,7 @@ async def run_entry(
     t_last: float | None = None
 
     async with link.d_watch(source) as wp:
+        task_status.started()
         async for raw in wp:
             if t_min is not None:
                 t = anyio.current_time()

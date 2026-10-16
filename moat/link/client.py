@@ -12,10 +12,12 @@ import sys
 from contextlib import asynccontextmanager, nullcontext, suppress
 from contextvars import ContextVar
 from functools import partial
+from ssl import SSLError
 from traceback import format_exception
 
 import outcome
 from attrs import define, field
+from stamina import retry_context
 
 from moat.util import (
     CtxObj,
@@ -104,6 +106,10 @@ if TYPE_CHECKING:
         ack: Callable[..., Awaitable[Any]]
         ok: Callable[..., Awaitable[Any]]
         mon: Callable[..., AbstractAsyncContextManager[Any]]
+
+    # An async callable that accepts a ``task_status`` keyword argument,
+    # as expected by `LinkSender.retrying`.
+    ProcType = Callable[..., Awaitable[Any]]
 
 
 NotGivenType = type(NotGiven)
@@ -897,6 +903,102 @@ class LinkSender(MsgSender, MsgRoot):
             await tg.start(_run)
             yield res
             tg.cancel_scope.cancel()
+
+    async def retrying(self, cfg: Mapping | None, path: Path, proc: ProcType, /, *args, **kw):
+        """
+        Retry loop with exponential back-off and error reporting.
+
+        The procedure ``proc`` must signal readiness by calling
+        ``task_status.started()`` (possibly with a value) within ``wait``
+        seconds. Once it has signalled readiness it must stay up for ``up``
+        seconds; only then is the attempt counted as successful and
+        reported via :meth:`e_ok`.
+
+        Exceptions raised by ``proc`` (or by exceeding ``wait``) are reported
+        via :meth:`e_exc` and then re-raised so that `stamina` can decide
+        whether to retry. Exceptions in the default ``on`` set (network /
+        transport errors) are retried with exponential back-off; any other
+        exception falls through immediately after being reported.
+
+        The configuration mapping understands:
+
+        - timeout: max wall-clock time before giving up entirely
+        - attempts: max number of attempts
+        - initial: delay before the first retry (.5 sec)
+        - max: maximum delay between retries (5 min)
+        - jitter: retry randomness (.3 sec)
+        - exp: exponential back-off exponent (1.4)
+        - wait: time for an attempt to reach success (1 h)
+        - up: time the service must stay up before reporting success (10 sec)
+        - on: additional exception(s) to tolerate, or a callback
+
+        Args:
+            cfg: Retry configuration, typically taken from the caller's
+                ``backoff`` config section. May be ``None`` for the defaults.
+            path: The error-reporting path identifying this service.
+            proc: An async callable that accepts a ``task_status`` keyword
+                argument (duck-typing `anyio.abc.TaskStatus`).
+            *args, **kw: Forwarded to ``proc``.
+        """
+        from .announce import MinReady  # noqa:PLC0415
+
+        if cfg is None:
+            cfg = {}
+        wait = cfg.get("wait", 3600)
+        up = cfg.get("up", 10)
+        rcfg = dict(
+            timeout=cfg.get("timeout", None),
+            attempts=cfg.get("attempts", None),
+            wait_initial=cfg.get("initial", 0.5),
+            wait_max=cfg.get("max", 300),
+            wait_jitter=cfg.get("jitter", 0.3),
+            wait_exp_base=cfg.get("exp", 1.4),
+            on=cfg.get("on", ()),
+        )
+        on = rcfg["on"]
+        if not callable(on):
+            # `stamina` accepts a single exception type or a *tuple* of them
+            # (a set would be misinterpreted as a backoff callback).
+            extras = (
+                OSError,
+                SSLError,
+                anyio.ClosedResourceError,
+                anyio.BrokenResourceError,
+                EOFError,
+            )
+            if isinstance(on, type):
+                on = (on,)
+            seen: set[type] = set()
+            ordered: list[type] = []
+            for tp in (*on, *extras):
+                if tp not in seen:
+                    seen.add(tp)
+                    ordered.append(tp)
+            rcfg["on"] = tuple(ordered)
+
+        async for attempt in retry_context(**rcfg):
+            with attempt:
+                try:
+                    async with anyio.create_task_group() as tg:
+                        evt = MinReady(path=path)
+                        tg.start_soon(partial(proc, *args, task_status=evt, **kw))
+                        with anyio.fail_after(wait):
+                            await evt.wait()
+                        await anyio.sleep(up)
+                        await self.e_ok(path, value=evt.value)
+                except Exception as exc:
+                    # `proc` runs in a task group, so a single failure arrives
+                    # wrapped in an `ExceptionGroup`. Collapse it so that
+                    # `stamina`'s exception-type matching sees the real cause;
+                    # report the unwrapped exception (with backtrace).
+                    exc = ungroup.one(exc)
+                    # Report, but never let a reporting failure mask the
+                    # original error: shield against hangs and swallow
+                    # reporter-side exceptions.
+                    with anyio.move_on_after(5, shield=True):
+                        with suppress(Exception):
+                            await self.e_exc(path, exc)
+                    raise exc from None
 
     async def e_exc(self, path: Path, exc: Exception, **kw) -> None:
         """

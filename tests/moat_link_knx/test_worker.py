@@ -30,7 +30,7 @@ class _WatchCtx:
     """Fake d_watch async context manager.
 
     Items are 3-tuples ``(delay, val, meta)``.  Yields ``None`` when
-    ``val`` is ``None`` (used to simulate ``mark=True``'s end-of-initial
+    ``val`` is ``None`` (used to simulate ``mark=True``'s end-of-sync
     sentinel); otherwise yields ``(val, meta)``.
     """
 
@@ -68,9 +68,9 @@ def _link_with(values, getter=None):
     return link
 
 
-async def _run_out_initial(link, srv, entry, addr, subpath):
-    """Invoke :func:`run_out` with ``initial=True`` to engage state checks."""
-    await knx_worker.run_out(link, srv, entry, addr, subpath, initial=True)
+async def _run_out_sync(link, srv, entry, addr, subpath):
+    """Invoke :func:`run_out` with ``sync=True`` to engage state checks."""
+    await knx_worker.run_out(link, srv, entry, addr, subpath, sync_state=True)
 
 
 def _patch_device(monkeypatch, sets):
@@ -132,7 +132,7 @@ async def test_out_state_older_passes(monkeypatch, autojump_clock):  # noqa:ARG0
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(
-            _run_out_initial,
+            _run_out_sync,
             link,
             srv,
             entry,
@@ -164,7 +164,7 @@ async def test_out_state_newer_suppresses(monkeypatch, autojump_clock):  # noqa:
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(
-            _run_out_initial,
+            _run_out_sync,
             link,
             srv,
             entry,
@@ -189,7 +189,7 @@ async def test_out_state_missing_passes(monkeypatch, autojump_clock):  # noqa:AR
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(
-            _run_out_initial,
+            _run_out_sync,
             link,
             srv,
             entry,
@@ -224,7 +224,7 @@ async def test_out_state_only_blocks_old(monkeypatch, autojump_clock):  # noqa:A
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(
-            _run_out_initial,
+            _run_out_sync,
             link,
             srv,
             entry,
@@ -238,7 +238,7 @@ async def test_out_state_only_blocks_old(monkeypatch, autojump_clock):  # noqa:A
 
 
 @pytest.mark.trio
-async def test_out_state_check_only_during_initial(monkeypatch, autojump_clock):  # noqa:ARG001
+async def test_out_state_check_only_during_sync(monkeypatch, autojump_clock):  # noqa:ARG001
     """After the ``mark=True`` sentinel runtime updates skip the state check.
 
     A post-mark command whose timestamp predates the state must still be
@@ -267,7 +267,7 @@ async def test_out_state_check_only_during_initial(monkeypatch, autojump_clock):
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(
-            _run_out_initial,
+            _run_out_sync,
             link,
             srv,
             entry,
@@ -315,7 +315,7 @@ async def test_in_names_group_address(monkeypatch, autojump_clock):  # noqa:ARG0
     cbs: list = []
     device = MagicMock()
 
-    def _make(_srv, _addr, _mode, _name, cb):
+    def _make(_srv, _addr, _mode, _name, cb, sync_state):  # noqa:ARG001
         cbs.append(cb)
         return device, lambda _d: 42
 
@@ -342,7 +342,7 @@ async def test_idem(monkeypatch, autojump_clock):  # noqa:ARG001
     cbs: list = []
     device = MagicMock()
 
-    def _make(_srv, _addr, _mode, _name, cb):
+    def _make(_srv, _addr, _mode, _name, cb, sync_state):  # noqa:ARG001
         cbs.append(cb)
         return device, lambda _d: 42
 

@@ -70,6 +70,7 @@ class KnxEntry(Node):
       observed bus state.  If newer than the command at ``src``, the
       command is treated as stale and not forwarded.
     * ``idem``: optional idempotency flag (default ``True``).
+    * ``initial``: optional fetch-on-startup flag (default ``None``: input nodes).
     """
 
     @property

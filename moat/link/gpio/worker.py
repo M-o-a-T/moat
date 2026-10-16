@@ -27,6 +27,8 @@ from moat.util import NotGiven, combine_dict
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskStatus
+
     from moat.lib.path import Path
     from moat.link.client import LinkSender
 
@@ -56,11 +58,15 @@ async def run_in(
     line_num: int,
     subpath: Path,
     cfg: dict[str, Any],
+    *,
+    task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Forward GPIO line state changes to a MoaT-Link destination.
 
     Dispatches to :func:`_poll_task`, :func:`_count_task`, or
     :func:`_button_task` depending on ``entry.mode``.
+
+    Readiness is signalled once the line monitor is established.
 
     Args:
         link: Active MoaT-Link sender.
@@ -69,6 +75,7 @@ async def run_in(
         line_num: Line number on the chip.
         subpath: Path of this entry (for logging).
         cfg: Global ``link.gpio`` defaults, merged with per-line config.
+        task_status: Signalled when the worker is up.
     """
     mode = entry.mode
     dest = entry.dest
@@ -78,11 +85,11 @@ async def run_in(
     lc = combine_dict(entry.data_ if isinstance(entry.data_, dict) else {}, cfg)
 
     if mode == "read":
-        await _poll_task(link, chip, line_num, dest, lc, subpath)
+        await _poll_task(link, chip, line_num, dest, lc, subpath, task_status)
     elif mode == "count":
-        await _count_task(link, chip, line_num, dest, lc, subpath)
+        await _count_task(link, chip, line_num, dest, lc, subpath, task_status)
     elif mode == "button":
-        await _button_task(link, chip, line_num, dest, lc, subpath)
+        await _button_task(link, chip, line_num, dest, lc, subpath, task_status)
     else:
         logger.warning("Unknown input mode %r at %s", mode, subpath)
 
@@ -94,6 +101,7 @@ async def _poll_task(
     dest: Path,
     lc: dict[str, Any],
     subpath: Path,  # noqa: ARG001
+    task_status: TaskStatus[None],
 ) -> None:
     """Monitor a line and forward debounced state changes."""
     negate = lc.get("low", False)
@@ -112,6 +120,7 @@ async def _poll_task(
                 await link.d_set(dest, value)
 
         await set_value(old_value)
+        task_status.started()
         mon_iter = mon.__aiter__()
         while True:
             e = await mon_iter.__anext__()
@@ -139,6 +148,7 @@ async def _count_task(
     dest: Path,
     lc: dict[str, Any],
     subpath: Path,  # noqa: ARG001
+    task_status: TaskStatus[None],
 ) -> None:
     """Count pulses on a line and report periodically."""
     intv = lc.get("interval", 1)
@@ -158,6 +168,7 @@ async def _count_task(
 
     wire = chip.line(line_num)
     with wire.monitor(_DIR(None)) as mon:
+        task_status.started()
         i = mon.__aiter__()
         t = anyio.current_time()
         d: int = 0
@@ -208,6 +219,7 @@ async def _button_task(
     dest: Path,
     lc: dict[str, Any],
     subpath: Path,  # noqa: ARG001
+    task_status: TaskStatus[None],
 ) -> None:
     """Decode button-press sequences and publish them."""
     negate = lc.get("low", False)
@@ -221,6 +233,7 @@ async def _button_task(
 
     wire = chip.line(line_num)
     with wire.monitor(gpio.Edge.BOTH) as mon:
+        task_status.started()
         ival = mon.value
         mon_iter = mon.__aiter__()
 
@@ -354,11 +367,15 @@ async def run_out(
     line_num: int,
     subpath: Path,
     cfg: dict[str, Any],
+    *,
+    task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """Forward MoaT-Link source updates onto a GPIO line.
 
     Dispatches to :func:`_set_value`, :func:`_oneshot_value`, or
     :func:`_pulse_value` depending on ``entry.mode``.
+
+    Readiness is signalled once the source watch is established.
 
     Args:
         link: Active MoaT-Link sender.
@@ -367,6 +384,7 @@ async def run_out(
         line_num: Line number on the chip.
         subpath: Path of this entry (for logging).
         cfg: Global ``link.gpio`` defaults, merged with per-line config.
+        task_status: Signalled when the worker is up.
     """
     mode = entry.mode
     src = entry.src
@@ -381,17 +399,21 @@ async def run_out(
 
     with chip.line(line_num).open(direction=gpio.Direction.OUTPUT) as line:
         if mode == "write":
-            await _with_output(link, line, src, _set_value, state, negate)
+            await _with_output(link, line, src, _set_value, state, negate, task_status=task_status)
         elif mode == "oneshot":
             if t_on is None:
                 logger.warning("t_on not set at %s", subpath)
                 return
-            await _with_output(link, line, src, _oneshot_value, state, negate, t_on)
+            await _with_output(
+                link, line, src, _oneshot_value, state, negate, t_on, task_status=task_status
+            )
         elif mode == "pulse":
             if t_on is None or t_off is None:
                 logger.warning("t_on/t_off not set at %s", subpath)
                 return
-            await _with_output(link, line, src, _pulse_value, state, negate, t_on, t_off)
+            await _with_output(
+                link, line, src, _pulse_value, state, negate, t_on, t_off, task_status=task_status
+            )
         else:
             logger.warning("Unknown output mode %r at %s", mode, subpath)
 
@@ -402,6 +424,7 @@ async def _with_output(
     src: Path,
     proc: Any,
     *args: Any,
+    task_status: TaskStatus[None],
 ) -> None:
     """Watch a MoaT-Link source and call *proc* for each value change.
 
@@ -410,6 +433,7 @@ async def _with_output(
     a transient runtime condition.
     """
     async with link.d_watch(src, mark=False, state=False) as wp:
+        task_status.started()
         async for val in wp:
             if val is NotGiven:
                 continue

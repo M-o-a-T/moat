@@ -246,13 +246,13 @@ Cancel the gate and counter tasks, cancel the whole task group.
 
 ### Required code change in `gate/link.py`
 
-The current `run_` method creates the remote Link with the local config:
-
-```python
-async with Link(self.link.link.cfg, only=server_name) as remote:
-```
-
-This must be extended to honour a `backend` override from the gate config:
+The `run_` method creates the remote Link from the local configuration,
+honours a `backend` override from the gate config, and strips the local
+client's connection settings (`client.path`, `client.port`,
+`client.local_only`, `client.name`): they designate the *local* server, so
+inheriting them would connect the "remote" side to our own server and sync
+the subtree with itself. The remote Link is held by a task in the gate's
+task group for as long as the gate runs:
 
 ```python
 async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -260,14 +260,23 @@ async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
     if not server_name:
         raise ValueError("Link gate requires 'server' configuration")
 
-    cfg = self.link.link.cfg
+    cfg = combine_dict({}, self.link.link.cfg, cls=attrdict)
+    client = attrdict(cfg.get("client", {}))
+    for key in ("path", "port", "local_only", "name"):
+        client.pop(key, None)
+    cfg["client"] = client
     if "backend" in self.cf:
         # Deep-merge: gate's backend overrides local backend settings.
         cfg = combine_dict({"backend": dict(self.cf.backend)}, cfg, cls=attrdict)
 
-    async with Link(cfg, only=server_name) as remote:
-        self._remote = remote
-        await super().run_(task_status=task_status)
+    async def _remote(*, task_status):
+        async with Link(cfg, only=server_name) as remote:
+            self._remote = remote
+            task_status.started()
+            await anyio.sleep_forever()
+
+    await self.tg.start(_remote)
+    await super().run_(task_status=task_status)
 ```
 
 The test gate config passes `backend.port = s2_port` so the remote Link

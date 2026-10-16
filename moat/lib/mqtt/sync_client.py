@@ -47,9 +47,10 @@ class MQTTClient:  # noqa: D101
 
     def __init__(
         self,
-        host_or_path: str | None = None,
+        host: str | None = None,
         port: int | None = None,
         *,
+        path: str | None = None,
         transport: Literal["tcp", "unix"] = "tcp",
         websocket_path: str | None = None,
         ssl: bool | SSLContext = False,
@@ -61,8 +62,9 @@ class MQTTClient:  # noqa: D101
         max_packet_size: int | None = None,
         will: Will | None = None,
     ) -> None:
-        self._ctor_args = (host_or_path, port)
+        self._ctor_args = (host, port)
         self._ctor_kwargs: dict[str, Any] = {
+            "path": path,
             "transport": transport,
             "websocket_path": websocket_path,
             "ssl": ssl,

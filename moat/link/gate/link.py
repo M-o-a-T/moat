@@ -16,6 +16,7 @@ from moat.util.dict import combine_dict as _combine_dict
 
 from . import DelayedGate, GateNode
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -46,10 +47,16 @@ class Gate(DelayedGate):
         server: str - name of the remote server to connect to
         delay: float - delay in seconds (default 0.1)
         skip: list[str] - additional path prefixes to skip (default: ["run"])
+        backend: dict - overrides the MQTT broker the remote Link connects to
 
     The gateway monitors the same path on the remote server and synchronizes
     changes bidirectionally, using the DelayedGate delay mechanism to handle
     conflicts where the same data is updated on both sides.
+
+    The remote Link is built from the local configuration, minus the local
+    client's connection settings (``client.path`` et al.), so it always
+    locates the remote server via its announcement on the (possibly
+    overridden) backend.
 
     Note: The "run" subpath is always skipped as it contains operational
     data (client IDs, ping status, etc.) that should not be synchronized.
@@ -81,11 +88,23 @@ class Gate(DelayedGate):
         if not server_name:
             raise ValueError("Link gate requires 'server' configuration")
 
-        # Build the config for the remote Link.
+        # Build the config for the remote Link: a copy of the local one,
+        # minus the local client's connection settings. ``client.path``
+        # (Unix socket), ``client.port``, ``client.local_only`` and
+        # ``client.name`` all designate the *local* server; the remote Link
+        # must find its own server via the announcements on the (possibly
+        # overridden) backend. Inheriting them would connect the "remote"
+        # side to the local server, syncing the subtree with itself.
+        cfg = attrdict(self.link.link.cfg)
+        client = cfg.get("client", None)
+        client = attrdict(client if isinstance(client, Mapping) else ())
+        for key in ("path", "port", "local_only", "name"):
+            client.pop(key, None)
+        cfg["client"] = client
+
         # If the gate config contains a 'backend' dict, use it to override
         # the local backend settings so the remote Link talks to the
         # correct MQTT broker (e.g. a satellite broker after a network split).
-        cfg = self.link.link.cfg
         if "backend" in self.cf:
             cfg = _combine_dict(
                 {"backend": dict(self.cf.backend)},
@@ -93,10 +112,18 @@ class Gate(DelayedGate):
                 cls=attrdict,
             )
 
-        # Connect to the remote server
-        async with Link(cfg, only=server_name) as remote:
-            self._remote = remote
-            await super().run_(task_status=task_status)
+        # Connect to the remote server. The Link is held by a task in the
+        # gate's task group: `Gate.run_` returns once the initial sync is
+        # done, but the remote side must stay connected for as long as
+        # the gate runs.
+        async def _remote(*, task_status) -> None:
+            async with Link(cfg, only=server_name) as remote:
+                self._remote = remote
+                task_status.started()
+                await anyio.sleep_forever()
+
+        await self.tg.start(_remote)
+        await super().run_(task_status=task_status)
 
     async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """

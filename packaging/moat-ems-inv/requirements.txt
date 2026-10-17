@@ -4,7 +4,7 @@ pytest
 pyserial>=3.5
 asyncclick>=8.3
 anyio_serial
-simpleeval
+simpleeval>=1.0.7
 ruyaml
 quart_trio
 chevron

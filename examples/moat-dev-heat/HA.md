@@ -69,7 +69,7 @@ HA shows the switch's `.state`, which the target unit clears as well.
 
 An override item (`app.heat.override.*`: a value, or unset for
 "automatic") is shown in HA as two entities, handled by one
-`transform.hass.override` job each (`../moat-link-job/code.transform.hass.override.yaml`):
+`transform.hass.override` job each (`../moat-link-job/transform.hass.override.yaml`):
 
 - `value`: the on/off switch or number,
 - `manual`: a switch that turns the override on.
@@ -92,14 +92,10 @@ else sets or clears it (`moat dev heat override`), HA follows.
 up:
 
 ```shell
-moat link code transform.hass.override set -a -d ../moat-link-job/code.transform.hass.override.yaml
+moat link code transform.hass.override set -a -d ../moat-link-job/transform.hass.override.yaml
 moat link job at heat.ovr.wp set -c transform.hass.override -t 0 \
     -p dst app.heat.override.wp \
     -p value home.ass.dyn.switch.heizung.wp \
     -p manual home.ass.dyn.switch.heizung.wp_override \
     -p actual app.heat.ha.wp_enabled
 ```
-
-No two of these jobs watch the same path. Keep it that way until
-moat-5m1s is fixed: two watches of the same path on one MoaT-Link client
-don't both get updates.

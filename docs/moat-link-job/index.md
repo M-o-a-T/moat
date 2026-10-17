@@ -46,6 +46,16 @@ rescheduling.  Useful for poking at a snippet from the command line.
 * All output emitted via the snippet's ``_log`` logger (at DEBUG and
   up) is mirrored to stderr regardless of the global verbosity.
 
+### Modifying a running job
+
+Changing a job's record — data, code path, timing parameters, or the
+record itself — stops the running task. The job then stays stopped
+until its target is set anew: pass ``-t0`` (or a future ``-t SECONDS``)
+when you want the job to (re)start with the new record. Setting
+``-t-`` stops the job outright.
+
+An ``-i``/``--info``-only change does not interrupt a running job.
+
 ## Storage layout
 
 Two configurable paths control where job data lives:

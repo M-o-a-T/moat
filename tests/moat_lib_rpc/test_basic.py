@@ -5,10 +5,11 @@ import pytest
 
 from tests.moat_lib_rpc.scaffold import scaffold
 
-from moat.util import ungroup
+from moat.util import ungroup, yload
 from moat.lib.micro import log
 from moat.lib.path import P
 from moat.lib.rpc import MsgHandler, MsgSender
+from moat.lib.rpc._test import rpc_stack
 from moat.lib.rpc.errors import OverrunError
 
 
@@ -576,3 +577,71 @@ async def test_stream_flow_completes_large_transfer(use_socket):
         async for (m,) in st:
             got.append(m)
     assert got == list(range(n)), f"incomplete: got {len(got)} of {n}"
+
+
+@pytest.mark.anyio
+async def test_dir_reports_delegated_subs():
+    """ "dir_" must list sub-handlers reachable via "sub_*"."""
+
+    class SubFoo(MsgHandler):
+        "some namespace"
+
+        async def cmd_bar(self):  # pragma: no cover
+            "dummy"
+
+    class EP(MsgHandler):
+        def sub_baz(self, msg, rcmd):  # pragma: no cover
+            "method-based sub-handler"
+
+        async def stream_quux(self, msg):  # pragma: no cover
+            "dummy"
+
+    ep = EP()
+    async with scaffold(ep, None) as (_a, b):
+        with ep.delegate(P("foo"), SubFoo()):
+            res = await b.cmd("dir_")
+            assert res.kw["d"] == {"foo": "SubFoo", "baz": "EP"}
+            assert res.kw["s"] == ["quux"]
+
+            res = await b.cmd("dir_", v=False)
+            assert "d" not in res.kw
+            assert res.kw["c"] == ["dir_", "rdy_"]
+
+        res = await b.cmd("dir_")
+        assert res.kw["d"] == {"baz": "EP"}
+
+
+@pytest.mark.anyio
+async def test_dir_merged_across_tunnel(tmp_path):
+    """Delegated subs must survive the "dir_" merge in "BaseCmdMsg.handle"."""
+
+    class SubExtra(MsgHandler):
+        "extra namespace"
+
+        async def cmd_deep(self):  # pragma: no cover
+            "dummy"
+
+    cfg = yload(
+        """\
+app: dir
+a:
+  app: _test_.Cmd
+l:
+  app: _test.LoopCmd
+  loop:
+    qlen: 2
+  link:
+    pack: {}
+""",
+        attr=True,
+    )
+
+    async with rpc_stack(tmp_path, cfg) as d:
+        tun = d.app.sub["l"]
+        with tun.delegate(P("extra"), SubExtra()):
+            res = await d.cmd(P("l.dir_"))
+            # the root's sub-apps, forwarded through the loopback tunnel …
+            assert res.kw["d"]["a"] == "_test_.Cmd"
+            assert res.kw["d"]["l"] == "_test.LoopCmd"
+            # … plus the tunnel's own delegated sub-handler
+            assert res.kw["d"]["extra"] == "SubExtra"

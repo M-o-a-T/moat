@@ -100,7 +100,11 @@ class Gate(DelayedGate):
         client = attrdict(client if isinstance(client, Mapping) else ())
         for key in ("path", "port", "local_only", "name"):
             client.pop(key, None)
-        cfg["client"] = client
+        cfg.client = client
+
+        # The remote side might run with a different root
+        if "root" in self.cf:
+            cfg.root = self.cf.root
 
         # If the gate config contains a 'backend' dict, use it to override
         # the local backend settings so the remote Link talks to the
@@ -116,14 +120,20 @@ class Gate(DelayedGate):
         # gate's task group: `Gate.run_` returns once the initial sync is
         # done, but the remote side must stay connected for as long as
         # the gate runs.
-        async def _remote(*, task_status) -> None:
-            async with Link(cfg, only=server_name) as remote:
-                self._remote = remote
-                task_status.started()
-                await anyio.sleep_forever()
-
-        await self.tg.start(_remote)
-        await super().run_(task_status=task_status)
+        async with (
+            Link(cfg, only=server_name) as remote,
+            remote.announcing(
+                host=False,
+                wait=False,
+                name=self.path,
+            ) as ann,
+        ):
+            self._remote = remote
+            await super().run_(task_status=task_status)
+            # The initial sync is done: report the gate as running on the
+            # remote side, lest ``wait_sr`` complain that it never started.
+            ann.started("running")
+            await anyio.sleep_forever()
 
     async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """

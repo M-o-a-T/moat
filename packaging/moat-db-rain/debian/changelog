@@ -1,3 +1,9 @@
+moat-db-rain (0.0.4-2) unstable; urgency=medium
+
+  * New release for 26.4.40
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 17 Oct 2026 14:39:31 +0200
+
 moat-db-rain (0.0.4-1) unstable; urgency=medium
 
   * New release for 26.4.26

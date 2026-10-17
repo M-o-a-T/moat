@@ -15,7 +15,7 @@ dependencies = [
     "anyio ~= 4.0",
     "moat-util ~= 0.64.0",
     "asyncclick ~= 8.3",
-    "simpleeval ~= 1.0",
+    "simpleeval >= 1.0.7,<2",
     "moat-lib-config ~= 0.2.0",
     "moat-lib-proxy ~= 0.1.1",
 ]

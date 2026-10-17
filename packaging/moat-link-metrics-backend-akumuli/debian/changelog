@@ -1,3 +1,9 @@
+moat-link-metrics-backend-akumuli (0.0.6-2) unstable; urgency=medium
+
+  * New release for 26.4.40
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 17 Oct 2026 14:40:24 +0200
+
 moat-link-metrics-backend-akumuli (0.0.6-1) unstable; urgency=medium
 
   * New release for 26.4.26

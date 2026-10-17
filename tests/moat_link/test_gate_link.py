@@ -104,3 +104,165 @@ async def test_gate_remote_skips_local_socket(cfg, tmp_path):
                 assert await _d_get(cb, P("x.a")) == 1
 
                 tg.cancel_scope.cancel()
+
+
+async def test_gate_remote_root_override(cfg):
+    """The gate's ``root`` key repoints the remote Link at the remote root.
+
+    Two servers on two brokers use different link roots (``ra`` and
+    ``rb``). The gate on the ``ra`` side declares ``root: rb`` so its
+    remote Link publishes/subscribes below the remote root. Without the
+    override (or with a frozen global Root) the remote side would use
+    the local root and nothing would cross over.
+    """
+    gcfg = attrdict(
+        driver="link",
+        src=P("x"),
+        server="SRVD",
+        delay=0.1,
+        root=P("rb"),
+    )
+
+    async with (
+        Scaffold(copy.deepcopy(cfg), use_servers=True, root=P("ra")) as sf_a,
+        Scaffold(copy.deepcopy(cfg), use_servers=True, root=P("rb")) as sf_b,
+    ):
+        await sf_a.server(name="SRVC", init="TEST")
+        await sf_b.server(name="SRVD", init="TEST")
+
+        # The remote Link must use SRVD's broker, not the local one.
+        gcfg["backend"] = dict(sf_b.cfg.backend)
+
+        async with (
+            sf_a.client_() as ca,
+            sf_b.client_() as cb,
+        ):
+            # Distinct data on each side, below the gated path.
+            await ca.d_set(P("x.a"), 1)
+            await ca.i_sync()
+            await cb.d_set(P("x.b"), 2)
+            await cb.i_sync()
+
+            await ca.d_set(P("gate.roottest"), gcfg)
+            await ca.i_sync()
+
+            async with anyio.create_task_group() as tg:
+                await tg.start(run_gate, sf_a.cfg, ca, P("gate.roottest"))
+
+                # The gate is up (initial sync done): both sides must
+                # have converged across the different roots.
+                assert await _d_get(ca, P("x.b")) == 2
+                assert await _d_get(cb, P("x.a")) == 1
+
+                tg.cancel_scope.cancel()
+
+
+async def test_gate_remote_announcement_reports_up(cfg):
+    """The gate's remote-side announcement flips to ``up: True`` when running.
+
+    The link gate announces itself on the remote server (so operators can
+    see that a gate is syncing this subtree).  The announcement must
+    report ``up: True`` once the initial sync has completed, not stay
+    ``up: False`` forever (which also spams "did not (yet?) start"
+    warnings from ``SetReady.wait_sr``).
+    """
+    gcfg = attrdict(
+        driver="link",
+        src=P("x"),
+        server="SRVF",
+        delay=0.1,
+    )
+
+    async with (
+        Scaffold(copy.deepcopy(cfg), use_servers=True) as sf_e,
+        Scaffold(copy.deepcopy(cfg), use_servers=True) as sf_f,
+    ):
+        await sf_e.server(name="SRVE", init="TEST")
+        await sf_f.server(name="SRVF", init="TEST")
+        gcfg["backend"] = dict(sf_f.cfg.backend)
+
+        async with (
+            sf_e.client_() as ce,
+            sf_f.client_() as cf,
+        ):
+            await ce.d_set(P("x.a"), 1)
+            await ce.i_sync()
+
+            await ce.d_set(P("gate.anntest"), gcfg)
+            await ce.i_sync()
+
+            async with anyio.create_task_group() as tg:
+                await tg.start(run_gate, sf_e.cfg, ce, P("gate.anntest"))
+
+                # The gate is up: the remote server must see its
+                # announcement with up=True (and "running" as the value).
+                deadline = anyio.current_time() + TIMEOUT
+                while True:
+                    ann = await cf.d_get(P("run.host.gate.anntest"))
+                    if ann.get("up") and ann.get("value") == "running":
+                        break
+                    if anyio.current_time() >= deadline:
+                        raise AssertionError(f"Remote gate announcement not up: {ann!r}") from None
+                    await anyio.sleep(0.1)
+
+                tg.cancel_scope.cancel()
+
+
+async def test_gate_live_update_across_roots(cfg):
+    """Post-startup updates must land at the right remote path.
+
+    The gate's local ``Watcher`` parses raw MQTT topics by stripping the
+    length of the watched path.  That presumes the topic was collapsed
+    against the ambient ``Root`` — but inside the gate the ambient root
+    belongs to the *remote* Link, so local topics didn't collapse and
+    live updates were spliced wrongly (e.g. ``x.rb.x.a`` instead of
+    ``x.a``).  Initial sync (RPC-based) was unaffected.
+    """
+    gcfg = attrdict(
+        driver="link",
+        src=P("x"),
+        server="SRVH",
+        delay=0.1,
+        root=P("rb"),
+    )
+
+    async with (
+        Scaffold(copy.deepcopy(cfg), use_servers=True, root=P("ra")) as sf_g,
+        Scaffold(copy.deepcopy(cfg), use_servers=True, root=P("rb")) as sf_h,
+    ):
+        await sf_g.server(name="SRVG", init="TEST")
+        await sf_h.server(name="SRVH", init="TEST")
+        gcfg["backend"] = dict(sf_h.cfg.backend)
+
+        async with (
+            sf_g.client_() as cg,
+            sf_h.client_() as ch,
+        ):
+            # Seed data BEFORE the gate starts, so the initial sync has
+            # something to carry over.
+            await cg.d_set(P("x.seed"), 11)
+            await cg.i_sync()
+
+            await cg.d_set(P("gate.livetest"), gcfg)
+            await cg.i_sync()
+
+            async with anyio.create_task_group() as tg:
+                await tg.start(run_gate, sf_g.cfg, cg, P("gate.livetest"))
+
+                # Initial sync carried the seed over.
+                assert await _d_get(ch, P("x.seed")) == 11
+
+                # Now a LIVE update, after the gate settled: it must
+                # arrive at x.live on the remote — and nowhere else.
+                await cg.d_set(P("x.live"), 22)
+                assert await _d_get(ch, P("x.live")) == 22
+
+                # The corrupted-path variant must NOT exist.
+                try:
+                    d = await ch.d_get(P("x.rb.x.live"))
+                except KeyError:
+                    pass
+                else:
+                    raise AssertionError(f"Corrupted path exists: x.rb.x.live = {d!r}")
+
+                tg.cancel_scope.cancel()

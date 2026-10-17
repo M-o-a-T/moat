@@ -341,7 +341,21 @@ class ReliableMsg(StackedMsg):
 
                 await idle()
 
-        except (EOFError, OSError) as exc:
+        except BaseException as e:
+            # A dying transport raises EOFError/OSError in one of our child
+            # tasks (_read/_run_bg); modern task groups deliver that as an
+            # exception group. Unwrap the single-exception case so the
+            # handler below sees the original error. Anything else —
+            # including cancellation — propagates unchanged.
+            if (
+                isinstance(e, ExceptionGroup)
+                and len(e.exceptions) == 1
+                and isinstance(e.exceptions[0], (EOFError, OSError))
+            ):
+                e = e.exceptions[0]
+            if not isinstance(e, (EOFError, OSError)):
+                raise
+            exc = e
             # Connection dropped. If persist is set, log and return so
             # _run()'s loop reconnects; otherwise re-raise.
             if not self.persist:

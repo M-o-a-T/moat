@@ -130,8 +130,8 @@ async def path__(obj: attrdict) -> None:
     """Emit the full link path of this job's command and state entries.
 
     The state entry is managed by the runner and must not be written
-    directly. Updating the command entry cancels any currently-running
-    code for that job.
+    directly. Updating the command entry stops any currently-running
+    code for that job; set ``-t0`` to (re)start it.
     """
     res = {"command": obj.path + obj.jobpath, "state": obj.statepath + obj.jobpath}
     yprint(res, stream=obj.stdout)
@@ -453,6 +453,9 @@ async def set_(
     Code typically requires some input parameters. Use ``-v NAME VALUE``
     for string values, ``-p NAME VALUE`` for paths, and ``-e NAME VALUE``
     for evaluated data. ``-e NAME -`` deletes an item.
+
+    Modifying a running job's record stops it. Without a new ``-t TIME``
+    the job then stays stopped; pass ``-t0`` to (re)start it.
     """
     if obj.subpath[-1] == "-":
         raise click.UsageError("Group '-' can only be used for listing.")

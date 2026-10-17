@@ -818,6 +818,185 @@ async def test_no_restart_when_test_changes(cfg):
             tg.cancel_scope.cancel()
 
 
+async def test_stop_and_park_when_data_changes(cfg):
+    """A data change stops a running job; it stays stopped (parked).
+
+    The sleeper job runs indefinitely. Updating its ``data`` without
+    touching ``target`` must cancel the task — and, crucially, the job
+    must *not* be resurrected by the scheduler's fall-through logic:
+    it stays parked until a new target is set.
+    """
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        job_cfg, sub, job_path, state_path = await _setup_long_job(sf, c, "pd")
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("node") == c.name and not s.get("stopped"),
+            )
+
+            job = await c.d_get(job_path)
+            job["data"] = {"x": 1}
+            await c.d_set(job_path, job)
+            await c.i_sync()
+
+            # The task is cancelled and stays stopped.
+            st = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("stopped", 0) > 0,
+            )
+            assert st["started"] > 0
+            await anyio.sleep(2)
+            st2 = await c.d_get(state_path)
+            assert st2.get("stopped", 0) > 0
+            assert st2["started"] == st["started"]  # no resurrection
+            tg.cancel_scope.cancel()
+
+
+async def test_parked_job_restarts_with_new_target(cfg):
+    """A parked job (re)starts when its target is set anew."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        job_cfg, sub, job_path, state_path = await _setup_long_job(sf, c, "pk")
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            st0 = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("node") == c.name and not s.get("stopped"),
+            )
+
+            # Park it: data change, target untouched.
+            job = await c.d_get(job_path)
+            job["data"] = {"x": 1}
+            await c.d_set(job_path, job)
+            await c.i_sync()
+            await _wait_state(c, state_path, until=lambda s: s.get("stopped", 0) > 0)
+
+            # New target: the job (re)starts.
+            job = await c.d_get(job_path)
+            job["target"] = time.time()
+            await c.d_set(job_path, job)
+            await c.i_sync()
+            st = await _wait_state(
+                c,
+                state_path,
+                # NB: ``stopped`` keeps its old timestamp after a restart;
+                # a fresh ``started`` marks the new run.
+                until=lambda s: s.get("started", 0) > st0["started"],
+            )
+            assert st["node"] == c.name
+            tg.cancel_scope.cancel()
+
+
+async def test_data_change_with_t0_restarts(cfg):
+    """``-s DATA -t0`` in one update stops and (re)starts the job."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        job_cfg, sub, job_path, state_path = await _setup_long_job(sf, c, "dt")
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            st0 = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("node") == c.name and not s.get("stopped"),
+            )
+
+            # One update: new data AND a new target.
+            job = await c.d_get(job_path)
+            job["data"] = {"x": 1}
+            job["target"] = time.time()
+            await c.d_set(job_path, job)
+            await c.i_sync()
+
+            # The job restarts: a fresh ``started`` timestamp.
+            # NB: ``stopped`` keeps its old timestamp after a restart.
+            st = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("started", 0) > st0["started"],
+            )
+            assert st["node"] == c.name
+            tg.cancel_scope.cancel()
+
+
+async def test_target_zeroed_stops_job(cfg):
+    """``-t-`` stops a running job; it does not restart."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        job_cfg, sub, job_path, state_path = await _setup_long_job(sf, c, "tz")
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("node") == c.name and not s.get("stopped"),
+            )
+
+            job = await c.d_get(job_path)
+            job["target"] = None
+            await c.d_set(job_path, job)
+            await c.i_sync()
+
+            await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("stopped", 0) > 0,
+            )
+            await anyio.sleep(2)
+            st2 = await c.d_get(state_path)
+            assert st2.get("stopped", 0) > 0  # stayed stopped
+            tg.cancel_scope.cancel()
+
+
+async def test_info_change_does_not_stop_job(cfg):
+    """An ``info``-only change leaves a running job alone."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        job_cfg, sub, job_path, state_path = await _setup_long_job(sf, c, "ic")
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            st = await _wait_state(
+                c,
+                state_path,
+                until=lambda s: s.get("node") == c.name and not s.get("stopped"),
+            )
+
+            job = await c.d_get(job_path)
+            job["info"] = "renamed"
+            await c.d_set(job_path, job)
+            await c.i_sync()
+            await anyio.sleep(2)
+
+            st2 = await c.d_get(state_path)
+            assert st2["started"] == st["started"]
+            assert not st2.get("stopped")
+            tg.cancel_scope.cancel()
+
+
 async def _run_until_result(sf, c, name: str, code: str, act, result: Any) -> None:
     """Run ``code`` as job ``name``, call ``act()`` once it has started,
     and wait for the job to return ``result``."""

@@ -21,6 +21,7 @@ from ._impl import (
     RootPath,
     S_Root,
     logger_for,
+    norm_root,
     path_eval,
     set_root,
 )
@@ -39,6 +40,7 @@ __all__ = [
     "RootPath",
     "S_Root",
     "logger_for",
+    "norm_root",
     "path_eval",
     "set_root",
 ]

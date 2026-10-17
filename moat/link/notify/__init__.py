@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.link.client import Link
     from moat.link.node import Node
+    from moat.util.systemd import RunMsg
 
     from collections.abc import AsyncIterator
     from typing import Any, Self
@@ -57,6 +58,9 @@ class ErrorMirror:
 
     When an error is cleared (``ok=True`` or deleted) the corresponding
     notification is removed.
+
+    Readiness is signalled to systemd (``READY=1``, plus the watchdog)
+    once the error subtree watch is established.
     """
 
     link: Link
@@ -83,22 +87,25 @@ class ErrorMirror:
         self.link = link
         notify_path = self.cfg.get("path", P("notify"))
 
-        # Fetch the notify-vecs tree, if configured.
-        # This mirrors the codec_vecs pattern in moat/link/gate/venus.py.
-        vecs_path = self.cfg.get("vecs", None)
-        if isinstance(vecs_path, Path):
-            async with link.d_watch(
-                P("conv") + vecs_path, subtree=True, state=None, meta=False
-            ) as cdv:
-                self.notify_vecs = await cdv.get_node()
-            await self._run_loop(link, notify_path, evt)
-        else:
-            # No vecs tree configured — mirror everything at warning+.
-            await self._run_loop(link, notify_path, evt)
+        async with as_service(attrdict(debug=False)) as srv:
+            # Fetch the notify-vecs tree, if configured.
+            # This mirrors the codec_vecs pattern in moat/link/gate/venus.py.
+            #
+            # Without one, everything at warning level or higher is mirrored.
+            vecs_path = self.cfg.get("vecs", None)
+            if isinstance(vecs_path, Path):
+                async with link.d_watch(
+                    P("conv") + vecs_path, subtree=True, state=None, meta=False
+                ) as cdv:
+                    self.notify_vecs = await cdv.get_node()
+            await self._run_loop(link, notify_path, evt, srv)
 
-    async def _run_loop(self, link: Link, notify_path: Path, evt: anyio.Event | None) -> None:
+    async def _run_loop(
+        self, link: Link, notify_path: Path, evt: anyio.Event | None, srv: RunMsg
+    ) -> None:
         """Watch the error subtree and mirror qualifying entries."""
         async with link.d_watch(P("error"), subtree=True, state=None, meta=True) as mon:
+            srv.set()
             if evt is not None:
                 evt.set()
 

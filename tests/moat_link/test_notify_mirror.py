@@ -432,3 +432,46 @@ async def test_mirror_with_vecs_prio_override(cfg):
             assert data["prio"] == "fatal"
 
             tg.cancel_scope.cancel()
+
+
+async def test_mirror_signals_systemd_readiness(cfg, monkeypatch):
+    """The mirror tells systemd it's ready once its error watch is up.
+
+    Regression test: the mirror used to never signal ``READY=1``, so a
+    ``Type=notify`` unit stalled for ``TimeoutSec`` and was killed.
+    """
+    cfg.link.notify = _mirror_cfg()
+
+    notified: list[str] = []
+
+    def fake_notify(state):
+        notified.append(str(state))
+
+    import moat.util.systemd as sysd_mod  # noqa: PLC0415
+
+    monkeypatch.setattr(sysd_mod, "notify", fake_notify, raising=False)
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as writer,
+        sf.client_() as reader,
+    ):
+        evt = anyio.Event()
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(ErrorMirror(cfg.link.notify).run, reader, evt)
+            await evt.wait()
+
+            assert "READY" in "".join(notified), f"No READY notification sent: {notified}"
+
+            # Sanity: the mirror still works.
+            await writer.d_set(
+                P("error.run.host.demo"),
+                {"msg": "host down", "level": 4},
+            )
+            await writer.i_sync()
+
+            data = await _wait_for_notify(reader, "notify.run.host.demo")
+            assert data["msg"] == "host down"
+
+            tg.cancel_scope.cancel()

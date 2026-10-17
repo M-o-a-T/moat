@@ -1,5 +1,6 @@
 [Unit]
 Description=MoaT-Link Notification Forwarder
+After=moat-link-server.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

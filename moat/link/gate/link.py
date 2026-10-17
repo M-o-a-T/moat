@@ -116,7 +116,14 @@ class Gate(DelayedGate):
         # gate's task group: `Gate.run_` returns once the initial sync is
         # done, but the remote side must stay connected for as long as
         # the gate runs.
-        async with Link(cfg, only=server_name) as remote:
+        async with (
+            Link(cfg, only=server_name) as remote,
+            remote.announcing(
+                host=False,
+                wait=False,
+                name=self.path,
+            ),
+        ):
             self._remote = remote
             await super().run_(task_status=task_status)
             await anyio.sleep_forever()

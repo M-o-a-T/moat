@@ -76,6 +76,7 @@ else:
     _HAVE_SCHEMA = True
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
     from contextlib import AbstractAsyncContextManager
 
     from moat.lib.path import PathElem
@@ -217,7 +218,7 @@ class LinkCommon(CmdCommon):
     sdr: LinkSender
     announced: dict[Path, anyio.Event]
     backend: Backend
-    tg: Any
+    tg: TaskGroup
     current_server: MsgSender | None
 
     def __init__(self, cfg, name: str | None = None) -> None:

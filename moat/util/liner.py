@@ -18,6 +18,8 @@ from moat.lib.micro import (
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup as _TG
+
     from collections.abc import Awaitable, Callable
     from typing import Any, Self
 
@@ -61,7 +63,7 @@ class Liner:
 
         self.buf: bytearray | None = bytearray()
         self.evt: Event
-        self._tg: Any  # TaskGroup from moat.lib.micro
+        self._tg: _TG  # TaskGroup from moat.lib.micro
 
     async def __aenter__(self) -> Self:
         AC = ACM(self)

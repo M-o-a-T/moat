@@ -16,6 +16,8 @@ from moat.lib.broadcast import Broadcaster
 from typing import TYPE_CHECKING, Any, NamedTuple
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
+
     from collections.abc import AsyncIterator
 
 logger = logging.getLogger(__name__)
@@ -103,7 +105,7 @@ class GpioWatcher:
     This class polls `/sys/kernel/debug/gpio` (can be overridden).
     """
 
-    tg: Any = None  # for .run
+    tg: TaskGroup | None = None  # for .run
 
     def __init__(
         self,

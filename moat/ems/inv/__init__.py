@@ -34,6 +34,8 @@ from ._util import balance
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
+
     from asyncdbus import DbusType
 
     from typing import Any
@@ -259,7 +261,7 @@ class InvControl(BusVars):
     _change_mode_evt: Any | None = None
     _ctrl: Any | None = None
     _srv: Any | None = None
-    _tg: Any | None = None
+    _tg: TaskGroup | None = None
     step: int = 0
 
     @classmethod

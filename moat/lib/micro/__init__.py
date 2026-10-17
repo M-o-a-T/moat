@@ -39,6 +39,7 @@ T = TypeVar("T")
 R = TypeVar("R")
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup as _AnyioTaskGroup
     from contextlib import AbstractAsyncContextManager, AbstractContextManager
     from types import TracebackType
 
@@ -441,7 +442,7 @@ async def run_server(
     host: str,
     port: int,
     backlog: int = 5,
-    taskgroup: Any = None,
+    taskgroup: _AnyioTaskGroup | None = None,
     reuse_port: bool = True,
     evt: _anyio.Event | None = None,
 ) -> None:

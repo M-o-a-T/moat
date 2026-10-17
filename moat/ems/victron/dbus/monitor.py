@@ -29,7 +29,10 @@ from .utils import CtxObj, unwrap_dbus_value, wrap_dbus_value
 from .utils import call as _call
 
 from collections import defaultdict
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
 
 notfound = object()  # For lookups where None is a valid result
 
@@ -111,7 +114,7 @@ class DbusMonitor(CtxObj):
             ...
     """
 
-    _tg: Any | None = None
+    _tg: TaskGroup | None = None
 
     def __init__(
         self,

@@ -2127,6 +2127,17 @@ class Watcher(CtxObj, Generic[_NodeType]):
 
     async def _updates(self, qw, *, task_status) -> None:
         "get updates from MQTT"
+        # Anchor incoming topics at THIS link's root, not the ambient one:
+        # a Link may run nested inside another Link's context (e.g. the
+        # link gate's remote side), where the ambient root belongs to the
+        # other side and wouldn't collapse our topics.
+        token = Root.set(self.link.mqtt_root)
+        try:
+            await self._updates_inner(qw, task_status=task_status)
+        finally:
+            Root.reset(token)
+
+    async def _updates_inner(self, qw, *, task_status) -> None:
         plen = len(self.path)  # ignores the root prefix
         async with self.link.monitor(
             self.link.mqtt_root + self.path,

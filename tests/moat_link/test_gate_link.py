@@ -206,3 +206,63 @@ async def test_gate_remote_announcement_reports_up(cfg):
                     await anyio.sleep(0.1)
 
                 tg.cancel_scope.cancel()
+
+
+async def test_gate_live_update_across_roots(cfg):
+    """Post-startup updates must land at the right remote path.
+
+    The gate's local ``Watcher`` parses raw MQTT topics by stripping the
+    length of the watched path.  That presumes the topic was collapsed
+    against the ambient ``Root`` — but inside the gate the ambient root
+    belongs to the *remote* Link, so local topics didn't collapse and
+    live updates were spliced wrongly (e.g. ``x.rb.x.a`` instead of
+    ``x.a``).  Initial sync (RPC-based) was unaffected.
+    """
+    gcfg = attrdict(
+        driver="link",
+        src=P("x"),
+        server="SRVH",
+        delay=0.1,
+        root=P("rb"),
+    )
+
+    async with (
+        Scaffold(copy.deepcopy(cfg), use_servers=True, root=P("ra")) as sf_g,
+        Scaffold(copy.deepcopy(cfg), use_servers=True, root=P("rb")) as sf_h,
+    ):
+        await sf_g.server(name="SRVG", init="TEST")
+        await sf_h.server(name="SRVH", init="TEST")
+        gcfg["backend"] = dict(sf_h.cfg.backend)
+
+        async with (
+            sf_g.client_() as cg,
+            sf_h.client_() as ch,
+        ):
+            # Seed data BEFORE the gate starts, so the initial sync has
+            # something to carry over.
+            await cg.d_set(P("x.seed"), 11)
+            await cg.i_sync()
+
+            await cg.d_set(P("gate.livetest"), gcfg)
+            await cg.i_sync()
+
+            async with anyio.create_task_group() as tg:
+                await tg.start(run_gate, sf_g.cfg, cg, P("gate.livetest"))
+
+                # Initial sync carried the seed over.
+                assert await _d_get(ch, P("x.seed")) == 11
+
+                # Now a LIVE update, after the gate settled: it must
+                # arrive at x.live on the remote — and nowhere else.
+                await cg.d_set(P("x.live"), 22)
+                assert await _d_get(ch, P("x.live")) == 22
+
+                # The corrupted-path variant must NOT exist.
+                try:
+                    d = await ch.d_get(P("x.rb.x.live"))
+                except KeyError:
+                    pass
+                else:
+                    raise AssertionError(f"Corrupted path exists: x.rb.x.live = {d!r}")
+
+                tg.cancel_scope.cancel()

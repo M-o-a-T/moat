@@ -16,6 +16,7 @@ from moat.util import time as mtime
 
 from . import attrdict
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 
     from typing import Self
 
-__all__ = ["humandelta", "now", "simple_time_delta", "time_until", "ts2iso"]
+__all__ = ["add_dates", "humandelta", "now", "simple_time_delta", "time_until", "ts2iso"]
 
 startup = dt.datetime.now().astimezone()
 _log: Logger | None = None
@@ -88,6 +89,36 @@ def ts2iso(ts: float, delta: bool = False, msec: int = 1) -> str:
     if delta:
         res += f" ({humandelta(ts - mtime.time(), ago=True, msec=msec)})"
     return res
+
+
+def add_dates(d) -> None:
+    """
+    Given a dict with int/float entries that might conceivably be dates,
+    add ``_*`` with a textual representation (including the distance to
+    "now", like `MsgMeta.repr` does).
+    """
+
+    t = mtime.time()
+    start = t - 366 * 24 * 3600
+    stop = t + 366 * 24 * 3600
+
+    def _add(d) -> None:
+        if isinstance(d, (list, tuple)):
+            for dd in d:
+                _add(dd)
+            return
+        if not isinstance(d, Mapping):
+            return
+        for k, v in list(d.items()):
+            if isinstance(k, str) and k.startswith("_"):
+                continue
+            if not isinstance(v, (int, float)):
+                _add(v)
+                continue
+            if start <= v <= stop:
+                d[f"_{k}"] = ts2iso(v, delta=True, msec=3)
+
+    _add(d)
 
 
 def humandelta(

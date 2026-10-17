@@ -16,6 +16,7 @@ from moat.util import attrdict
 from moat.lib.path import P
 from moat.link._test import Scaffold
 from moat.link.gate import run_gate
+from moat.link.meta import MsgMeta
 
 from typing import TYPE_CHECKING, Any
 
@@ -264,5 +265,60 @@ async def test_gate_live_update_across_roots(cfg):
                     pass
                 else:
                     raise AssertionError(f"Corrupted path exists: x.rb.x.live = {d!r}")
+
+                tg.cancel_scope.cancel()
+
+
+async def test_gate_send_wraps_source_metadata(cfg):
+    """Sent data must carry the source metadata in ``gw``.
+
+    The gate wraps the far side's metadata in a ``gw`` key when copying
+    *to* the source (``_set_src``); the link gate must do the same when
+    copying *to* the remote (``set_dst``), so the receiving side can tell
+    where the data originally came from.
+    """
+    gcfg = attrdict(
+        driver="link",
+        src=P("x"),
+        server="SRVK",
+        delay=0.1,
+    )
+
+    async with (
+        Scaffold(copy.deepcopy(cfg), use_servers=True) as sf_j,
+        Scaffold(copy.deepcopy(cfg), use_servers=True) as sf_k,
+    ):
+        await sf_j.server(name="SRVJ", init="TEST")
+        await sf_k.server(name="SRVK", init="TEST")
+        gcfg["backend"] = dict(sf_k.cfg.backend)
+
+        async with (
+            sf_j.client_() as cj,
+            sf_k.client_() as ck,
+        ):
+            # Source data with distinctive metadata.
+            await cj.d_set(P("x.a"), 1, meta=MsgMeta(origin="TESTSRC"))
+            await cj.i_sync()
+
+            await cj.d_set(P("gate.gwtest"), gcfg)
+            await cj.i_sync()
+
+            async with anyio.create_task_group() as tg:
+                await tg.start(run_gate, sf_j.cfg, cj, P("gate.gwtest"))
+
+                # The remote copy must carry the source's origin in "gw".
+                deadline = anyio.current_time() + TIMEOUT
+                while True:
+                    try:
+                        _, m = await ck.d_get(P("x.a"), meta=True)
+                    except KeyError:
+                        m = None
+                    if m is not None:
+                        gw = m.kw.get("gw", None)
+                        if gw is not None and gw.origin == "TESTSRC":
+                            break
+                    if anyio.current_time() >= deadline:
+                        raise AssertionError(f"Source metadata lost: {m!r}") from None
+                    await anyio.sleep(0.1)
 
                 tg.cancel_scope.cancel()

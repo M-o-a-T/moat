@@ -169,10 +169,12 @@ class Gate(DelayedGate):
         """
         Send data to the remote server.
         """
-        if meta is None:
-            remote_meta = MsgMeta(origin=self.origin)
-        else:
-            remote_meta = MsgMeta(origin=self.origin, timestamp=meta.timestamp)
+        remote_meta = MsgMeta(origin=self.origin)
+        if meta is not None:
+            remote_meta.timestamp = meta.timestamp
+            # Preserve the source-side metadata, like `_set_src` does when
+            # copying in the other direction.
+            remote_meta["gw"] = meta
         await self._remote.d_set(self.cf.src + path, data, remote_meta)
         node.ext_meta = remote_meta
 

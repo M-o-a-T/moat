@@ -30,10 +30,10 @@ directions, via the XKNX library.  It replaces the legacy
    moat link knx myhouse monitor
    ```
 
-## Deprecation
+## Storage
 
-This package supersedes ``moat-kv-knx``.  The address tree now lives in
-MoaT-Link under the ``knx.<NAME>`` prefix; group addresses are stored as
-the three integer components of an ``a/b/c`` address.
+The address tree lives in MoaT-Link under the ``knx.<NAME>`` prefix; group
+addresses are stored as the three integer components of an ``a/b/c``
+address.
 
 % end main

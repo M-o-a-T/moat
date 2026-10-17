@@ -78,13 +78,31 @@ _PartRE = re.compile("[^:._]+|_|:|\\.")
 _RTagRE = re.compile("^:m[^:._]+:$")
 
 
+def norm_root(root: Path) -> Path:
+    """Flatten a possibly ``:R``-prefixed path into a plain one.
+
+    Constructing a path that equals the ambient root (e.g. ``P("a.b")``
+    while ``Root`` is ``a.b``) absorbs the root as a ``:R`` prefix.
+    Storing such a self-referential path as a root would serialize to
+    the empty string, so roots must always be normalized to plain
+    element tuples.
+    """
+    if root._prefix is None:  # noqa: SLF001
+        return root
+    pref = root._prefix  # noqa: SLF001
+    if not isinstance(pref, RootPath):
+        # Explicitly-relative path (``:@``): not a root absorption.
+        return root
+    return Path(*pref._data, *root._data, _warn=False)  # noqa: SLF001
+
+
 def set_root(cfg) -> None:
     """
     Utility to force-set the root global.
 
     Used for testing without a "proper" context.
     """
-    Root.set(cfg.root)
+    Root.set(norm_root(cfg.root))
 
 
 @total_ordering
@@ -1164,80 +1182,7 @@ path_eval = _eval.eval
 # Here we declare our bunch of "root" variables.
 
 
-class _NoResetToken:
-    """Token returned by :meth:`Var.set`.
-
-    ``Var`` has no context to restore, so unlike a real ``ContextVar`` token
-    this carries no state: its only job is to be recognisable to
-    :meth:`Var.reset` so the ``set``/``reset`` protocol driven by ``ctx_as``
-    works uniformly for both ``ContextVar`` and ``Var``.
-    """
-
-    __slots__ = ()
-
-    def __repr__(self) -> str:
-        return "<Var no-reset token>"
-
-
-_VAR_SET_TOKEN = _NoResetToken()
-
-
-class Var:
-    """
-    This mimics a ContextVar but without the context.
-    """
-
-    def __init__(self, name, default=NotGiven) -> None:
-        self.name = name
-        self.default = default
-        self.data = NotGiven
-
-    def get(self):
-        "get current value"
-        if self.data is NotGiven:
-            raise ValueError("Not set")
-        return self.data
-
-    def set(self, val, *, force: bool = False):
-        "set current value"
-        # If the root is a.b.c, a new identical value will arrive as an
-        # empty path with a root of a.b.c. That's bad. Thus silently don't
-        # update in that case.
-        #
-        # We detect that case structurally.
-        #
-        # Match by the RootPath's *key* ("R"), not by ``_var is self``:
-        # the ``RootPath`` embedded in @val may hold a stale ``Var`` (a
-        # second ``Root`` instance created, if the namespace-packaged
-        # ``moat.lib.path._impl`` is loaded more than once), so identity
-        # would fail even though @val denotes the same root.
-        if (
-            not force
-            and self.data is not NotGiven
-            and isinstance(val, Path)
-            and isinstance(val._prefix, RootPath)  # noqa:SLF001
-            and val._prefix._key == "R"  # noqa:SLF001
-            and not len(val._data)  # noqa:SLF001
-        ):
-            return _VAR_SET_TOKEN
-        if not force and self.data is not NotGiven:
-            if self.data.slashed != val.slashed:
-                raise ValueError("Already set", self.data, val)
-            return _VAR_SET_TOKEN
-        self.data = val
-        return _VAR_SET_TOKEN
-
-    def __bool__(self) -> bool:
-        "check if value is set"
-        return self.data is not NotGiven
-
-    def reset(self, token) -> None:
-        "reset value; no-op"
-        if token is not _VAR_SET_TOKEN:
-            raise ValueError(token)
-
-
-Root = Var("Root", default=None)
+Root = ContextVar[Path | None]("Root", default=None)
 
 
 class RootPath(Path):
@@ -1250,7 +1195,7 @@ class RootPath(Path):
 
     _mark = ""
 
-    def __init__(self, key: str, var: ContextVar[Path | None] | Var) -> None:
+    def __init__(self, key: str, var: ContextVar[Path | None]) -> None:
         self._key = key
         self._var = var
 
@@ -1269,10 +1214,7 @@ class RootPath(Path):
 
     def __bool__(self) -> bool:
         "check if the contextvar is set"
-        if isinstance(self._var, Var):
-            return bool(self._var)
-        p = self._var.get()
-        return p is not None
+        return self._var.get() is not None
 
     @property
     def _data(self) -> PathTuple:  # pyright:ignore

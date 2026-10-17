@@ -100,7 +100,11 @@ class Gate(DelayedGate):
         client = attrdict(client if isinstance(client, Mapping) else ())
         for key in ("path", "port", "local_only", "name"):
             client.pop(key, None)
-        cfg["client"] = client
+        cfg.client = client
+
+        # The remote side might run with a different root
+        if "root" in self.cf:
+            cfg.root = self.cf.root
 
         # If the gate config contains a 'backend' dict, use it to override
         # the local backend settings so the remote Link talks to the

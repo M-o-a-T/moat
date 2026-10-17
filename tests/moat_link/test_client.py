@@ -9,6 +9,7 @@ import time
 
 from jsonschema.exceptions import ValidationError
 
+from moat.util import attrdict
 from moat.lib.path import P, Path
 from moat.link._test import Scaffold
 from moat.link.client import LinkSender
@@ -48,6 +49,10 @@ class _DummyLink:
         self.logger = logging.getLogger("tests.moat_link.test_client")
         self.announced = set()
         self.current_server = object() if has_server else None
+        self.cfg = attrdict(root=Path())
+
+    def __getitem__(self, key):  # attrdict-like access for cfg["root"]
+        return self.cfg[key]
 
 
 def _mk_sender(*, has_server: bool):
@@ -61,14 +66,9 @@ def _mk_sender(*, has_server: bool):
     return sender, sent
 
 
-def _empty_root() -> Path:
-    return Path()
-
-
 @pytest.mark.anyio
-async def test_d_set_verify_rejects_invalid(monkeypatch):
+async def test_d_set_verify_rejects_invalid():
     "Strict schema verification rejects invalid payloads."
-    monkeypatch.setattr("moat.link.client.Root.get", _empty_root)
     sender, sent = _mk_sender(has_server=True)
 
     async def _search(path, meta=False):  # noqa: ARG001
@@ -82,9 +82,8 @@ async def test_d_set_verify_rejects_invalid(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_d_set_verify_warning_writes(caplog, monkeypatch):
+async def test_d_set_verify_warning_writes(caplog):
     "Warning mode logs and writes invalid payloads."
-    monkeypatch.setattr("moat.link.client.Root.get", _empty_root)
     sender, sent = _mk_sender(has_server=True)
 
     async def _search(path, meta=False):  # noqa: ARG001
@@ -98,9 +97,8 @@ async def test_d_set_verify_warning_writes(caplog, monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_d_set_verify_auto_when_server_present(monkeypatch):
+async def test_d_set_verify_auto_when_server_present():
     "Default verification is active under pytest when a server link exists."
-    monkeypatch.setattr("moat.link.client.Root.get", _empty_root)
     sender, sent = _mk_sender(has_server=True)
 
     async def _search(path, meta=False):  # noqa: ARG001
@@ -114,9 +112,8 @@ async def test_d_set_verify_auto_when_server_present(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_d_set_verify_auto_without_server(monkeypatch):
+async def test_d_set_verify_auto_without_server():
     "Default verification does not run without a server connection."
-    monkeypatch.setattr("moat.link.client.Root.get", _empty_root)
     sender, sent = _mk_sender(has_server=False)
 
     async def _search(path, meta=False):  # noqa: ARG001
@@ -129,9 +126,8 @@ async def test_d_set_verify_auto_without_server(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_d_set_verify_missing_schema(monkeypatch):
+async def test_d_set_verify_missing_schema():
     "Missing schema entries are ignored."
-    monkeypatch.setattr("moat.link.client.Root.get", _empty_root)
     sender, sent = _mk_sender(has_server=True)
 
     async def _search(path, meta=False):  # noqa: ARG001

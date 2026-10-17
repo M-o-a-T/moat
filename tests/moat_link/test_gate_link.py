@@ -104,3 +104,54 @@ async def test_gate_remote_skips_local_socket(cfg, tmp_path):
                 assert await _d_get(cb, P("x.a")) == 1
 
                 tg.cancel_scope.cancel()
+
+
+async def test_gate_remote_root_override(cfg):
+    """The gate's ``root`` key repoints the remote Link at the remote root.
+
+    Two servers on two brokers use different link roots (``ra`` and
+    ``rb``). The gate on the ``ra`` side declares ``root: rb`` so its
+    remote Link publishes/subscribes below the remote root. Without the
+    override (or with a frozen global Root) the remote side would use
+    the local root and nothing would cross over.
+    """
+    gcfg = attrdict(
+        driver="link",
+        src=P("x"),
+        server="SRVD",
+        delay=0.1,
+        root=P("rb"),
+    )
+
+    async with (
+        Scaffold(copy.deepcopy(cfg), use_servers=True, root=P("ra")) as sf_a,
+        Scaffold(copy.deepcopy(cfg), use_servers=True, root=P("rb")) as sf_b,
+    ):
+        await sf_a.server(name="SRVC", init="TEST")
+        await sf_b.server(name="SRVD", init="TEST")
+
+        # The remote Link must use SRVD's broker, not the local one.
+        gcfg["backend"] = dict(sf_b.cfg.backend)
+
+        async with (
+            sf_a.client_() as ca,
+            sf_b.client_() as cb,
+        ):
+            # Distinct data on each side, below the gated path.
+            await ca.d_set(P("x.a"), 1)
+            await ca.i_sync()
+            await cb.d_set(P("x.b"), 2)
+            await cb.i_sync()
+
+            await ca.d_set(P("gate.roottest"), gcfg)
+            await ca.i_sync()
+
+            async with anyio.create_task_group() as tg:
+                await tg.start(run_gate, sf_a.cfg, ca, P("gate.roottest"))
+
+                # The gate is up (initial sync done): both sides must
+                # have converged across the different roots.
+                assert await _d_get(ca, P("x.b")) == 2
+                assert await _d_get(cb, P("x.a")) == 1
+
+                tg.cancel_scope.cancel()

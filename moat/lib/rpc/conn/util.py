@@ -12,6 +12,7 @@ from moat.lib.stream import BaseConn
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    import anyio.abc
     from types import TracebackType
 
     from moat.lib.stream.base import Buffer, MutBuffer
@@ -36,6 +37,8 @@ class BaseConnIter:
     Initially ``None``; after binding it holds the actual (possibly
     OS-assigned) port number.
     """
+
+    tg: anyio.abc.TaskGroup
 
     def __init__(self) -> None:
         self.q = Queue(1)
@@ -63,6 +66,7 @@ class BaseConnIter:
         tg = getattr(self, "tg", None)
         if tg is not None:
             tg.cancel()
+            del self.tg
         return await AC_exit(self, *exc)
 
     if L:

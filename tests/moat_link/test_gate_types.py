@@ -38,7 +38,7 @@ async def test_delayed_gate_pending_to_dst_uses_meta_fallback() -> None:
     """DelayedGate should synthesize metadata if none is available."""
     gate = object.__new__(DelayedGate)
     gate.origin = "via:test"
-    gate._pending = TimerMap()  # noqa: SLF001
+    gate._pending = TimerMap()
     gate.cf = SimpleNamespace(src=P("s"))
 
     node = GateNode()
@@ -51,10 +51,10 @@ async def test_delayed_gate_pending_to_dst_uses_meta_fallback() -> None:
         seen.append(meta)
 
     gate.set_dst = _set_dst
-    gate._pending[_DelayedUpdate(path=P("x"), data=1, meta=None, node=node, to_dst=True)] = -1  # noqa: SLF001
+    gate._pending[_DelayedUpdate(path=P("x"), data=1, meta=None, node=node, to_dst=True)] = -1
 
     with anyio.move_on_after(0.05):
-        await gate._process_pending(gate._pending)  # noqa: SLF001
+        await gate._process_pending(gate._pending)
 
     assert len(seen) == 1
     assert isinstance(seen[0], MsgMeta)
@@ -66,8 +66,8 @@ async def test_delayed_gate_pending_to_src_clears_source() -> None:
     """DelayedGate should clear source state after writing source update."""
     gate = object.__new__(DelayedGate)
     gate.origin = "via:test"
-    gate._pending = TimerMap()  # noqa: SLF001
-    gate._speed_pending = {}  # noqa: SLF001
+    gate._pending = TimerMap()
+    gate._speed_pending = {}
     gate.cf = SimpleNamespace(src=P("s"))
     gate.link = _Remote()
 
@@ -79,10 +79,10 @@ async def test_delayed_gate_pending_to_src_clears_source() -> None:
     node = GateNode()
     node.set_(P("n"), 9, MsgMeta(origin="old"))
     meta = MsgMeta(origin="remote")
-    gate._pending[_DelayedUpdate(path=P("x"), data=3, meta=meta, node=node, to_dst=False)] = -1  # noqa: SLF001
+    gate._pending[_DelayedUpdate(path=P("x"), data=3, meta=meta, node=node, to_dst=False)] = -1
 
     with anyio.move_on_after(0.05):
-        await gate._process_pending(gate._pending)  # noqa: SLF001
+        await gate._process_pending(gate._pending)
 
     assert gate.link.calls[0][0] == P("s.x")
     assert node.data_ is NotGiven
@@ -96,12 +96,12 @@ async def test_link_gate_metadata_paths() -> None:
     gate = object.__new__(LinkGate)
     gate.origin = "via:test"
     gate.cf = SimpleNamespace(src=P("r"))
-    gate._skip_paths = frozenset(["run"])  # noqa: SLF001
-    gate._remote = _Remote()  # noqa: SLF001
+    gate._skip_paths = frozenset(["run"])
+    gate._remote = _Remote()
 
     node = GateNode()
     await gate.set_dst(P("a"), 2, None, node)
-    assert gate._remote.calls[0][0] == P("r.a")  # noqa: SLF001
+    assert gate._remote.calls[0][0] == P("r.a")
 
     m1 = MsgMeta(origin="x", timestamp=1)
     node.ext_meta = m1
@@ -143,11 +143,11 @@ def _make_venus_gate() -> VenusGate:
     gate.backend = gate.link
     gate.codecs = None
     gate.codec = "json"
-    gate._read_prefix = P("N") + gate.cf.dst  # noqa: SLF001
-    gate._write_prefix = P("W") + gate.cf.dst  # noqa: SLF001
-    gate._keepalive_topic = P("R") + gate.cf.dst + P("keepalive")  # noqa: SLF001
-    gate._keepalive_interval = 0.01  # noqa: SLF001
-    gate._keepalive_id = "unit-test-id"  # noqa: SLF001
+    gate._read_prefix = P("N") + gate.cf.dst
+    gate._write_prefix = P("W") + gate.cf.dst
+    gate._keepalive_topic = P("R") + gate.cf.dst + P("keepalive")
+    gate._keepalive_interval = 0.01
+    gate._keepalive_id = "unit-test-id"
     return gate
 
 

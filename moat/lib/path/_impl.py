@@ -288,14 +288,14 @@ class Path(Sequence[PathElem]):
             return cls(*data, decoded=decoded, prefix=prefix, _warn=False, scan=scan, mark=mark)
         p = object.__new__(cls)
         if decoded and data and isinstance(data[0], RootPath):
-            p._prefix = data[0]  # noqa:SLF001
-            p._data = tuple(data[1:])  # noqa:SLF001
+            p._prefix = data[0]
+            p._data = tuple(data[1:])
         else:
-            p._data = tuple(data)  # noqa:SLF001
-            p._prefix = prefix  # noqa:SLF001
+            p._data = tuple(data)
+            p._prefix = prefix
         if mark is None:  # pyright:ignore
             raise ValueError("Use an empty mark, not 'None'")
-        p._mark = mark  # noqa:SLF001
+        p._mark = mark
         return p
 
     def as_tuple(self) -> PathTuple:

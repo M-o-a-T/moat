@@ -1,3 +1,9 @@
+moat-dev-heat-service (0.1.0-4) unstable; urgency=medium
+
+  * New release for 26.4.42
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 17 Oct 2026 20:37:34 +0200
+
 moat-dev-heat-service (0.1.0-3) unstable; urgency=medium
 
   * New release for 26.4.25

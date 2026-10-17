@@ -126,10 +126,13 @@ class Gate(DelayedGate):
                 host=False,
                 wait=False,
                 name=self.path,
-            ),
+            ) as ann,
         ):
             self._remote = remote
             await super().run_(task_status=task_status)
+            # The initial sync is done: report the gate as running on the
+            # remote side, lest ``wait_sr`` complain that it never started.
+            ann.started("running")
             await anyio.sleep_forever()
 
     async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:

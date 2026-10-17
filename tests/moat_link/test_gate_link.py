@@ -155,3 +155,54 @@ async def test_gate_remote_root_override(cfg):
                 assert await _d_get(cb, P("x.a")) == 1
 
                 tg.cancel_scope.cancel()
+
+
+async def test_gate_remote_announcement_reports_up(cfg):
+    """The gate's remote-side announcement flips to ``up: True`` when running.
+
+    The link gate announces itself on the remote server (so operators can
+    see that a gate is syncing this subtree).  The announcement must
+    report ``up: True`` once the initial sync has completed, not stay
+    ``up: False`` forever (which also spams "did not (yet?) start"
+    warnings from ``SetReady.wait_sr``).
+    """
+    gcfg = attrdict(
+        driver="link",
+        src=P("x"),
+        server="SRVF",
+        delay=0.1,
+    )
+
+    async with (
+        Scaffold(copy.deepcopy(cfg), use_servers=True) as sf_e,
+        Scaffold(copy.deepcopy(cfg), use_servers=True) as sf_f,
+    ):
+        await sf_e.server(name="SRVE", init="TEST")
+        await sf_f.server(name="SRVF", init="TEST")
+        gcfg["backend"] = dict(sf_f.cfg.backend)
+
+        async with (
+            sf_e.client_() as ce,
+            sf_f.client_() as cf,
+        ):
+            await ce.d_set(P("x.a"), 1)
+            await ce.i_sync()
+
+            await ce.d_set(P("gate.anntest"), gcfg)
+            await ce.i_sync()
+
+            async with anyio.create_task_group() as tg:
+                await tg.start(run_gate, sf_e.cfg, ce, P("gate.anntest"))
+
+                # The gate is up: the remote server must see its
+                # announcement with up=True (and "running" as the value).
+                deadline = anyio.current_time() + TIMEOUT
+                while True:
+                    ann = await cf.d_get(P("run.host.gate.anntest"))
+                    if ann.get("up") and ann.get("value") == "running":
+                        break
+                    if anyio.current_time() >= deadline:
+                        raise AssertionError(f"Remote gate announcement not up: {ann!r}") from None
+                    await anyio.sleep(0.1)
+
+                tg.cancel_scope.cancel()

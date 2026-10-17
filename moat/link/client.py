@@ -1468,6 +1468,7 @@ class Link(LinkCommon, CtxObj):
     _state: str = "init"
     _common: bool = False
     _only: str | None = None
+    _seen_servers: set[str]
     _ctx_active: bool = False
     _setup_done: bool = False
     announced: dict[Path, anyio.Event]
@@ -1489,6 +1490,7 @@ class Link(LinkCommon, CtxObj):
         self._state_change = anyio.Event()
         self._common = common
         self._only = only
+        self._seen_servers = set()
         self._socket_path: str | None = None
         self.announced = {}
         with suppress(AttributeError):
@@ -1769,9 +1771,12 @@ class Link(LinkCommon, CtxObj):
                 srv = await self.tg.start(self._read_server_link)
         except TimeoutError:
             what = "any server" if self._only is None else f"server {self._only!r}"
+            hint = ""
+            if self._only is not None and self._seen_servers:
+                hint = f" Known servers: {', '.join(sorted(self._seen_servers))}."
             raise TimeoutError(
                 f"No announcement of {what} seen within "
-                f"{self.cfg.client.init_timeout}s. Is it running?"
+                f"{self.cfg.client.init_timeout}s.{hint} Is it running?"
             ) from None
 
         tm = self.cfg.timeout.connect
@@ -1855,16 +1860,32 @@ class Link(LinkCommon, CtxObj):
 
         self._last_link_seen = anyio.Event()
         if self._only is not None:
-            # Monitor the specific named server's announcement
-            monitor_path = P(":R.run.service.main.server") / self._only
+            # Monitor the named server's announcement — and, diagnostically,
+            # its siblings: remembering which servers *do* announce lets a
+            # mistyped name (e.g. a host's FQDN where the server announces
+            # under its short hostname) be reported actionable.
+            monitor_path = P(":R.run.service.main.server")
+            subtree = True
         else:
             # Monitor the main connection channel
             monitor_path = P(":R.run.service.main.conn")
+            subtree = False
         async with self.backend.monitor(
             monitor_path,
+            subtree=subtree,
             retain_handling=RetainHandling.SEND_RETAINED,
         ) as mon:
             async for msg in mon:
+                if subtree:
+                    if len(msg.topic) != 5:
+                        continue
+                    name = str(msg.topic[-1])
+                    if msg.data is NotGiven:
+                        self._seen_servers.discard(name)
+                    else:
+                        self._seen_servers.add(name)
+                    if name != self._only:
+                        continue
                 self._last_link = msg
                 if task_status is None:
                     self._last_link_seen.set()

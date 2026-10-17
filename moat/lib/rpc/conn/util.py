@@ -58,7 +58,17 @@ class BaseConnIter:
         self._port_ready.set()
 
     async def __aexit__(self, *exc):
-        await AC_exit(self, *exc)
+        # Stop the accept task; it would otherwise keep the (uncancelled)
+        # task group alive forever when exiting normally.
+        #
+        # The incoming exception is deliberately not forwarded: exiting
+        # a task group's context with an exception wraps it in an
+        # ExceptionGroup. The caller's ``async with`` propagates the
+        # original exception anyway.
+        tg = getattr(self, "tg", None)
+        if tg is not None:
+            tg.cancel()
+        return await AC_exit(self, None, None, None)
 
     if L:
 
@@ -120,7 +130,12 @@ class ListenerLink(BaseConn):
 
     async def __aenter__(self):
         await self.listener.__aenter__()
-        return await super().__aenter__()
+        try:
+            return await super().__aenter__()
+        except BaseException:
+            # Don't leak the listener's accept task if our own setup fails.
+            await self.listener.__aexit__(None, None, None)
+            raise
 
     async def __aexit__(
         self,

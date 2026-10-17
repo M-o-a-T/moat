@@ -12,7 +12,7 @@ Do this once:
   On Debian(-derived) systems: run `apt install python3-venv python3-build`.
 
 * Set things up:
-  `make setup`
+  `bash setup.py`
 
 * Activate the Python virtual evnironment:
   `. .venv/bin/activate`

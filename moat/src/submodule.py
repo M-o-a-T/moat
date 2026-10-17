@@ -290,7 +290,7 @@ async def get_cmd(edit: bool) -> None:
     If the target directory already exists the remote is fetched; otherwise
     the repository is cloned.  In both cases the working tree is checked out
     at the recorded ``rev``.  ``ext`` must be a symlink or directory created
-    by ``make setup``.
+    by ``setup.sh``.
 
     By default the read-only remotes from ``REMOTES`` are used.  For each
     HTTP(S) candidate an SSH equivalent is tried first, falling back to the
@@ -457,7 +457,7 @@ async def commit_cmd(obj, no_dirty: bool) -> None:
     For every entry in the ``ext`` section, the HEAD commit of
     ``ext/<name>`` is read via ``git rev-parse HEAD`` and written back
     to ``versions.yaml``.  ``ext`` must be a symlink or directory created
-    by ``make setup``.
+    by ``setup.sh``.
 
     Aborts if any repository has uncommitted changes, unless ``--no-dirty``
     is given.

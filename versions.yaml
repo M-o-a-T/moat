@@ -1,5 +1,5 @@
 _:
-  new: 26.4.40
+  new: 26.4.41
 ext:
   micropython:
     github: M-o-a-T/micropython.git
@@ -337,12 +337,12 @@ moat-lib-ring:
   rev: 715a75b8dc7ec3a13563b5b9ab7ea4253b69b5be
   tag: 0.2.5
 moat-lib-rpc:
-  deb: 0.7.18-1
-  new: 0.7.18
+  deb: 0.7.19-1
+  new: 0.7.19
   pkg: 1
-  pypi: 0.7.18
-  rev: ba648d64d6bbc6f46eb3314974ad0a1f7da91c94
-  tag: 0.7.18
+  pypi: 0.7.19
+  rev: bf360c266bf24af62a75a65aa50d999579125d5a
+  tag: 0.7.19
 moat-lib-run:
   deb: 0.2.4-2
   new: 0.2.4
@@ -352,12 +352,12 @@ moat-lib-run:
   rev: 92eacfb2c38efd0bb4f610dd37fecaf04b4a9b52
   tag: 0.2.4
 moat-lib-stream:
-  deb: 0.3.5-1
-  new: 0.3.5
+  deb: 0.3.6-1
+  new: 0.3.6
   pkg: 1
-  pypi: 0.3.5
-  rev: 715a75b8dc7ec3a13563b5b9ab7ea4253b69b5be
-  tag: 0.3.5
+  pypi: 0.3.6
+  rev: bf360c266bf24af62a75a65aa50d999579125d5a
+  tag: 0.3.6
 moat-lib-xknx:
   deb: 3.15.1-8
   new: 3.15.1
@@ -367,12 +367,12 @@ moat-lib-xknx:
   rev: 43d36f1b36ce7fef0933915a67e26532e8aab691
   tag: 3.15.0
 moat-link:
-  deb: 0.11.0-1
-  new: 0.11.0
+  deb: 0.11.1-1
+  new: 0.11.1
   pkg: 1
-  pypi: 0.11.0
-  rev: ba648d64d6bbc6f46eb3314974ad0a1f7da91c94
-  tag: 0.11.0
+  pypi: 0.11.1
+  rev: bf360c266bf24af62a75a65aa50d999579125d5a
+  tag: 0.11.1
 moat-link-cal:
   new: 0.0.2
   pkg: 1
@@ -380,12 +380,12 @@ moat-link-cal:
   rev: 715a75b8dc7ec3a13563b5b9ab7ea4253b69b5be
   tag: 0.0.2
 moat-link-gate:
-  deb: 0.1.4-1
-  new: 0.1.4
+  deb: 0.1.5-1
+  new: 0.1.5
   pkg: 1
-  pypi: 0.1.4
-  rev: ba648d64d6bbc6f46eb3314974ad0a1f7da91c94
-  tag: 0.1.4
+  pypi: 0.1.5
+  rev: bf360c266bf24af62a75a65aa50d999579125d5a
+  tag: 0.1.5
 moat-link-gpio:
   deb: 0.2.2-2
   new: 0.2.2
@@ -440,13 +440,12 @@ moat-link-metrics-backend-victoria:
   rev: 715a75b8dc7ec3a13563b5b9ab7ea4253b69b5be
   tag: 0.0.7
 moat-link-notify:
-  deb: 0.0.8-2
-  new: 0.0.8
-  pkg: 2
-  pkgrev: ba648d64d6bbc6f46eb3314974ad0a1f7da91c94
-  pypi: 0.0.8
-  rev: 715a75b8dc7ec3a13563b5b9ab7ea4253b69b5be
-  tag: 0.0.8
+  deb: 0.0.9-1
+  new: 0.0.9
+  pkg: 1
+  pypi: 0.0.9
+  rev: bf360c266bf24af62a75a65aa50d999579125d5a
+  tag: 0.0.9
 moat-link-ow:
   deb: 0.2.5-3
   new: 0.2.5

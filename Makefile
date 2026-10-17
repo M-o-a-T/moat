@@ -38,23 +38,7 @@ endif
 #	@exit 1
 #endif
 
-venv:
-ifneq ($(VENV),N)
-	python3 -m venv .venv --upgrade-deps
-	uv pip install -U -e .
-	uv pip install -U -e .[dev]
-	uv pip install -U -e .[doc]
-	uv pip install -U ty pre-commit
-endif
-
-prep:
-	git submodule update --init --recursive
-	make -C ext/micropython/mpy-cross
-	env PYTHONPATH=${PWD} \
-	  make -C ext/micropython/ports/unix \
-	    VARIANT_DIR=${PWD}/moat/micro/_embed/boards/unix/test \
-	    BUILD=${PWD}/build/mpy-unix \
-	    STRIP= DEBUG=1
+all: setup
 
 doc:
 	set -o pipefail -o errexit ; \
@@ -76,21 +60,16 @@ docwarn:
 	    ( if grep -E 'ERR|WARN' ; then exit 1 ; else exit 0; fi )
 
 setup:
+ifndef IS_WORKTREE
+	bash setup.sh
+else
+	test -d "${MOAT_EXT}" || { echo "MOAT_EXT '${MOAT_EXT}' not found; run 'make' in the main checkout first." >&2; exit 1; }
 ifneq ($(VENV),N)
-ifdef IS_WORKTREE
 	test -d .venv || cp -a --reflink=auto "$(WT_MAIN)/.venv" .venv
 endif
-	python3 -mvenv .venv --upgrade-deps
-	. .venv/bin/activate; test -f .venv/bin/uv || pip install uv
-	. .venv/bin/activate; uv pip install -U -e .[dev,doc]
-endif
-ifdef IS_WORKTREE
-	test -d "${MOAT_EXT}" || { echo "MOAT_EXT '${MOAT_EXT}' not found; run 'make setup' in the main checkout first." >&2; exit 1; }
-else
-	mkdir -p "${MOAT_EXT}"
+	./mt src submod get
 endif
 	rm -rf ext; ln -sf "${MOAT_EXT}" ext
-	./mt src submod get
 
 release: doc
 	./mt src tag

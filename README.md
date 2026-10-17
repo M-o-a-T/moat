@@ -80,6 +80,25 @@ As of 2026-01, we're on [Github](https://github.com/M-o-a-T/moat).
 
 This will change, in favor of Codeberg and Radicle. TODO.
 
+## Development
+
+MoaT does not virtual environments; it's running on a bare-metal system
+with system packages, thus we use system packages for development.
+
+`export VENV=Y` if you want to use a virtual environment anyway.
+`export UPY=N` if you don't need to run on MicroPython.
+`export ESP=N` if you do, but don't have ESP microcontrollers.
+
+You need 10G of disk space.
+
+To install all dependencies, run `bash setup.sh`.
+
+### Worktrees
+
+Run `bash setup.sh` after you created a new worktree. 
+
+(Requires a successful setup run in the main work area.)
+
 ### Testing
 
 Complete test coverage depend on the availability of
@@ -87,6 +106,9 @@ Complete test coverage depend on the availability of
 - victoria-metrics
 - flashmq
 - python-ortools
+- micropython (source)
+
+Please don't submit patches with untested components.
 
 ## Support
 

@@ -26,7 +26,9 @@ if [ "$M" != "$WT" ] ; then
     fi
 
     cd "$WT"
-    test -d .venv || cp -a --reflink=auto "$M/.venv" .venv
+    if ! test -d .venv && test -d "$M/.venv" ; then
+        cp -a --reflink=auto "$M/.venv" .venv
+    fi
     rm -rf ext; ln -sf "$D/$EXT" ext
 
     exit 0

@@ -371,7 +371,11 @@ async def node_attr(
     Args:
         obj: command object
         path: address of the node to change
-        res: old node, if it has been read already
+        val: old value of the node, if it has been read already;
+            read from the server if not given. A missing node starts
+            from an empty dict.
+        meta: old metadata, if known
+        retain: use the server-side (conflict-checked) setter
         **kw: the results of `attr_args`
 
     Returns the result of setting the attribute.
@@ -380,12 +384,12 @@ async def node_attr(
         try:
             val, *m = await obj.conn.d.get(path)
         except KeyError:
-            pass
+            val = {}
         else:
             meta = MsgMeta.restore(m)
     if val is None:
         val = {}
-    val = process_args(None if val is NotGiven else val, **kw)
+    val = process_args(val, **kw)
     if retain:
         t = {} if meta is NotGiven else {"t": meta.timestamp}
         if val is NotGiven:

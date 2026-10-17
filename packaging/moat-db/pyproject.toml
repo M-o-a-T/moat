@@ -18,7 +18,7 @@ dependencies = [
 	"msgpack",
 	"outcome",
 	"ruyaml",
-	"simpleeval",
+	"simpleeval >= 1.0.7",
 	"moat-util ~= 0.64.0",
 	"sqlalchemy ~= 2.0",
 	"alembic",
@@ -44,7 +44,6 @@ repository = "https://github.com/M-o-a-T/moat"
 event = [ "attr", "outcome",]
 main = [ "getpass",]
 msg = [ "msgpack",]
-path = [ "simpleeval",]
 queue = [ "outcome",]
 systemd = [ "systemd.daemon",]
 yaml = [ "ruyaml",]

@@ -37,7 +37,7 @@ repository = "https://github.com/M-o-a-T/moat"
 event = [ "attr", "outcome",]
 main = [ "asyncclick >= 8.3", "getpass",]
 msg = [ "msgpack",]
-path = [ "simpleeval",]
+path = [ "simpleeval >= 1.0.7",]
 queue = [ "outcome",]
 systemd = [ "systemd.daemon",]
 yaml = [ "ruyaml",]

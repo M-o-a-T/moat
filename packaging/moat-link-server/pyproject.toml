@@ -17,7 +17,7 @@ dependencies = [
 	"asyncclick ~= 8.3",
 	"attrs",
 	"ruyaml",
-	"simpleeval",
+	"simpleeval >= 1.0.7",
 	"moat-util ~= 0.64.0",
 	"moat-lib-rpc ~= 0.7.6",
 	"moat-lib-codec ~= 0.4.20",

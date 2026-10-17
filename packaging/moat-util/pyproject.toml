@@ -18,7 +18,7 @@ dependencies = [
 	"msgpack",
 	"outcome",
 	"ruyaml",
-	"simpleeval",
+	"simpleeval >= 1.0.7",
 	"moat-lib-codec ~= 0.4.20",
 	"moat-lib-micro ~= 0.3.4",
 	"moat-lib-path ~= 0.3.4",
@@ -45,7 +45,6 @@ repository = "https://github.com/M-o-a-T/moat"
 event = [ "attr", "outcome",]
 main = [ "getpass",]
 msg = [ "msgpack",]
-path = [ "simpleeval",]
 queue = [ "outcome",]
 systemd = [ "systemd.daemon",]
 yaml = [ "ruyaml",]

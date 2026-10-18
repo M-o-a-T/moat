@@ -243,6 +243,18 @@ class JobEntry:
         "info",
     )
 
+    #: Changes to these attributes stop a running job;
+    #: ``info`` is cosmetic and doesn't.
+    RESTART_ATTRS: ClassVar[tuple[str, ...]] = (
+        "code",
+        "data",
+        "delay",
+        "ok_after",
+        "repeat",
+        "backoff",
+        "target",
+    )
+
     delay: float = 100
     repeat: float = 0
     target: float | None = 0
@@ -259,6 +271,7 @@ class JobEntry:
     scope: anyio.CancelScope | None = None
     retry: float | None = None
     _comment: str | None = None
+    _parked_target: float | None = None
     _q: Any = None
     _running: bool = False
     _logger: logging.Logger
@@ -281,10 +294,13 @@ class JobEntry:
     def update_value(self, value: Mapping[str, Any] | None) -> None:
         """Apply a freshly-arrived data update to the job's attributes.
 
-        If the code attribute changes while the job is running, the
-        running task is cancelled.  Likewise if the target is cleared.
+        Changing a scheduling-relevant field stops the running task.
+        The job then stays stopped until its target is set anew
+        (``moat link job at PATH set -t0``): a record change without a
+        new target parks the job, while a new target (re)starts it
+        when it arrives.
         """
-        old_code = self.code
+        old = {k: getattr(self, k, None) for k in self.ATTRS}
         if value is None:
             for k in self.ATTRS:
                 with suppress(AttributeError):
@@ -296,13 +312,25 @@ class JobEntry:
             if "data" not in value:
                 self.data = {}
 
-        if self.scope is not None:
-            if value is None or self.code != old_code:
-                self._comment = "Cancel: Code changed"
+        if value is None or not self.target:
+            # Deleted, or the target was cleared: stop the job.
+            self._parked_target = None
+            if self.scope is not None:
+                self._comment = (
+                    "Cancel: entry removed" if value is None else "Cancel: target zeroed"
+                )
                 self.scope.cancel()
-            elif not self.target:
-                self._comment = "Cancel: target zeroed"
-                self.scope.cancel()
+            return
+        if not any(getattr(self, k, None) != old[k] for k in self.RESTART_ATTRS):
+            return
+        # The record changed: stop the running task.
+        if self.scope is None:
+            return
+        self._comment = "Cancel: record changed"
+        if old["target"] == self.target:
+            # No new target: park the job until somebody sets ``-t0``.
+            self._parked_target = self.target
+        self.scope.cancel()
 
     def should_start(self) -> tuple[float | bool | None, str]:
         """Return when, if ever, this job should be started next.
@@ -319,6 +347,11 @@ class JobEntry:
             return None, "node set"
         if st.started and not st.stopped:
             raise RuntimeError("Running! should not be called")
+        if self._parked_target is not None:
+            # Stopped by a record change: only a new target restarts.
+            if self.target == self._parked_target:
+                return False, "parked: record changed"
+            self._parked_target = None
         if self.target is None:
             return False, "no target"
         if self.target > st.started:
@@ -408,6 +441,7 @@ class JobEntry:
             st.backoff = 0
             await link.e_ok(self.path)
         finally:
+            self._comment = None  # don't leak a cancel comment into the next run
             with anyio.fail_after(2, shield=True):
                 if st.node == self.runner.name:
                     st.node = None

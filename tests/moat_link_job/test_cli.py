@@ -7,17 +7,38 @@ state in the MoaT-Link tree.
 
 from __future__ import annotations
 
+import anyio
 import pytest
 import time
 
 import asyncclick as click
 
 import moat.link.job  # noqa:F401 - register cfg
+from moat.util import attrdict, combine_dict
 from moat.lib.path import P
 from moat.link._test import Scaffold
 from moat.src.test import raises
 
 pytestmark = pytest.mark.anyio
+
+
+async def _wait_state(c, state_path, *, timeout: float = 15, until=None):
+    """Poll ``state_path`` until it satisfies ``until``."""
+    if until is None:
+
+        def _ok(_st):
+            return bool(_st)
+
+        until = _ok
+    with anyio.fail_after(timeout):
+        while True:
+            try:
+                st = await c.d_get(state_path)
+            except KeyError:
+                st = None
+            if isinstance(st, dict) and until(st):
+                return st
+            await anyio.sleep(0.1)
 
 
 async def test_set_get_delete(cfg):
@@ -395,3 +416,69 @@ async def test_debug_refuses_live_anon_owner(cfg):
             with raises(click.exceptions.UsageError) as r:
                 await sf.run("link job at live debug")
             assert "already running" in str(r.value)
+
+
+async def test_set_stops_running_job(cfg):
+    """Modifying a running job's record via the CLI stops it.
+
+    A data-only change parks the job; ``set -t0`` (re)starts it. Both
+    in one command stops and restarts it.
+    """
+    from moat.link.code import CODE_EXEC_ROOT  # noqa: PLC0415
+    from moat.link.job import AnyJobRunner  # noqa: PLC0415
+
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        await c.d_set(
+            CODE_EXEC_ROOT + P("test.cli_sleep"),
+            dict(
+                code="""
+import anyio
+await _self.setup_done()
+await anyio.sleep_forever()
+""",
+                is_async=True,
+            ),
+        )
+        job_cfg = combine_dict(attrdict(actor=attrdict(cycle=1, gap=0.2)), cfg.link["job"])
+        sub = job_cfg["sub"]["group"] + P("default")
+        state_path = job_cfg["state"] + sub + P("clij")
+
+        await sf.run("link job at clij set -c test.cli_sleep -t0")
+        await c.i_sync()
+
+        runner = AnyJobRunner(c, job_cfg, sub, nodes=1)
+        async with anyio.create_task_group() as tg, runner.run():
+            st0 = await _wait_state(
+                c, state_path, until=lambda s: s.get("node") == c.name and not s.get("stopped")
+            )
+
+            # Data-only change: the job stops and stays stopped.
+            await sf.run("link job at clij set -v x 1")
+            await c.i_sync()
+            st = await _wait_state(c, state_path, until=lambda s: s.get("stopped", 0) > 0)
+            assert st["started"] == st0["started"]
+            await anyio.sleep(1)
+            st = await c.d_get(state_path)
+            assert st.get("stopped", 0) > 0  # still parked
+
+            # ``-t0`` restarts it.
+            await sf.run("link job at clij set -t0")
+            await c.i_sync()
+            st = await _wait_state(
+                c, state_path, until=lambda s: s.get("started", 0) > st0["started"]
+            )
+            assert st["node"] == c.name
+
+            # Data change and ``-t0`` in one command: stop + restart.
+            st1 = st
+            await sf.run("link job at clij set -v x 2 -t0")
+            await c.i_sync()
+            st = await _wait_state(
+                c, state_path, until=lambda s: s.get("started", 0) > st1["started"]
+            )
+            assert st["node"] == c.name
+            tg.cancel_scope.cancel()

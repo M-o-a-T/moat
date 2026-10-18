@@ -133,7 +133,10 @@ class Backend(CtxObj, metaclass=ABCMeta):
         Send a somewhat-free-form error message.
         """
         if subpath.prefix is None:
-            subpath = Root.get() / "error" + subpath
+            rt = Root.get()
+            if rt is None:
+                raise ValueError("Root is not set")
+            subpath = rt / "error" + subpath
         if msg:
             kw["msg"] = msg
         if data is not NotGiven:

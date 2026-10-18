@@ -9,44 +9,14 @@ import os
 import sys
 
 from moat.util import NotGiven, attrdict, yprint
-from moat.util import time as mtime
 from moat.lib.run import process_args
-from moat.util.times import ts2iso
+from moat.util.times import add_dates
 
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.path import Path
-
-
-def add_dates(d) -> None:
-    """
-    Given a dict with int/float entries that might conceivably be dates,
-    add ``_*`` with a textual representation.
-    """
-
-    t = mtime.time()
-    start = t - 366 * 24 * 3600
-    stop = t + 366 * 24 * 3600
-
-    def _add(d) -> None:
-        if isinstance(d, (list, tuple)):
-            for dd in d:
-                _add(dd)
-            return
-        if not isinstance(d, Mapping):
-            return
-        for k, v in list(d.items()):
-            if isinstance(k, str) and k.startswith("_"):
-                continue
-            if not isinstance(v, (int, float)):
-                _add(v)
-                continue
-            if start <= v <= stop:
-                d[f"_{k}"] = ts2iso(v)
-
-    _add(d)
 
 
 async def data_get(

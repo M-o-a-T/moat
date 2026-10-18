@@ -1,0 +1,314 @@
+#
+# Register description for a Wilo-Para MAXO circulation pump,
+# as typically used in heating systems.
+#
+# Source: Wilo OEM Technical guide "Wilo-Para MAXO Modbus Communication
+# Protocol" V01.01 (18/06/2024, corr. 13/02/2025), cross-checked against
+# Wilo's full online register list (qr.wilo.com/para-maxo-Modbus-registers).
+#
+# The device speaks Modbus/RTU. Delivery state: 19200 baud, 8E1, address 101.
+#
+# Wilo register numbers start at zero, thus the Modbus address equals the
+# "Wilo Register" number. (The "3xxxxx/4xxxxx" numbers in the manual are
+# Modbus-standard notation and are NOT used here.)
+#
+# Note the "Scale" column of the manual is a multiplier: a raw value of
+# 65535 in the flow register is the error marker, not 6553.5 m³/h.
+#
+# Multi-register values are big-endian ("standard word order").
+#
+
+regs:
+  ctrl:
+    default:
+      reg_type: h
+
+    duty_point:
+      _doc: Relative duty point (setpoint), in 0.5 % steps.
+      register: 1
+      type: int
+      unit: "%"
+      factor: 0.5
+    pump_cmd:
+      _doc: >
+        Pump on/off. Bit 0 switches the pump on. Higher bits implement
+        min/max overrides (unsupported on Para MAXO).
+      register: 40
+      type: uint
+      values:
+        0: off
+        1: on
+    control_function:
+      _doc: Control mode. Unsupported modes are rejected by the pump.
+      register: 42
+      type: uint
+      values:
+        1: n_const
+        3: dp_const
+        4: dp_var
+    bus_timer:
+      _doc: >
+        Bus command timer state machine. Regularly write "set_preset" (or
+        "set") to arm the fallback/local-menu lockout; when the timer
+        expires the pump assumes loss of communication.
+      register: 300
+      type: uint
+      values:
+        1: off
+        2: set
+        3: active
+        4: reset
+        5: manual
+        6: set_preset
+        7: active_preset
+        8: reset_preset
+        9: manual_preset
+    bus_timeout:
+      _doc: Bus command timer timeout, 20…65534 s. Factory default 300 s.
+      register: 400
+      type: uint
+      unit: s
+
+    fb:
+      default:
+        _doc: Fallback (preset) values, used when the bus command timer expires.
+
+      duty_point:
+        register: 402
+        type: int
+        unit: "%"
+        factor: 0.5
+      control_function:
+        _doc: Preset control mode.
+        register: 403
+        type: uint
+        values:
+          1: n_const
+          3: dp_const
+          4: dp_var
+      pump_cmd:
+        _doc: Preset pump on/off.
+        register: 404
+        type: uint
+        values:
+          0: off
+          1: on
+
+    uart:
+      default:
+        _doc: >
+          Serial interface settings. Written values take effect only after
+          echoing "param_ack" (I/F 61694) to H 61694 and a power cycle.
+
+      addr:
+        _doc: Modbus address, 1…247. Factory default 101.
+        register: 61440
+        type: uint
+      speed:
+        register: 61441
+        type: uint
+        values:
+          0: b300
+          1: b600
+          2: b1200
+          3: b2400
+          4: b4800
+          5: b9600
+          6: b19200
+          7: b38400
+          8: b57600
+          9: b115200
+          10: b76800
+          12: invalid
+      frame:
+        register: 61442
+        type: uint
+        values:
+          2: 8N1
+          3: 8N2
+          6: 8E1
+          10: 8O1
+          15: invalid
+      param_ack:
+        _doc: >
+          Acknowledges a parameter block write: read I/F 61694 and write
+          the value here. Applies the UART settings at the next power-up.
+        register: 61694
+        type: uint
+        len: 2
+
+  state:
+    default:
+      reg_type: i
+
+    pressure:
+      _doc: Differential pressure (calculated if sensorless).
+      register: 1
+      type: uint
+      unit: cmH2O
+      factor: 10
+    flow:
+      _doc: Calculated flow. 65535 = error/no data.
+      register: 2
+      type: uint
+      unit: m3/h
+      factor: 0.1
+    energy:
+      _doc: Cumulative electrical energy consumption.
+      register: 3
+      type: uint
+      unit: kWh
+    power:
+      _doc: Electrical input power.
+      register: 4
+      type: uint
+      unit: W
+    op_time:
+      _doc: Total operating time (motor turning).
+      register: 5
+      type: uint
+      unit: h
+      factor: 10
+    speed:
+      _doc: Pump speed.
+      register: 7
+      type: uint
+      unit: rpm
+    control_function:
+      _doc: Currently-active control mode.
+      register: 10
+      type: uint
+      values:
+        1: n_const
+        3: dp_const
+        4: dp_var
+    speed_max:
+      _doc: Maximum speed preset value.
+      register: 18
+      type: uint
+      unit: rpm
+    speed_min:
+      _doc: Minimum speed preset value.
+      register: 19
+      type: uint
+      unit: rpm
+    flow_max:
+      _doc: Maximum flow preset value.
+      register: 24
+      type: uint
+      unit: m3/h
+      factor: 0.1
+    flow_min:
+      _doc: Minimum flow preset value.
+      register: 25
+      type: uint
+      unit: m3/h
+      factor: 0.1
+
+    duty_point:
+      _doc: Active relative duty point.
+      register: 200
+      type: int
+      unit: "%"
+      factor: 0.5
+    duty_max:
+      _doc: Maximum reachable duty point, in 0.5 % steps.
+      register: 202
+      type: int
+      unit: "%"
+      factor: 0.5
+    duty_min:
+      _doc: Minimum reachable duty point, in 0.5 % steps.
+      register: 204
+      type: int
+      unit: "%"
+      factor: 0.5
+    duty_100:
+      _doc: >
+        Physical value of a 100 % duty point, in the unit reported by
+        "duty_units" — e.g. 8 m of head in "dp_const" mode, or the maximum
+        speed in "n_const" mode.
+      register: 206
+      type: float
+    duty_units:
+      _doc: Engineering unit of the 100 % duty-point value.
+      register: 208
+      type: uint
+      values:
+        19: kWh
+        47: W
+        73: s
+        104: rpm
+        135: m3/h
+
+    duty_actual:
+      _doc: Actual (operating) relative duty point.
+      register: 400
+      type: int
+      unit: "%"
+      factor: 0.5
+    pump_active:
+      _doc: Pump commanded on (bit 0).
+      register: 402
+      type: uint
+      values:
+        0: off
+        1: on
+    status:
+      _doc: >
+        Operating status bitmap. Bits: 0=ready4operation, 1=running,
+        3=warning, 4=error (retry pending), 5=final error.
+      register: 404
+      type: uint
+    heartbeat:
+      _doc: Communication heartbeat counter; resets on restart/power-on.
+      register: 500
+      type: uint
+      len: 2
+    timer_left:
+      _doc: Remaining bus-command-timer time.
+      register: 504
+      type: uint
+      unit: s
+    version:
+      _doc: >
+        Interface-module firmware version; the main version number is in
+        the most-significant byte.
+      register: 700
+      type: uint
+      len: 2
+    vendor:
+      _doc: Vendor ID (569 = WILO SE).
+      register: 702
+      type: uint
+      len: 2
+    error:
+      _doc: >
+        Current warning or error code. 0=no error. Codes flagged as a
+        warning in the manual still allow pump operation.
+      register: 940
+      type: uint
+      values:
+        0: none
+        4: mains_undervolt
+        7: generator_op
+        10: rotor_blocked
+        11: dry_running
+        19: flow_low
+        21: motor_overload
+        23: motor_short
+        25: motor_open
+        30: module_overtemp
+        31: bridge_overtemp
+        32: dc_link_undervolt
+        33: dc_link_overvolt
+        38: medium_temp_sensor
+        50: bus_communication
+        111: curr_hi
+        112: overspeed
+        119: turbine_mode
+    param_ack:
+      _doc: Echo this to H 61694 to accept changed UART parameters.
+      register: 61694
+      type: uint
+      len: 2

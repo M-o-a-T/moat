@@ -9,8 +9,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from moat.lib.micro import _TaskGroupProto
+
     from collections.abc import Awaitable, Callable
-    from typing import Any, Protocol
+    from typing import Protocol
 
     class HasValueTaskReplies(Protocol):
         """Required reply methods on command objects."""
@@ -54,7 +56,7 @@ class ValueTask:
         self.x = x
         self._t: Cancellable | None = None
 
-    async def start(self, tg: Any) -> None:
+    async def start(self, tg: _TaskGroupProto) -> None:
         """Task starter. Called from the command."""
         if self._t is not None:
             raise RuntimeError("dup")

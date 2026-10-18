@@ -150,6 +150,8 @@ def convert(enc, dec, pathi, patho, stream, long, short, f_eval, f_dump, **kw) -
     if long and short:
         raise click.UsageError("Both Path mods together are a no-op")
     if long:
+        if dec in ("msgpack", "cbor"):
+            raise click.UsageError(f"PathLongener requires the std-{dec} decoder.")
         long = PathLongener()
     if short:
         long = PathShortener()

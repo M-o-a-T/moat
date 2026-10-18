@@ -30,7 +30,7 @@ but then *create an issue* detailing what's missing to improve the docs later.
 
 ## Project Structure & Modules
 
-- This is a monorepository. All code lives in `moat/`.
+- This is a monorepository. All Python code lives in `moat/`.
   - Code is CPython 13+ compatible
     - exception: code in `moat/micro/_embed` runs on a version of
       MicroPython 1.25+, enhanced with taskgroups
@@ -43,7 +43,7 @@ but then *create an issue* detailing what's missing to improve the docs later.
     - `docs/moat-X-Y` for documentation
     - `packaging/moat-X-Y` for `pyproject.toml` and Debian packaging
     - `tests/moat_X_Y` for testing
-    - `examples/moat-X-Y`
+    - `examples/moat-X-Y` (optional)
   - Tests use `pytest`. Required modules are listed in the global
     `pyproject.toml` and are supposed to be installed on the host system.
   - We use semantic versioning for submodules, except for major version zero.
@@ -60,7 +60,7 @@ but then *create an issue* detailing what's missing to improve the docs later.
 - `packaging/**/src` is auto-populated and excluded via `.gitignore`.
 
 - `ext/` is a symlink to required support libraries. It is not checked into
-  git. Always run `make setup` after cloning the repository or creating a new
+  git. Always run `make` after cloning the repository or creating a new
   worktree, to recreate the link, set up the local virtual environment, fetch
   submodules, and bootstrap the beads database.
 
@@ -118,12 +118,14 @@ but then *create an issue* detailing what's missing to improve the docs later.
 - When testing, *always write the test output to a temporary file* so you
   can analyze it more easily. Running the same test multiple times is
   inefficient.
+- DO NOT create a virtual environment for Python.
+  The system's Python installation has everything we need.
 
 ## Coding Style
 
 - Standard Python, 4-space indents, formatted by `ruff format`.
 - `ruff check` clean. See `pyproject.toml` for global exceptions.
-- ignore pylint, pyright or isort comments.
+- ignore comments that target pylint, pyright, mypy, or isort.
   Remove them if you're changing the line anyway.
 - Keep functions reasonably small.
 - Do not repeat yourself. Use subclassing.
@@ -176,8 +178,6 @@ but then *create an issue* detailing what's missing to improve the docs later.
   etc., in commit messages. Do not repeat information that's obvious when
   looking at the diff.
 - DO NOT use "--rebase" when merging or pulling.
-- After merging, if `pyproject.toml` or `versions.yaml` changed, run
-  `make setup` to update the virtual environment.
 - DO NOT use "--no-verify" when committing.
   - If you encounter a pre-existing failure, temporarily stash your changes
     and run a sub-agent to fix the problem.
@@ -206,7 +206,7 @@ Work is NOT complete until `git push` succeeds.
 
 1. **Use a worktree named after the issue**, in `/src/work/moat-XXX`.
    The worktree may already exist. If so, simply continue there.
-   Otherwise, create it, switch to it, and run `make setup`.
+   Otherwise, create it, switch to it, and run `make`.
 
 1. If the work requires planning *or* the issue instructs you to plan,
    but does not mention a `*.md` file (and TODO/<issue>.md does not exist),

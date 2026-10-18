@@ -42,7 +42,7 @@ from moat.lib.path import (
     Path,
     PathLongener,
     Root,
-    set_root,
+    norm_root,
 )
 from moat.lib.rpc import Caller, MsgSender
 from moat.lib.rpc.base import MsgRoot
@@ -76,6 +76,7 @@ else:
     _HAVE_SCHEMA = True
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
     from contextlib import AbstractAsyncContextManager
 
     from moat.lib.path import PathElem
@@ -217,13 +218,12 @@ class LinkCommon(CmdCommon):
     sdr: LinkSender
     announced: dict[Path, anyio.Event]
     backend: Backend
-    tg: Any
+    tg: TaskGroup
     current_server: MsgSender | None
 
     def __init__(self, cfg, name: str | None = None) -> None:
         super().__init__(cfg)
         CFG.maybe_redo()
-        set_root(CFG.moat.link)
 
         if name is not None:
             self.is_server = True
@@ -514,6 +514,18 @@ class LinkSender(MsgSender, MsgRoot):
         return self._link.cfg
 
     @property
+    def mqtt_root(self) -> Path:
+        """The MQTT root of this Link's backend.
+
+        Raw-MQTT fast paths (``d_set`` without a timestamp, ``Watcher``
+        subscriptions, the ``i_sync`` stamp) must anchor at *their own*
+        Link's root, not at the ambient root context variable: a Link may
+        run nested inside another Link's context (e.g. the link gate's
+        remote side), where the ambient root belongs to the other side.
+        """
+        return norm_root(self._link.cfg["root"])
+
+    @property
     def id(self) -> str:
         "Link ID"
         return self._link.id
@@ -645,7 +657,7 @@ class LinkSender(MsgSender, MsgRoot):
         if t is None and not with_prev:
             if retain is None:
                 retain = len(path) == 0 or path[0] != "run"
-            await self.send(Root.get() + path, data=data, meta=meta, retain=retain)
+            await self.send(self.mqtt_root + path, data=data, meta=meta, retain=retain)
             return True
         tt = {} if t is None else {"t": t}
         old: tuple[Any, MsgMeta | None] | None = None
@@ -1112,7 +1124,11 @@ class LinkSender(MsgSender, MsgRoot):
         mostly-accurate time.
         """
         (st,) = await self.cmd(P("i.stamp"))
-        await self.send(P(":R.run.service.main.stamp") / self._link.server_name, st, retain=False)
+        await self.send(
+            self.mqtt_root + (P("run.service.main.stamp") / self._link.server_name),
+            st,
+            retain=False,
+        )
         await self.cmd(P("i.sync"), st)
 
     async def i_checkid(self, id: str) -> bool:
@@ -1453,6 +1469,7 @@ class Link(LinkCommon, CtxObj):
     _state: str = "init"
     _common: bool = False
     _only: str | None = None
+    _seen_servers: set[str]
     _ctx_active: bool = False
     _setup_done: bool = False
     announced: dict[Path, anyio.Event]
@@ -1474,6 +1491,7 @@ class Link(LinkCommon, CtxObj):
         self._state_change = anyio.Event()
         self._common = common
         self._only = only
+        self._seen_servers = set()
         self._socket_path: str | None = None
         self.announced = {}
         with suppress(AttributeError):
@@ -1543,7 +1561,7 @@ class Link(LinkCommon, CtxObj):
         This also sends our ID message, after the first ping,
         but only if the task status isn't ignored.
         """
-        path = Root.get() + self._ping_path
+        path = self.cfg["root"] + self._ping_path
         sn = self.server_name
         while True:
             await self.backend.send(
@@ -1575,7 +1593,7 @@ class Link(LinkCommon, CtxObj):
                 self._state_change = anyio.Event()
 
     async def _monitor_ping(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
-        path = Root.get() + self._ping_path
+        path = self.cfg["root"] + self._ping_path
         async with self.backend.monitor(path) as mon:
             task_status.started()
             async for msg in mon:
@@ -1598,7 +1616,7 @@ class Link(LinkCommon, CtxObj):
                 sdr = await self._outer.start(self._hold, stop, done)
                 try:
                     with (
-                        ctx_as(Root, self.cfg["root"]),
+                        ctx_as(Root, norm_root(self.cfg["root"])),
                         ctx_as(_the_link, self) if self._common else nullcontext(),
                     ):
                         yield sdr
@@ -1634,7 +1652,7 @@ class Link(LinkCommon, CtxObj):
         try:
             with anyio.CancelScope(shield=True) as self._hold_scope:
                 async with (
-                    ctx_as(Root, self.cfg["root"]),
+                    ctx_as(Root, norm_root(self.cfg["root"])),
                     get_backend(self.cfg, name=self.name, will=will) as self.backend,
                 ):
                     try:
@@ -1664,7 +1682,7 @@ class Link(LinkCommon, CtxObj):
                         try:
                             with anyio.move_on_after(2):
                                 await self.backend.send(
-                                    Root.get() + self._ping_path,
+                                    self.cfg["root"] + self._ping_path,
                                     data=dict(up=False, state="closed"),
                                     retain=False,
                                     meta=False,
@@ -1754,9 +1772,12 @@ class Link(LinkCommon, CtxObj):
                 srv = await self.tg.start(self._read_server_link)
         except TimeoutError:
             what = "any server" if self._only is None else f"server {self._only!r}"
+            hint = ""
+            if self._only is not None and self._seen_servers:
+                hint = f" Known servers: {', '.join(sorted(self._seen_servers))}."
             raise TimeoutError(
                 f"No announcement of {what} seen within "
-                f"{self.cfg.client.init_timeout}s. Is it running?"
+                f"{self.cfg.client.init_timeout}s.{hint} Is it running?"
             ) from None
 
         tm = self.cfg.timeout.connect
@@ -1840,16 +1861,32 @@ class Link(LinkCommon, CtxObj):
 
         self._last_link_seen = anyio.Event()
         if self._only is not None:
-            # Monitor the specific named server's announcement
-            monitor_path = P(":R.run.service.main.server") / self._only
+            # Monitor the named server's announcement — and, diagnostically,
+            # its siblings: remembering which servers *do* announce lets a
+            # mistyped name (e.g. a host's FQDN where the server announces
+            # under its short hostname) be reported actionable.
+            monitor_path = P(":R.run.service.main.server")
+            subtree = True
         else:
             # Monitor the main connection channel
             monitor_path = P(":R.run.service.main.conn")
+            subtree = False
         async with self.backend.monitor(
             monitor_path,
+            subtree=subtree,
             retain_handling=RetainHandling.SEND_RETAINED,
         ) as mon:
             async for msg in mon:
+                if subtree:
+                    if len(msg.topic) != 5:
+                        continue
+                    name = str(msg.topic[-1])
+                    if msg.data is NotGiven:
+                        self._seen_servers.discard(name)
+                    else:
+                        self._seen_servers.add(name)
+                    if name != self._only:
+                        continue
                 self._last_link = msg
                 if task_status is None:
                     self._last_link_seen.set()
@@ -2091,9 +2128,22 @@ class Watcher(CtxObj, Generic[_NodeType]):
 
     async def _updates(self, qw, *, task_status) -> None:
         "get updates from MQTT"
+        # Anchor incoming topics at THIS link's root, not the ambient one:
+        # a Link may run nested inside another Link's context (e.g. the
+        # link gate's remote side), where the ambient root belongs to the
+        # other side and wouldn't collapse our topics.
+        token = Root.set(self.link.mqtt_root)
+        try:
+            await self._updates_inner(qw, task_status=task_status)
+        finally:
+            Root.reset(token)
+
+    async def _updates_inner(self, qw, *, task_status) -> None:
         plen = len(self.path)  # ignores the root prefix
         async with self.link.monitor(
-            Root.get() + self.path, subtree=self.subtree, retained=(self.state is NotGiven)
+            self.link.mqtt_root + self.path,
+            subtree=self.subtree,
+            retained=(self.state is NotGiven),
         ) as mon:
             task_status.started()
             async for msg in mon:

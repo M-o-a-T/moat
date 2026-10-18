@@ -1,8 +1,5 @@
 """
-Compatibility wrappers that allows MoaT code to run on CPython/anyio as
-well as MicroPython/uasyncio.
-
-Well, for the most part.
+Import checking oops.
 """
 
 # ruff:noqa:F401
@@ -39,6 +36,7 @@ T = TypeVar("T")
 R = TypeVar("R")
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup as TaskGroup_
     from contextlib import AbstractAsyncContextManager, AbstractContextManager
     from types import TracebackType
 
@@ -441,7 +439,7 @@ async def run_server(
     host: str,
     port: int,
     backlog: int = 5,
-    taskgroup: Any = None,
+    taskgroup: TaskGroup_ | None = None,
     reuse_port: bool = True,
     evt: _anyio.Event | None = None,
 ) -> None:

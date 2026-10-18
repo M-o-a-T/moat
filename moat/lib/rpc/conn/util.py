@@ -12,6 +12,7 @@ from moat.lib.stream import BaseConn
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    import anyio.abc
     from types import TracebackType
 
     from moat.lib.stream.base import Buffer, MutBuffer
@@ -37,6 +38,8 @@ class BaseConnIter:
     OS-assigned) port number.
     """
 
+    tg: anyio.abc.TaskGroup
+
     def __init__(self) -> None:
         self.q = Queue(1)
         self.evt = Event()
@@ -58,7 +61,13 @@ class BaseConnIter:
         self._port_ready.set()
 
     async def __aexit__(self, *exc):
-        await AC_exit(self, *exc)
+        # Stop the accept task; it would otherwise keep the (uncancelled)
+        # task group alive forever when exiting normally.
+        tg = getattr(self, "tg", None)
+        if tg is not None:
+            tg.cancel()
+            del self.tg
+        return await AC_exit(self, *exc)
 
     if L:
 
@@ -120,7 +129,12 @@ class ListenerLink(BaseConn):
 
     async def __aenter__(self):
         await self.listener.__aenter__()
-        return await super().__aenter__()
+        try:
+            return await super().__aenter__()
+        except BaseException:
+            # Don't leak the listener's accept task if our own setup fails.
+            await self.listener.__aexit__(None, None, None)
+            raise
 
     async def __aexit__(
         self,

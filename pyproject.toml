@@ -198,7 +198,8 @@ ignore = [
     "TRY003", "TRY300", "TRY301", "TRY400",
     "UP012", "UP015", "UP040", # "UP038",
 
-    "missing-copyright-notice"
+    "missing-copyright-notice",
+    "unconventional-import-alias",
     ]
 
 explicit-preview-rules = true

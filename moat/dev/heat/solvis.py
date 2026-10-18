@@ -45,6 +45,8 @@ from moat.util.times import t_iter
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
+
     from typing import Self
 
 # FORMAT = "%(levelname)s %(pathname)-15s %(lineno)-4s %(message)s"
@@ -1951,7 +1953,7 @@ class Data:
     #           )
 
     async def run_rec(
-        self, rec: Any, tg: Any, *, task_status: Any = anyio.TASK_STATUS_IGNORED
+        self, rec: Any, tg: TaskGroup, *, task_status: Any = anyio.TASK_STATUS_IGNORED
     ) -> None:
         """Read a recording."""
         task_status.started()

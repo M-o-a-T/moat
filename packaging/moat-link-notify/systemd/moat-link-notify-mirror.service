@@ -1,5 +1,6 @@
 [Unit]
 Description=MoaT-Link Error-to-Notification Mirror
+After=moat-link-server.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

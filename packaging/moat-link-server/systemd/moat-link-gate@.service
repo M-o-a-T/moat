@@ -1,6 +1,6 @@
 [Unit]
-Description=MoaT-KV gateway script
-After=moat-kv.service moat-link.service
+Description=MoaT-Link gateway
+After=moat-link.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

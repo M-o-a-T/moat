@@ -651,14 +651,14 @@ class MsgHandler(Base, BaseMsgHandler, MsgRoot):
     doc_dir_ = dict(
         _d="directory",
         v="bool:verbose",
-        _r=dict(c=["str:commands"], d=["str:modules"], j="bool:callable"),
+        _r=dict(c=["str:commands"], d="dict(str,str):sub-handlers", j="bool:callable"),
     )
 
     async def cmd_dir_(self, v=True):
         """
         Rudimentary introspection. Returns a dict with
         a list of available commands @c,
-        iterators @i, and submodules @d.
+        iterators @i, and sub-handlers @d.
         j=True if callable directly.
 
         If @v ("visible") is set (the default),
@@ -666,6 +666,7 @@ class MsgHandler(Base, BaseMsgHandler, MsgRoot):
         """
         c = []
         s = []
+        d = {}
         res = {}
 
         for k in dir(self):
@@ -675,6 +676,10 @@ class MsgHandler(Base, BaseMsgHandler, MsgRoot):
                 c.append(k[4:])
             elif k.startswith("stream_"):
                 s.append(k[7:])
+            elif k.startswith("sub_"):
+                sub = getattr(self, k)
+                own = getattr(sub, "__self__", sub)
+                d[k[4:]] = own.__class__.__name__
             elif k == "cmd":
                 res["C"] = True
             elif k == "stream":
@@ -683,6 +688,8 @@ class MsgHandler(Base, BaseMsgHandler, MsgRoot):
             res["c"] = c
         if s:
             res["s"] = s
+        if d:
+            res["d"] = d
         return res
 
     async def check_rdy(self, msg: Msg, rcmd: list[PathElem]) -> None:

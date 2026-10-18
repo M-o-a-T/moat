@@ -56,6 +56,7 @@ from moat.lib.path import (
     PathLongener,
     PathShortener,
     Root,
+    norm_root,
 )
 from moat.lib.rpc import MsgHandler, MsgSender, rpc_on_aiostream
 from moat.link.backend import Backend, get_backend
@@ -1987,7 +1988,7 @@ class Server(MsgHandler):
         # root path
         csr = self.cfg.root
         csr = P(csr) if isinstance(csr, str) else Path.build(csr)
-        Root.set(csr)
+        Root.set(norm_root(csr))
 
         # termination notice
         will_data = attrdict(

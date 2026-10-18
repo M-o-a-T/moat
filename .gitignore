@@ -17,7 +17,6 @@
 /.coverage
 /coverage.xml
 coverage.xml
-/*.deb
 /debian/
 /develop-eggs/
 /dist/

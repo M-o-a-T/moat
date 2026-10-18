@@ -32,7 +32,7 @@ name = "Matthias Urlichs"
 email = "matthias@urlichs.de"
 
 [project.optional-dependencies]
-link = [ "moat-link ~= 0.10.5",]
+link = [ "moat-link ~= 0.11.0",]
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

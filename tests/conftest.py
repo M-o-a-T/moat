@@ -109,7 +109,7 @@ def anyio_backend():
 def clear_root():
     "clear root after test"
     yield
-    Root.set(NotGiven, force=True)
+    Root.set(None)
 
 
 @pytest.fixture(autouse=True, scope="session")

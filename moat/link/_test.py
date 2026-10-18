@@ -21,7 +21,7 @@ from moat.util import (
     time as mtime,
 )
 from moat.lib.config import CFG
-from moat.lib.path import P, Root
+from moat.lib.path import P, Root, norm_root
 from moat.link.backend import get_backend
 from moat.link.client import Link
 from moat.link.server import Server
@@ -123,10 +123,14 @@ class Scaffold(CtxObj):
     tempdir: FSPath | None
 
     def __init__(
-        self, cfg: attrdict | Literal[True], use_servers=True, tempdir: str | None = None
+        self,
+        cfg: attrdict | Literal[True],
+        use_servers=True,
+        tempdir: str | None = None,
+        root: Path | None = None,
     ) -> None:
         cf = attrdict(
-            root=P("test.moat.link"),
+            root=root if root is not None else P("test.moat.link"),
             backend=attrdict(
                 driver="mqtt",
                 codec="std-cbor",
@@ -160,7 +164,7 @@ class Scaffold(CtxObj):
 
     @asynccontextmanager
     async def _ctx(self) -> AsyncIterator[Self]:
-        Root.set(self.cfg.root)
+        Root.set(norm_root(self.cfg.root))
 
         with (
             nullcontext(

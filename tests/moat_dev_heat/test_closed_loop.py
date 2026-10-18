@@ -9,9 +9,11 @@ from __future__ import annotations
 import pytest
 from itertools import pairwise
 
+from moat.dev.heat.errors import ErrorsUnit
 from moat.dev.heat.link import out_path
 from moat.dev.heat.passthru import IDLE, PassthruUnit, passthru
 from moat.dev.heat.pellet import PelletUnit
+from moat.dev.heat.pump import PumpTimeout
 from moat.dev.heat.selector import PELLET, WP, SelectorUnit
 from moat.dev.heat.sim import PlantCfg
 from moat.dev.heat.sim.loop import ClosedLoop
@@ -532,3 +534,121 @@ def test_passthru() -> None:
     lp.until(lambda: lp.run != "down", 1800)
     tr = lp.loop.plant.truth()
     assert tr["t_out"] - tr["t_in"] < 3
+
+
+# faults
+
+
+def _full_loop(name: str) -> ClosedLoop:
+    "all units but the watchdog and passthru, with the production rules (see `_rules`)"
+    sc = SCENARIOS[name]
+    loop = pump_loop(sc.plant, seed=sc.seed, start=sc.start)
+    for unit in (PelletUnit, SelectorUnit, ErrorsUnit):
+        loop.add_unit(unit)
+    return loop
+
+
+def _rules(lp: ClosedLoop) -> None:
+    "what production does outside the units: the burner follows its request, the valve reports"
+    lp.set(INPUT_PATHS["pellet_run"], lp.get(WANTED))
+    lp.set(VALVE_STATE, lp.get(VALVE))
+
+
+class Runs:
+    "records the pump unit's state changes"
+
+    def __init__(self) -> None:
+        self.runs: list[tuple[float, str]] = []
+
+    def __call__(self, lp: ClosedLoop) -> None:
+        "record, after a tick"
+        r = (lp.get(PUMP_OUT) or {}).get("run")
+        if r and (not self.runs or self.runs[-1][1] != r):
+            self.runs.append((lp.now, r))
+
+    def first(self, state: str, after: float = 0) -> float:
+        "when ``state`` was first entered after ``after``"
+        return next(t for t, r in self.runs if r == state and t >= after)
+
+    def during(self, t0: float, t1: float) -> set[str]:
+        "the states the pump unit was in between t0 and t1"
+        res = {r for t, r in self.runs if t0 <= t < t1}
+        before = [r for t, r in self.runs if t < t0]
+        if before:
+            res.add(before[-1])
+        return res
+
+
+def test_error_mid_run() -> None:
+    "a heat-pump error stops it at once; the burner takes over; no restart while it's failed"
+    sc = SCENARIOS["error_mid_run"]
+    loop = _full_loop("error_mid_run")
+    runs = Runs()
+    inv = Invariants()
+
+    def cb(lp: ClosedLoop) -> None:
+        if lp.now == 2 * 3600:
+            lp.plant.inject_error(":2", 123)
+        if lp.now == 3 * 3600:
+            lp.plant.clear_error(":2")
+        _rules(lp)
+        runs(lp)
+        inv(lp)
+
+    loop.run(sc.duration, sc.dt, cb)
+    t_err = 2 * 3600
+    assert runs.during(t_err - 600, t_err) & {"run", "ice"}
+    assert runs.first("down", t_err) - t_err <= 60
+    assert runs.first("off", t_err) - t_err <= 600
+    assert runs.during(t_err + 600, 3 * 3600) == {"off"}
+    sel = loop.get(SEL_OUT)
+    assert sel["primary"] == PELLET
+    # the heat pump counts as failed for `retry` (2 h), so it stays off
+    assert "run" not in runs.during(3 * 3600, t_err + 7200 - 60)
+
+
+def test_no_power() -> None:
+    "the running heat pump stops drawing power: off, retries, then the start-up timeout"
+    sc = SCENARIOS["hp_no_power"]
+    loop = pump_loop(sc.plant, seed=sc.seed, start=sc.start)
+    runs = Runs()
+    inv = Invariants()
+
+    def cb(lp: ClosedLoop) -> None:
+        if lp.now == 3600:
+            lp.plant.inject_error(":1", 99)  # ignored by the errors unit, as in production
+        runs(lp)
+        inv(lp)
+
+    with pytest.raises(PumpTimeout):
+        loop.run(sc.duration, sc.dt, cb)
+    old = [(t, v) for t, what, v in load(trace_file("hp_no_power").read_text())["events"]]
+    old_down = next(t for t, v in old if v == "down")
+    old_end = next(t for t, v in old if isinstance(v, str) and v.startswith("TimeoutError"))
+    assert abs(runs.first("down", 3600) - old_down) <= 60
+    assert abs(loop.now - old_end) <= 120, (loop.now, old_end)
+
+
+def test_ignition_failure() -> None:
+    "the burner doesn't ignite: the selector falls back to the heat pump"
+    loop = _full_loop("pellet_handover")
+    loop.plant.pellet.fail_next = 99  # every ignition fails; the burner latches a fault
+    phases: list[tuple[float, Any, Any]] = []
+    inv = Invariants()
+
+    def cb(lp: ClosedLoop) -> None:
+        _rules(lp)
+        o = lp.get(SEL_OUT) or {}
+        ph = (o.get("primary"), o.get("phase"))
+        if not phases or phases[-1][1:] != ph:
+            phases.append((lp.now, *ph))
+        inv(lp)
+
+    loop.run(8 * 3600, 10, cb)
+    seq = [p[1:] for p in phases]
+    assert (PELLET, "wp_to_pellet") in seq, phases
+    i = seq.index((PELLET, "wp_to_pellet"))
+    assert seq[i + 1] == (WP, "steady"), phases
+    # the start timeout (30 min) decides
+    assert phases[i + 1][0] - phases[i][0] == pytest.approx(1800, abs=120)
+    assert PELLET in loop.get(SEL_OUT)["failed"]

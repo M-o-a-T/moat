@@ -63,6 +63,7 @@ class Inputs:
     hp_valve: bool | None = None  # heat-pump loop valve; None: no valve (always open)
     heat_mode: int = 5  # setting.heat.mode.path
     heat_setpoint: float = 40.0  # adj.curve.setting
+    heat_speed: float | None = None  # heating-circuit pump duty, %; None: full flow
     water_setpoint: float | None = 50.0  # setting.water; drives the automatic switchover
     switchover: bool | None = None  # force the switchover valve; None: automatic
     pellet_run: bool | None = None  # cmd.pellet.run; None: follow pellet_wanted
@@ -250,6 +251,7 @@ class Plant:
             setpoint=inp.heat_setpoint,
             t_tap=t_tap,
             t_air=w.t_air,
+            speed=(inp.heat_speed or 0) / 100 if inp.heat_speed is not None else 1.0,
         )
         led.heating += m * C_WATER * (t_tap - t_ret)
         buf.flow(m, t_ret, buf.layer(bc.heat_in), h_out)

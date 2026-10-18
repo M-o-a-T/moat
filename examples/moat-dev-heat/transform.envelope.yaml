@@ -1,0 +1,197 @@
+code: |
+  # Limit a circulation pump, depending on the difference between the
+  # target and the actual flow temperature (moat-565).
+  #
+  # The pump's speed setpoint (@dst, in %) tracks the deviation
+  # `target - actual`: at zero deviation it runs at @mid, towards
+  # @max when the water is too cold, down to @min when it's too warm.
+  # Beyond ±@spread the output saturates at the respective bound.
+  #
+  # The output changes only when it moves by at least @step (percent
+  # points), so the pump isn't hammered with micro-changes; @step 0.5
+  # matches the Wilo's duty-point raster.
+  #
+  # While @enable is false, or its item is deleted, the output is zero.
+  # Without an @enable path there is no gating. Unknown or deleted
+  # temperature inputs hold the last output.
+
+  class _Act(_cls.ChangeMsg): pass
+  class _Tgt(_cls.ChangeMsg): pass
+  class _Ena(_cls.ChangeMsg): pass
+  class _Mid(_cls.ChangeMsg): pass
+  class _Min(_cls.ChangeMsg): pass
+  class _Max(_cls.ChangeMsg): pass
+  class _Spread(_cls.ChangeMsg): pass
+  class _Step(_cls.ChangeMsg): pass
+
+  n = 2
+  await _self.watch(actual, cls=_Act)
+  await _self.watch(target, cls=_Tgt)
+  if enable is not None:
+      await _self.watch(enable, cls=_Ena)
+      n += 1
+  for nm, p in (("mid", mid), ("min", min_), ("max", max_), ("spread", spread), ("step", step)):
+      if isinstance(p, _Path):
+          await _self.watch(p, cls={"mid": _Mid, "min": _Min, "max": _Max,
+                                    "spread": _Spread, "step": _Step}[nm])
+          n += 1
+
+  ready = False
+  act = tgt = None
+  ena = True
+  out = None
+
+  async for msg in _info:
+      if isinstance(msg, _cls.ReadyMsg):
+          if msg.msg < n:
+              continue
+          ready = True
+      elif isinstance(msg, _Act):
+          act = None if msg.value is _cls.NotGiven else msg.value
+      elif isinstance(msg, _Tgt):
+          tgt = None if msg.value is _cls.NotGiven else msg.value
+      elif isinstance(msg, _Ena):
+          ena = msg.value is not _cls.NotGiven and bool(msg.value)
+      elif isinstance(msg, _Mid):
+          mid = msg.value
+      elif isinstance(msg, _Min):
+          min_ = msg.value
+      elif isinstance(msg, _Max):
+          max_ = msg.value
+      elif isinstance(msg, _Spread):
+          spread = msg.value
+      elif isinstance(msg, _Step):
+          step = msg.value
+      else:
+          continue
+
+      if not ready:
+          continue
+
+      if not ena:
+          if out != 0:
+              await _link.set(dst, 0, idem=True)
+              out = 0
+          continue
+
+      if not isinstance(act, (int, float)) or isinstance(act, bool):
+          continue
+      if not isinstance(tgt, (int, float)) or isinstance(tgt, bool):
+          continue
+      if None in (mid, min_, max_) or not spread:
+          continue
+
+      # Too cold: towards max. Too warm: towards min.
+      frac = (tgt - act) / spread
+      frac = min(max(frac, -1.0), 1.0)
+      val = mid + frac * (max_ - mid if frac >= 0 else mid - min_)
+      val = min(max(val, min_), max_)
+
+      if out is not None and abs(val - out) < step:
+          continue
+      await _link.set(dst, val, idem=True)
+      out = val
+default:
+  enable: null
+  mid: 60
+  min_: 30
+  max_: 100
+  spread: 10
+  step: 0.5
+info: 'Envelope: limit the pump speed by the target-vs-actual temperature difference'
+is_async: true
+vars:
+- actual
+- target
+- dst
+- enable
+- mid
+- min_
+- max_
+- spread
+- step
+tests:
+  track:
+    info: the output tracks the deviation, saturated at the bounds
+    timeout: 10
+    data:
+      act:
+        _: 40
+      tgt:
+        _: 45
+    args:
+      actual: !P act
+      target: !P tgt
+      dst: !P out
+      mid: 60
+      min_: 30
+      max_: 100
+      spread: 10
+      step: 0.5
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and abs(out[-1] - 80) < 0.01"]   # +5/10 → 60+0.5*(100-60)
+    - [set, !P act, 45]
+    - [wait, 3, "abs(out[-1] - 60) < 0.01"]           # on target → mid
+    - [set, !P act, 50]
+    - [wait, 3, "abs(out[-1] - 45) < 0.01"]           # -5/10 → 60-0.5*(60-30)
+    - [set, !P act, 60]
+    - [wait, 3, "abs(out[-1] - 30) < 0.01"]           # saturated at min
+    - [set, !P act, 30]
+    - [wait, 3, "abs(out[-1] - 100) < 0.01"]          # saturated at max
+  enable:
+    info: a false enable forces zero; a missing input holds the output
+    timeout: 10
+    data:
+      act:
+        _: 40
+      tgt:
+        _: 45
+      ena:
+        _: true
+    args:
+      actual: !P act
+      target: !P tgt
+      dst: !P out
+      enable: !P ena
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and abs(out[-1] - 80) < 0.01"]
+    - [set, !P ena, false]
+    - [wait, 3, "out[-1] == 0"]
+    - [set, !P ena, true]
+    - [wait, 3, "abs(out[-1] - 80) < 0.01"]
+    - [delete, !P ena]
+    - [wait, 3, "out[-1] == 0"]
+    - [set, !P ena, true]
+    - [wait, 3, "abs(out[-1] - 80) < 0.01"]
+    - [delete, !P act]
+    - [sleep, 0.3]
+    - [check, "out[-1] == 80"]                        # held
+  paths:
+    info: bounds given as paths are watched
+    timeout: 10
+    data:
+      act:
+        _: 40
+      tgt:
+        _: 45
+      md:
+        _: 60
+    args:
+      actual: !P act
+      target: !P tgt
+      dst: !P out
+      mid: !P md
+      min_: 30
+      max_: 100
+      spread: 10
+      step: 0.5
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "out and abs(out[-1] - 80) < 0.01"]
+    - [set, !P md, 40]
+    - [wait, 3, "abs(out[-1] - 70) < 0.01"]

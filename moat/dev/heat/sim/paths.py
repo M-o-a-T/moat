@@ -54,6 +54,7 @@ INPUT_PATHS = {
     "hp_valve": P("app.heat.ha.valve.cmd"),
     "heat_mode": P("heat.s.heat.mode.cmd"),
     "heat_setpoint": P("heat.s.heat.temp.cmd"),
+    "heat_speed": P("heat.s.heating.pump.cmd.duty"),
     "pellet_run": P("heat.s.pellets.power.cmd"),
     "pellet_wanted": P("heat.s.pellets.power.cmd.auto"),
     "pellet_load": P("heat.s.pellets.load.goal.cmd"),

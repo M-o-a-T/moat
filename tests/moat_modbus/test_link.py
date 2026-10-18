@@ -137,3 +137,71 @@ async def test_kv_poll(cfg, autojump_clock):  # noqa: D103
 
         # terminate tasks
         tg.cancel_scope.cancel()
+
+
+cfg_const_srv_ = """
+server:
+- host: 127.0.0.1
+  port: -1
+  units:
+    32:
+      regs:
+        keeper:
+          reg_type: h
+          register: 12342
+          type: uint
+          len: 1
+"""
+
+cfg_const_cli_ = """
+slots:
+  1sec:
+    read_delay: 1
+    write_delay: 1
+    read_align: false
+hostports:
+  localhost:
+    PORT:
+      32:
+        regs:
+          keeper:
+            reg_type: h
+            register: 12342
+            type: uint
+            len: 1
+            const: 6
+            slot: 1sec
+"""
+
+
+@pytest.mark.trio
+async def test_const_written(cfg, autojump_clock):  # noqa: ARG001
+    "A scalar const on a polled slot is written to the bus, repeatedly."
+    autojump_clock.autojump_threshold = 0.05
+    cfg1 = yload(cfg_const_srv_, attr=True)
+    cfg2 = yload(cfg_const_cli_, attr=True)
+    cfg1.server[0].port = 0
+    cfg2.hostports.localhost[0] = cfg2.hostports.localhost.PORT
+    del cfg2.hostports.localhost.PORT
+
+    async with (
+        Scaffold(True, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+        trio.open_nursery() as tg,
+    ):
+        cfg1 = await tg.start(dev_poll, cfg1, c)
+        actual_port = cfg1.server[0].port
+        cfg2.hostports.localhost[actual_port] = cfg2.hostports.localhost.pop(0)
+        reg = cfg1.server[0].units[32].regs.keeper
+
+        cfg2 = await tg.start(dev_poll, cfg2, c)
+        await trio.sleep(3)
+        assert reg.value == 6
+
+        # Somebody else overwrites it; the const writer restores it.
+        reg.reg.set(66)
+        await trio.sleep(3)
+        assert reg.value == 6
+
+        tg.cancel_scope.cancel()

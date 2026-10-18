@@ -162,6 +162,39 @@ modes that the `*.cmd` items set.
 | `heat.s.water.temp.cmd` | operator | Hot-water setpoint; forwarded to the Solvis. |
 | `heat.s.water.mode(.cmd)` | poller / operator | Hot-water mode and its command. |
 
+## Heating-circuit pump (`heat.s.heating.pump.*`)
+
+Polled from the Wilo-Para MAXO circulation pump (`modbus.wilo.yaml`;
+moat-565). Its speed setpoint replaces the legacy GPIO heat pin: the
+`envelope` job derives it from the target-vs-actual flow-temperature
+difference, and the poller forwards it to the pump together with the
+heat valve's on/off state. Quasi-static settings (control function,
+fallback presets, bus-command timer) are held by the poller as consts
+and rewritten every minute, so a lost frame can't corrupt them; when
+the bus-command timer expires the pump falls back to its presets
+(30 % duty, on).
+
+| Path | Writer | Description |
+| --- | --- | --- |
+| `heat.s.heating.pump.cmd.duty` | envelope | Speed setpoint. %. |
+| `heat.s.heating.pump.duty` | poller | Duty-point setpoint, read back. %. |
+| `heat.s.heating.pump.duty_actual` | poller | Actual duty point. %. |
+| `heat.s.heating.pump.duty_max`, `.duty_min` | poller | Allowed duty-point range. %. |
+| `heat.s.heating.pump.duty_100` | poller | Physical value at 100 % duty (mode-dependent). |
+| `heat.s.heating.pump.duty_units` | poller | Unit of that physical value (rpm, W, m³/h, …). |
+| `heat.s.heating.pump.speed` | poller | Pump speed. rpm. |
+| `heat.s.heating.pump.flow` | poller | Calculated flow rate. m³/h; 65535 = no data. |
+| `heat.s.heating.pump.pressure` | poller | Differential pressure. cmH₂O. |
+| `heat.s.heating.pump.power` | poller | Power consumption. W. |
+| `heat.s.heating.pump.energy` | poller | Energy consumption. kWh. |
+| `heat.s.heating.pump.op_time` | poller | Operating hours. h. |
+| `heat.s.heating.pump.control_function` | poller | Control mode (n_const, dp_const, dp_var). |
+| `heat.s.heating.pump.active` | poller | The pump is running. |
+| `heat.s.heating.pump.status` | poller | Status bitmap (ready, running, warning, error, final). |
+| `heat.s.heating.pump.error` | poller | Warning/error code; 0 = none. |
+| `heat.s.heating.pump.timer_left` | poller | Remaining bus-command-timer time. s. |
+| `heat.s.heating.pump.heartbeat` | poller | Interface heartbeat counter. |
+
 ## Pellet burner (`heat.s.pellets.*`)
 
 Polled from the KWB burner (`modbus.heat.yaml`).

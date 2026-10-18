@@ -30,10 +30,21 @@ class Heating:
         self.q = 0.0  # radiator output, kW
 
     def step(
-        self, dt: float, *, on: bool, setpoint: float, t_tap: float, t_air: float
+        self,
+        dt: float,
+        *,
+        on: bool,
+        setpoint: float,
+        t_tap: float,
+        t_air: float,
+        speed: float = 1.0,
     ) -> tuple[float, float]:
         """
         Advance by ``dt``.
+
+        @speed scales the circuit flow (0…1, default 1 = full flow); zero
+        or missing means the pump stands still, which is thermally the
+        same as switching the circuit off.
 
         Returns ``(m_buffer, t_return)``: the mass drawn from the buffer at
         ``t_tap`` (kg) and the temperature it is returned at. The energy
@@ -44,15 +55,16 @@ class Heating:
         t_ret = t_tap
         t_s = self.t_room
         self.q = 0.0
-        if on:
+        flow = cfg.flow * speed if on else 0.0
+        if flow > 0:
             t_s = min(t_tap, setpoint)
-            fc = kgps(cfg.flow) * C_WATER
+            fc = kgps(flow) * C_WATER
             dt_rad = t_s - self.t_room
             if dt_rad > 0 and fc > 0:
                 q = min(cfg.k_rad * dt_rad**cfg.n_rad, fc * dt_rad)
                 t_ret = t_s - q / fc
                 if t_tap - t_ret > 0.01:
-                    m = kgps(cfg.flow) * dt * (t_s - t_ret) / (t_tap - t_ret)
+                    m = kgps(flow) * dt * (t_s - t_ret) / (t_tap - t_ret)
                     self.q = m * C_WATER * (t_tap - t_ret) / dt
 
         self.t_room, _, _ = tank(self.t_room, cfg.cap_house, 0, 0, cfg.ua_house, t_air, self.q, dt)

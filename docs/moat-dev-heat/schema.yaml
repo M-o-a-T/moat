@@ -94,7 +94,7 @@ title: Heat-valve unit output
 description: The heating circuit's state, published by the `heat_valve` unit.
 type: object
 properties:
-  on:
+  "on":
     type: boolean
     title: Heating circuit on
   pending:
@@ -110,7 +110,7 @@ properties:
     type: string
     title: Reason text
 required:
-- on
+- "on"
 - pending
 - hc
 - reason
@@ -721,7 +721,7 @@ description: >-
 type: object
 properties:
   mode:
-    enum: [off, fixed, rate, rate_temp, temp, drain]
+    enum: ["off", fixed, rate, rate_temp, temp, drain]
     title: Requested mode
   pwm:
     anyOf:
@@ -753,7 +753,9 @@ properties:
   seq:
     type: integer
     title: Sequence number
-    description: Increments on every change.
+    description: >-
+      Changes whenever the request does. The flow unit applies a request
+      whose seq differs from the last one it applied.
 required:
 - mode
 - seq
@@ -762,22 +764,25 @@ _path: !P app.heat.force_start
 title: Force-start request
 description: >-
   One-shot "start the heat pump even if the buffer is warm" (legacy
-  --force-on). Deleted by the `pump` unit when consumed.
-type: boolean
+  --force-on). Set to null by the `pump` unit when consumed.
+anyOf:
+- type: "null"
+- type: boolean
 ---
 _path: !P app.heat.passthru.request
 title: Passthru request
 description: >-
-  Ask the `passthru` unit to hand the heat pump to its original
-  controller for maintenance. Switching happens only while the heat pump
+  Planned (moat-n84.26; not implemented yet). Ask the `passthru` unit
+  to hand the heat pump to its original controller for maintenance. Switching happens only while the heat pump
   is idle; the request waits until then.
 type: boolean
 ---
 _path: !P app.heat.passthru.state
 title: Passthru state
 description: >-
-  Published by the `passthru` unit (moat-n84.26): who controls the heat
-  pump. In `original` the pump unit writes nothing and the watchdog is
+  Planned (moat-n84.26): to be published by the `passthru` unit, which
+  doesn't exist yet. The pump and watchdog units already read it: who
+  controls the heat pump. In `original` the pump unit writes nothing and the watchdog is
   inactive.
 type: string
 enum: [ours, switching, original]
@@ -807,9 +812,11 @@ _path: !P app.heat.override
 title: Operator overrides
 description: >-
   One item per override. Absent or null means automatic; a plain value
-  applies until changed; {value, expires, reason} lapses at `expires`.
-  The schemas of the items are also published at runtime below
-  schema.app.heat.override, so malformed writes are rejected.
+  applies until changed; {value, expires, reason} lapses at `expires`,
+  and the reading units then delete the item. `moat dev heat override
+  --schemas` publishes the items' schemas below schema.app.heat.override,
+  so malformed writes are rejected; those also accept a null `value` in
+  the mapping form.
 ---
 _path: !P app.heat.override.wp
 title: Heat-pump override
@@ -934,7 +941,9 @@ type: boolean
 ---
 _path: !P app.heat.ha.force_day.cmd
 title: Force-day switch
-description: The `switch.heizung.day_mode` command. Setting it clears force-night.
+description: >-
+  The `switch.heizung.day_mode` command. Setting it clears force-night;
+  the `target` unit then writes false to the force-night command.
 type: boolean
 ---
 _path: !P app.heat.ha.force_day.state
@@ -944,7 +953,9 @@ type: boolean
 ---
 _path: !P app.heat.ha.force_night.cmd
 title: Force-night switch
-description: The `switch.heizung.night_mode` command. Setting it clears force-day.
+description: >-
+  The `switch.heizung.night_mode` command. Setting it clears force-day;
+  the `target` unit then writes false to the force-day command.
 type: boolean
 ---
 _path: !P app.heat.ha.force_night.state
@@ -998,7 +1009,7 @@ title: Heat-pump COP
 description: The COP estimate, published by the `pump` unit, rate-limited.
 type: number
 ---
-_path: !P cfg.app.heat.#
+_path: !P cfg.app.heat.+
 title: Heat unit configurations
 description: >-
   One item per unit (and the shared `service` and `emergency` items):
@@ -1112,15 +1123,15 @@ type: number
 _path: !P heat.s.pump.cmd.want.mode
 title: Original-controller mode request
 description: >-
-  Mirrored by the Solvis emulation (stiebelfake) during passthru: the
-  mode the original controller asks for. Legacy bypass-mode path.
+  Mirrored by the Solvis emulation (stiebelfake): the mode the original
+  controller asks for. Used in passthru (legacy bypass mode).
 type: integer
 ---
 _path: !P heat.s.pump.cmd.want.power
 title: Original-controller load request
 description: >-
-  Mirrored by the Solvis emulation during passthru: the load the
-  original controller asks for. Legacy bypass-mode path.
+  Mirrored by the Solvis emulation: the load the original controller
+  asks for. Used in passthru (legacy bypass mode).
 type: number
 ---
 _path: !P heat.s.pump.cmd.live
@@ -1163,8 +1174,9 @@ type: number
 _path: !P heat.s.heat.temp
 title: Heating setpoint
 description: >-
-  The Solvis controller's heating setpoint, as read back. The target
-  unit's curve is anchored here. °C.
+  Read-back of heat.s.heat.temp.cmd: the Solvis controller's fixed day
+  flow temperature. The target unit's demand values (and the heat_valve
+  unit's pre-heat test) are based on it. °C.
 type: number
 ---
 _path: !P heat.s.heat.temp_low
@@ -1176,7 +1188,7 @@ _path: !P heat.s.heat.temp.cmd
 title: Heating flow-temperature command
 description: >-
   The flow temperature the `target` unit asks the Solvis for
-  (the curve's value, rounded up). Forwarded by the poller.
+  (the curve's value plus 0.8, truncated). Forwarded by the poller.
 type: integer
 ---
 _path: !P heat.s.heat.mode
@@ -1284,7 +1296,7 @@ _path: !P heat.s.pellets.aux.#
 title: Burner auxiliary goals
 description: >-
   Auxiliary temperature goals in the burner's controller (aux:1,
-  aux:2, aux:r-min) and their read-backs. The `pellet` unit patches the
+  aux:2, aux.r-min) and their read-backs. The `pellet` unit patches the
   start-up temperature into the goals while the burner warms up.
 type: number
 ---
@@ -1306,11 +1318,10 @@ type: integer
 _path: !P heat.s.control.errors.#
 title: Solvis errors
 description: >-
-  The Solvis controller's error slots: `:n.code` (the code), `:n.time`
-  (when), `:n.p1`, `:n.p2` (parameters). The `modbus_mon` monitor
-  restarts the Solvis poller on code 26.
-type: object
-additionalProperties: true
+  The Solvis controller's error slots, one item per field: `:n.code`
+  (the code), `:n.time` (when), `:n.p1`, `:n.p2` (parameters). The
+  `modbus_mon` monitor restarts the Solvis poller on code 26.
+type: number
 ---
 _path: !P temp.avg.temp.aussen_kompost.min
 title: Outside temperature (daily minimum)
@@ -1365,11 +1376,15 @@ properties:
   msg:
     type: string
     title: Problem description
-  level:
+  exc:
+    type: string
+    title: The exception
+  n:
     type: integer
-    title: Severity
-  data:
-    title: Triggering data
+    title: Number of occurrences
+  first:
+    type: number
+    title: Time of first occurrence
   unit:
     type: string
     title: Unit name

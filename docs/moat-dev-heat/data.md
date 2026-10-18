@@ -12,15 +12,17 @@ Conventions:
 - **Retained.** Everything below is retained; a restarting unit receives
   the last value of every input at once.
 - **Ownership.** Each unit is the sole writer of its `out` and `state`
-  items. Sensor and device paths (`heat.s.*`, `temp.*`) are written by
-  the Modbus pollers and bridging jobs, not by the units.
+  items (`moat dev heat migrate` seeds the latter once). Sensor readings
+  under `heat.s.*` and `temp.*` come from the Modbus pollers and bridging
+  jobs; the units write commands (`*.cmd`), PID logs and the water-pump
+  PWM there, as listed below.
 - **Wildcards.** `+` matches one path element, `#` one or more.
 
 Units: `target` (heating curve, demand), `heat_valve` (heating circuit),
 `flow` (water-pump PWM), `pump` (heat pump), `pellet` (pellet burner),
 `selector` (which source runs), `errors` (aggregation), `frost` (loop
-frost protection), `watchdog` (crash cover), `passthru` (maintenance
-handover, moat-n84.26). Support processes: `pwm` (software PWM daemon),
+frost protection), `watchdog` (crash cover); `passthru` (maintenance
+handover) is planned (moat-n84.26). Support processes: `pwm` (software PWM daemon),
 `modbus_mon` (Solvis poller babysitter), `run` (system runner).
 
 ## Unit coordination (`app.heat.*`)
@@ -37,16 +39,18 @@ handover, moat-n84.26). Support processes: `pwm` (software PWM daemon),
 | `app.heat.frost.out` | frost | Frost cycle: active, current pulse, loop minimum temperature. |
 | `app.heat.watchdog.out` | watchdog | Status, and a record of the last emergency shutdown. |
 | `app.heat.flow.request` | pump, emergency shutdown | What the water pump should do (mode, rate, temp, PWM bounds, seq). |
-| `app.heat.force_start` | operator (CLI `--force-on`) | One-shot "start although the buffer is warm"; deleted by pump. |
-| `app.heat.passthru.request` | operator | Hand the heat pump to its original controller (passthru). |
-| `app.heat.passthru.state` | passthru | Who controls the heat pump: ours / switching / original. |
+| `app.heat.force_start` | operator (CLI `--force-on`), pump | One-shot "start although the buffer is warm"; pump sets it to null when consumed. |
+| `app.heat.passthru.request` | operator | Planned: hand the heat pump to its original controller (passthru). |
+| `app.heat.passthru.state` | passthru (planned) | Who controls the heat pump: ours / switching / original. Read by pump and watchdog; nothing writes it yet. |
 | `app.heat.watchdog.disable` | operator | Disable the watchdog; plain bool or `{value, expires, reason}`. |
 
 ## Operator overrides (`app.heat.override.*`)
 
 Absent or null = automatic; `{value, expires, reason}` lapses at
-`expires`. Schemas are published at `schema.app.heat.override.NAME` so
-malformed writes are rejected. Set with `moat dev heat override`.
+`expires`, and the units reading it then delete the item.
+`moat dev heat override --schemas` publishes the items' schemas at
+`schema.app.heat.override.NAME`, so that malformed writes are rejected.
+Set with `moat dev heat override` (all but `errors`).
 
 | Path | Writer | Description |
 | --- | --- | --- |
@@ -58,8 +62,8 @@ malformed writes are rejected. Set with `moat dev heat override`.
 
 ## Persistent state (`app.heat.<unit>.state`)
 
-Written by the owning unit only (debounced, immediate on critical
-changes). Timestamps are wall-clock time, so they survive a reboot.
+Written by the owning unit (debounced, immediate on critical changes),
+and once by `moat dev heat migrate`. Timestamps are wall-clock time, so they survive a reboot.
 
 | Path | Writer | Description |
 | --- | --- | --- |
@@ -96,9 +100,9 @@ these and `home.ass.dyn` (see `examples/moat-dev-heat/HA.md`).
 | --- | --- | --- |
 | `app.heat.ha.heat` | HA job | Heating enabled (copy of the `heizung.main` switch). |
 | `app.heat.ha.heat_state` | heat_valve | Echo of heating enabled. |
-| `app.heat.ha.force_day.cmd` | HA job | Force day (the `day_mode` switch). |
+| `app.heat.ha.force_day.cmd` | HA job, target | Force day (the `day_mode` switch); target turns it off when force night is turned on. |
 | `app.heat.ha.force_day.state` | target | Force-day feedback; turning one on clears the other. |
-| `app.heat.ha.force_night.cmd` | HA job | Force night (the `night_mode` switch). |
+| `app.heat.ha.force_night.cmd` | HA job, target | Force night (the `night_mode` switch); target turns it off when force day is turned on. |
 | `app.heat.ha.force_night.state` | target | Force-night feedback. |
 | `app.heat.ha.t_air` | HA job, simulator | Current outside temperature for the selector. °C. |
 | `app.heat.ha.pump_state` | heat_valve | Heating-circuit pump runs. |
@@ -125,8 +129,8 @@ Polled from the Stiebel heat pump by the Modbus poller
 | `heat.s.pump.err:N` | poller | Error slot N's code; 0 = no error. |
 | `heat.s.pump.cmd.power` | pump, emergency | Commanded load, 0…1; forwarded to the heat pump. |
 | `heat.s.pump.cmd.mode` | pump, emergency | Operating mode (3 on, 0 off); forwarded. |
-| `heat.s.pump.cmd.want.mode` | stiebelfake | Passthru: the mode the original controller asks for. |
-| `heat.s.pump.cmd.want.power` | stiebelfake | Passthru: the load the original controller asks for. |
+| `heat.s.pump.cmd.want.mode` | stiebelfake | The mode the original controller asks for (used in passthru). |
+| `heat.s.pump.cmd.want.power` | stiebelfake | The load the original controller asks for (used in passthru). |
 | `heat.s.pump.cmd.live` | stiebelfake | Keepalive between the Solvis emulation and the poller. |
 | `heat.s.pump.cmd.reset` | stiebelfake | Reset handshake between the emulation and the poller. |
 | `heat.s.pump.pid` | flow | Circulation-pump PWM, 0…1; output by the `pwm` daemon. |
@@ -137,9 +141,9 @@ Polled from the Stiebel heat pump by the Modbus poller
 
 ## Buffer and heating circuit (`heat.s.buffer.*`, `heat.s.heat.*`, `heat.s.water.*`)
 
-Buffer temperatures are polled from the KWB buffer
-(`modbus.heat.yaml`); setpoints and modes are echoed by the Solvis
-controller.
+Polled from the Solvis controller (`modbus.heat.yaml`, host `wp`):
+the buffer and circuit sensors, and read-backs of the setpoints and
+modes that the `*.cmd` items set.
 
 | Path | Writer | Description |
 | --- | --- | --- |
@@ -148,9 +152,9 @@ controller.
 | `heat.s.buffer.temp.mid` | poller | Buffer middle. °C. |
 | `heat.s.buffer.temp.return` | poller | Buffer bottom (return). °C. |
 | `heat.s.buffer.temp.switch` | poller | Mixing/switchover zone. °C. |
-| `heat.s.heat.temp` | poller (Solvis echo) | Heating setpoint. °C. |
-| `heat.s.heat.temp_low` | poller (Solvis echo) | Reduced (night) heating setpoint. °C. |
-| `heat.s.heat.temp.cmd` | target | Flow temperature for the Solvis (curve value, rounded up). |
+| `heat.s.heat.temp` | poller (Solvis echo) | Read-back of `heat.temp.cmd`: the Solvis' fixed day flow temperature. Basis of the demand values. °C. |
+| `heat.s.heat.temp_low(.cmd)` | poller / operator | Reduced (night) flow temperature, read back and commanded. °C. |
+| `heat.s.heat.temp.cmd` | target | Flow temperature for the Solvis (curve value + 0.8, truncated). |
 | `heat.s.heat.mode` | poller (Solvis echo) | Heating-circuit mode. |
 | `heat.s.heat.mode.cmd` | heat_valve | Heating circuit on (3) / standby (5); forwarded. |
 | `heat.s.heating.temp.out` | poller | Heating-circuit outflow. °C. |
@@ -171,7 +175,7 @@ Polled from the KWB burner (`modbus.heat.yaml`).
 | `heat.s.pellets.load.goal(.cmd)` | poller / pellet | Load goal, read back and commanded. 0…1. |
 | `heat.s.pellets.load.force` | operator | Use this load instead of the controller's. 0…1, absent = auto. |
 | `heat.s.pellets.power` | poller | Burner request flag, read back. |
-| `heat.s.pellets.power.cmd` | poller (derived) | Burner request, forwarded; derived from `.auto` at cutover. |
+| `heat.s.pellets.power.cmd` | cutover job | Burner request, forwarded by the poller; derived from `.auto` (moat-n84.24). |
 | `heat.s.pellets.power.cmd.auto` | selector | Whether the burner should run; sole writer. |
 | `heat.s.pellets.aux:1.goal`, `aux:2.goal`, `aux.r-min.goal` | pellet | Start-up temperature patched into the burner's controller. |
 | `heat.s.pellets.aux:1`, `aux:2`, `aux.r-min` | poller | Those goals' read-backs. |
@@ -199,4 +203,16 @@ Polled from the KWB burner (`modbus.heat.yaml`).
 | --- | --- | --- |
 | `run.host.<host>.heat.<unit>` | each unit, pwm daemon | Service announcement/liveness; `<host>` is the configured installation-wide name (default `heat`). |
 | `error.app.heat.<unit>` | run (system runner) | A unit failed; cleared after it runs again for `recovery` seconds. |
-| `schema.app.heat.override.NAME` | `override` command | JSON schema of each override item, so writes are checked. |
+| `schema.app.heat.override.NAME` | `override --schemas` | JSON schema of each override item, so writes are checked. |
+
+## Optional paths
+
+These are off (`None`) by default and only used when configured.
+
+| Setting | Unit | Description |
+| --- | --- | --- |
+| `cfg.app.heat.heat_valve.pin` | heat_valve | Heating circuit on (1.0) / off (0.0), for a `pwm` daemon output. |
+| `cfg.app.heat.selector.feedback_pellet` | selector | Echo of the burner request. |
+| `cfg.app.heat.pump.legacy_state` | pump | The run state as a number (legacy writer of `heat.s.pump.state`). |
+| `cfg.app.heat.errors.source` | errors | Service announcement of the error feed's writer; while it's down, the feed counts as stale. |
+| `cfg.app.heat.pwm.outputs.NAME.override` | pwm | `flag` and `val` paths: while the flag is true, output the value instead. |

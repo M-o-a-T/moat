@@ -61,10 +61,6 @@ class PassthruCfg(UnitCfg):
     e.g. its Modbus host's and its poller's service.
     """
 
-    # outputs
-    feedback: Path | None = P("app.heat.ha.passthru")
-    """``bypass``, copied to Home Assistant as the passthru switch's state."""
-
     p_idle: float = 1.2
     """The heat pump is idle below this power, kW."""
 
@@ -145,8 +141,6 @@ class PassthruCore:
         else:
             st.switching = wait
 
-        if self.cfg.feedback is not None:
-            out[self.cfg.feedback] = st.bypass
         changed = (st.bypass, st.switching) != old
         return Step(outputs=out, save=changed, save_now=changed)
 

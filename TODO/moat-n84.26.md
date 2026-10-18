@@ -138,12 +138,15 @@ pump's power: risk of overheating. So the bypass is force-ended.
    `schema.yaml` and `data.md` (state shape, writer, `passthru` no longer
    "planned"), and an HA switch for the request:
    `examples/moat-dev-heat/HA.md` gets a `switch.heizung.passthru` whose
-   command is copied to `app.heat.passthru.request`; its state comes
-   from `app.heat.ha.passthru`, which the passthru unit publishes (the
-   copy jobs can't extract an attribute). No CLI command. I3.md: the
+   command is copied to `app.heat.passthru.request`; its state is the
+   `bypass` element of `app.heat.passthru.state`, copied by
+   `transform.copy.value` with its new `attr` parameter. No CLI
+   command. I3.md: the
    `errors` setting, and that `moat-link-host` must run on i3.
 
-6. **Tests** (`tests/moat_dev_heat/test_passthru.py`):
+6. **Tests** — done (`tests/moat_dev_heat/test_passthru.py`). The
+   closed-loop test runs on `ClosedLoop`, which now also publishes a
+   core's state when its step saves it (as the `StateStore` does):
    - core, table-driven: request while the heat pump runs is deferred
      (`switching: heatpump_idle`), switches once idle; switch back
      deferred while the Solvis runs it; request withdrawn while waiting;

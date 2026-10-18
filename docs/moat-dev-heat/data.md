@@ -112,7 +112,6 @@ these and `home.ass.dyn` (see `examples/moat-dev-heat/HA.md`).
 | `app.heat.ha.cop` | pump | COP estimate, rate-limited. |
 | `app.heat.ha.valve.cmd` | frost | Heat-pump loop valve (smart plug). |
 | `app.heat.ha.valve.state` | HA job | Loop-valve feedback. |
-| `app.heat.ha.passthru` | passthru | The original controller is in charge (passthru switch feedback). |
 
 ## Heat pump (`heat.s.pump.*`)
 

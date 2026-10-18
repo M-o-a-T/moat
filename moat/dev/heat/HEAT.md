@@ -439,8 +439,7 @@ The `passthru` unit (`passthru.py`) coordinates the switch:
   `{bypass: bool, switching: str|None}`: whether the original controller
   is in charge, and what a pending switch waits for (`heatpump_idle`,
   `sensors`, `solvis`), `None` when settled. This is the unit's
-  persistent state, saved at once, so a restart resumes. `bypass` is
-  also published as `app.heat.ha.passthru` for HA.
+  persistent state, saved at once, so a restart resumes.
 - The switch happens **only while the heat pump is idle**: power below
   `p_idle` and compressor speed 0; towards the original controller also
   `pump.out.run == off`. Otherwise the request waits. While a switch to

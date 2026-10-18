@@ -8,7 +8,8 @@ their Link adapter would give them.
 
 A tick: the plant reads its commands from the bus and advances; its
 sensor readings are published; then every core whose inputs changed, or
-whose wake-up time has come, is stepped, and its outputs are published.
+whose wake-up time has come, is stepped, and its outputs (and its state,
+if the step says it changed) are published.
 Cores are stepped repeatedly within a tick until nothing changes any
 more, so a chain of units settles in one tick.
 """
@@ -22,6 +23,8 @@ from math import inf
 from moat.util import NotGiven
 from moat.dev.heat.config import make_config
 from moat.dev.heat.link import Override, TreeReader
+from moat.dev.heat.pid import T_OFFSET
+from moat.dev.heat.state import state_path
 from moat.lib.path import Path
 from moat.util.time import patch_clock
 
@@ -290,6 +293,13 @@ class ClosedLoop:
                 slot.steps += 1
                 if res.save or res.save_now:
                     slot.saves += 1
+                    if slot.state is not None:
+                        # as the StateStore does (immediately, here)
+                        self.set(
+                            state_path(slot.name),
+                            slot.state.model_dump(context={T_OFFSET: self.wall - self.now}),
+                            slot.name,
+                        )
                 slot.wake_at = inf if res.wake_in is None else self.now + res.wake_in
                 for path, value in res.outputs.items():
                     if self.set(path, value, slot.name):

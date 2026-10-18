@@ -61,10 +61,11 @@ parameter names against the stored snippet).
 | `app.heat.ha.valve.cmd` | `switch.plug-n5.relay.cmd` | frost |
 | `switch.plug-n5.relay.state` | `app.heat.ha.valve.state` | frost |
 | `switch.heizung.passthru.cmd` | `app.heat.passthru.request` | passthru |
-| `app.heat.ha.passthru` | `switch.heizung.passthru.state` | passthru |
+| `app.heat.passthru.state` (`attr: bypass`) | `switch.heizung.passthru.state` | passthru |
 
 The passthru switch's `.state` says whether the original controller is
-in charge, which happens only once the heat pump is idle. When the
+in charge, which happens only once the heat pump is idle (the job's
+`attr` parameter copies just that element). When the
 passthru unit has to end a bypass because the Solvis can't be polled,
 it resets the request; that isn't copied back to `.cmd`.
 

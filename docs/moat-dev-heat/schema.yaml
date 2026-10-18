@@ -1004,13 +1004,6 @@ title: Loop-valve feedback
 description: The valve's actual state, copied from the smart plug.
 type: boolean
 ---
-_path: !P app.heat.ha.passthru
-title: Passthru feedback
-description: >-
-  Published by the `passthru` unit: whether the original controller is
-  in charge. Shown in Home Assistant as `switch.heizung.passthru`'s state.
-type: boolean
----
 _path: !P app.heat.ha.pump_state
 title: Heating-circuit pump
 description: Whether the heating circuit runs, published by the `heat_valve` unit.

@@ -157,7 +157,8 @@ async def test_wait_and_force(heat) -> None:
                 )
             )
         new = await heat.expect(
-            P("run.host.heat.heat.target"), lambda v: v is not None and v["id"] != ann["id"]
+            P("run.host.heat.heat.target"),
+            lambda v: v is not None and v["id"] != ann["id"] and v["up"],
         )
         assert new["up"]
         tg.cancel_scope.cancel()

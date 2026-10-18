@@ -251,6 +251,7 @@ async def test_error_shutdown(cfg, jump) -> None:  # noqa: ARG001
     async with Heat(cfg) as h:
         await h.running()
         await anyio.sleep(120)
+        before = (await h.get(FLOW_REQ))["seq"]
         h.sim.plant.inject_error(":2", 123)
         err = await h.until(lambda: h.get(PUMP_ERR), 120)
         assert "PumpAbort" in repr(err)
@@ -260,6 +261,8 @@ async def test_error_shutdown(cfg, jump) -> None:  # noqa: ARG001
         # restarted, the unit doesn't start the heat pump while the error is there
         await anyio.sleep(300)
         assert await h.run() == "off"
+        # its requests continue after the emergency shutdown's (moat-8hjx)
+        assert (await h.get(FLOW_REQ))["seq"] > before + 2
 
 
 @pytest.mark.slow

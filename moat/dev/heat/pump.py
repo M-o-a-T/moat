@@ -438,6 +438,16 @@ class PumpCore:
         else:
             self._power, self._mode = min(p, 1), self.cfg.mode_on
 
+    def _seen_seq(self, req: Any) -> None:
+        """
+        Continue after the ``seq`` of the stored flow request: after a
+        restart, or an emergency shutdown that wrote its own requests, our
+        next request must still differ from the last one the flow unit
+        applied.
+        """
+        if isinstance(req, dict) and isinstance(seq := req.get("seq"), int):
+            self._seq = max(self._seq, seq)
+
     def _request(self, mode: FlowMode, *, preload: bool = False, **kw: Any) -> None:
         req = FlowRequest(mode=mode, preload=preload, **kw)
         if self._flow is not None:
@@ -574,6 +584,7 @@ class PumpCore:
         dem = target.get("demand") if isinstance(target, dict) else None
         pellet = inputs.get("pellet") or {}
         missing = [k for k in self.SENSORS if v[k] is None]
+        self._seen_seq(inputs.get("flow_request"))
 
         if passthru(inputs.get("passthru")):
             return self._bypass(inputs)
@@ -1065,6 +1076,7 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
                 "passthru",
                 "rate_cmd",
                 "force_start",
+                "flow_request",
             )
         }
         rd["override"] = override_reader(self.link, "wp", cfg.override)

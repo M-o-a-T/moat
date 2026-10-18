@@ -66,7 +66,7 @@ class FlowRequest(BaseModel):
     preload: bool = False
     """On change, preset the PID(s) so that they start at ``pwm``."""
     seq: int = 0
-    """Incremented by the writer on every change."""
+    """Incremented on every change; a writer continues after the stored request's."""
 
     def to_link(self) -> dict[str, Any]:
         """The request as written to MoaT-Link (plain types only)."""

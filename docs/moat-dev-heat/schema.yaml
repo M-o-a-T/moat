@@ -757,8 +757,10 @@ properties:
     type: integer
     title: Sequence number
     description: >-
-      Changes whenever the request does. The flow unit applies a request
-      whose seq differs from the last one it applied.
+      Increases with every change, also across pump-unit restarts and
+      emergency shutdowns (each writer continues after the stored one).
+      The flow unit applies a request whose seq differs from the last one
+      it applied.
 required:
 - mode
 - seq

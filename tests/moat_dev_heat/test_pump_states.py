@@ -106,6 +106,7 @@ def _inputs(**kw: Any) -> dict[str, Any]:
         "rate_cmd": None,
         "override": None,
         "force_start": None,
+        "flow_request": None,
     }
     res.update(kw)
     return res
@@ -424,6 +425,19 @@ def test_passthru_pending():
     assert d.out[OUT]["reason"] == "passthru"
     d.step(passthru={"bypass": False, "switching": None})
     assert d.run != "off"
+
+
+def test_seq_continues():
+    "after a restart, the flow requests continue after the stored one's seq"
+    d = _running()
+    d.state.run = R.run
+    d2 = Drive(state=d.state)
+    d2.inp.update(d.inp, flow_request={"mode": "off", "seq": 15})
+    d2.step()
+    assert d2.req["seq"] > 15
+    seq = d2.req["seq"]
+    d2.step(t_out=41.0)
+    assert d2.req["seq"] >= seq
 
 
 def test_missing_sensor():

@@ -349,7 +349,7 @@ class TermInfo:  # noqa:D101
             if not self.fallback:
                 raise
 
-            term_type = _TERM_ALIASES.get(self.terminal_name, self.terminal_name)
+            term_type = _TERM_ALIASES.get(self.terminal_name.lower(), self.terminal_name.lower())
             if term_type not in _TERMINAL_CAPABILITIES:
                 term_type = "dumb"
             self._capabilities = _TERMINAL_CAPABILITIES[term_type].copy()

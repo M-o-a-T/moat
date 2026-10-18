@@ -134,7 +134,7 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
     @asynccontextmanager
     async def __asynccontextmanager__(self):
         term = self.term
-        self.terminfo = terminfo.TermInfo(term or os.environ.get("TERM", "VT100"))
+        self.terminfo = terminfo.TermInfo(term or os.environ.get("TERM", "vt100"))
         try:
             current_term = await self.__io.tget()
             await self.__io.tset(current_term)
@@ -150,7 +150,9 @@ class UnixConsole(Console, anyio.AsyncContextManagerMixin):  # noqa: D101
         def _my_getstr(cap: str, optional: bool = False) -> bytes | None:
             r = self.terminfo.get(cap)
             if not optional and r is None:
-                raise InvalidTerminal(f"terminal doesn't have the required {cap} capability")
+                raise InvalidTerminal(
+                    f"terminal {self.terminfo.terminal_name!r}: no {cap} capability"
+                )
             return r
 
         self._bel = _my_getstr("bel")

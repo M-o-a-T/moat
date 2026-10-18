@@ -27,6 +27,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _host_args(cfg: Mapping) -> dict[str, Any]:
+    "Host settings from a ``hosts`` / ``hostports`` entry (next to its units)."
+    return {k: cfg[k] for k in ("timeout",) if k in cfg}
+
+
 async def _start_bypass(
     cl: ModbusClient,
     tg: TaskGroup,
@@ -234,7 +239,7 @@ async def dev_poll(
 
         # TCP clients
         for h, hv in cfg.get("hosts", {}).items():
-            tcp_host = await cl.host_service(h, None)
+            tcp_host = await cl.host_service(h, None, **_host_args(hv))
             for u, v in hv.items():
                 if not isinstance(u, int):
                     continue
@@ -247,8 +252,10 @@ async def dev_poll(
             for p, pv in hv.items():
                 if not isinstance(p, int):
                     continue
-                tcp_host = await cl.host_service(h, p)
+                tcp_host = await cl.host_service(h, p, **_host_args(pv))
                 for u, v in pv.items():
+                    if not isinstance(u, int):
+                        continue
                     dev = await make_dev(v, Reg, tcp_host, unit=u)
                     tg.start_soon(dev.poll)
                     do_attach(v, dev)

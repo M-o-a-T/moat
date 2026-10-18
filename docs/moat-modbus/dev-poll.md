@@ -65,6 +65,34 @@ This configuration:
 - **`hosts`**: TCP client connections without explicit ports (host → unit → config)
 - **`ports`**: Serial client connections (port → unit → config)
 
+### Connections
+
+Next to the units, a `hosts` or `hostports` entry may contain
+`timeout`: how long to wait for a reply, in seconds (default 10). A
+`ports` entry needs a `serial` section (`baudrate`, `parity`, …), which
+also accepts `timeout` (default 0.5).
+
+```yaml
+hostports:
+  solvis.example:
+    502:
+      timeout: 3
+      1:
+        regs:
+          ...
+```
+
+A request that isn't answered in time fails. Failures are reported to
+MoaT-Link's error subsystem, if a link is configured:
+
+- `error.app.modbus.tcp.<host>.<port>`: the TCP connection can't be
+  established;
+- `….<unit>.<slot>` below that (or below
+  `error.app.modbus.serial.<port>`): reading a slot failed, e.g.
+  because the device didn't answer within `timeout`.
+
+The entries are removed when the problem goes away.
+
 ### Slots
 
 Slots group registers that should be read together in a single Modbus transaction.

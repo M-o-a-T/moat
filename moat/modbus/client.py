@@ -93,17 +93,20 @@ class ModbusClient(CtxObj):
         h = Host(self, addr, port, **kw)
         return h
 
-    async def _host(self, addr, port=None, *, task_status) -> None:
-        async with self.host(addr, port) as srv:
+    async def _host(self, addr, port, kw, *, task_status) -> None:
+        async with self.host(addr, port, **kw) as srv:
             task_status.started(srv)
             await anyio.sleep_forever()
 
-    async def host_service(self, addr, port):
-        """Run a TCP client in a background task."""
+    async def host_service(self, addr, port, **kw):
+        """Run a TCP client in a background task.
+
+        Keyword arguments are passed to `Host`, e.g. ``timeout``.
+        """
         if not port:
             port = 502
         assert self._tg is not None
-        return await self._tg.start(self._host, addr, port)
+        return await self._tg.start(self._host, addr, port, kw)
 
     def serial(self, /, port, **ser):
         """Return a host object for connections to this serial port."""

@@ -1,0 +1,88 @@
+"""
+Tests for poll failures as reported to MoaT-Link by `moat.modbus.dev.poll.dev_poll`.
+"""
+
+from __future__ import annotations
+
+import anyio
+import pytest
+import socket
+
+from moat.util import yload
+from moat.lib.path import P
+from moat.link._test import Scaffold
+from moat.modbus.dev.poll import dev_poll
+
+from typing import Any
+
+CFG = """
+slots:
+  1sec:
+    read_delay: 1
+hostports:
+  127.0.0.1:
+    {port}:
+      timeout: {timeout}
+      1:
+        regs:
+          r: {{reg_type: h, register: 1, type: uint, len: 1, slot: 1sec, dest: !P test.r}}
+"""
+
+ERR = P("error.app.modbus.tcp") / "127.0.0.1"
+
+
+def _dead_port() -> int:
+    "a port nobody listens on"
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+async def _wait_err(c: Any, path: P, limit: float) -> Any:
+    "wait for an error record at @path; fail after @limit seconds"
+    with anyio.fail_after(limit):
+        while True:
+            try:
+                return await c.d_get(path)
+            except KeyError:
+                await anyio.sleep(0.2)
+
+
+@pytest.mark.anyio
+async def test_unreachable(cfg):  # noqa: ARG001
+    "an unreachable host is reported at its host path"
+    async with (
+        Scaffold(True, use_servers=True) as sf,
+        sf.server_(init={"x": 1}),
+        sf.client_() as c,
+        anyio.create_task_group() as tg,
+    ):
+        port = _dead_port()
+        await tg.start(dev_poll, yload(CFG.format(port=port, timeout=10), attr=True), c)
+        err = await _wait_err(c, ERR / str(port), 5)
+        assert "exc" in err
+        tg.cancel_scope.cancel()
+
+
+@pytest.mark.anyio
+async def test_unresponsive_timeout(cfg):  # noqa: ARG001
+    "a host that doesn't answer is reported at the slot, after the configured timeout"
+    async with (
+        Scaffold(True, use_servers=True) as sf,
+        sf.server_(init={"x": 1}),
+        sf.client_() as c,
+        anyio.create_task_group() as tg,
+    ):
+        lst = await anyio.create_tcp_listener(local_host="127.0.0.1", local_port=0)
+        port = lst.extra(anyio.abc.SocketAttribute.local_port)
+
+        async def handle(conn: Any) -> None:
+            async with conn:
+                await anyio.sleep_forever()
+
+        tg.start_soon(lst.serve, handle)
+        await tg.start(dev_poll, yload(CFG.format(port=port, timeout=1), attr=True), c)
+        # the default timeout is 10 seconds
+        err = await _wait_err(c, ERR / str(port) / "1" / "1sec", 4)
+        assert "exc" in err
+        tg.cancel_scope.cancel()

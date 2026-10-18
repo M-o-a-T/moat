@@ -1,0 +1,1375 @@
+# Schema of the heat controller's MoaT-Link data.
+#
+# Multi-document YAML, one `_path` per data item (or wildcard subtree);
+# the content is the item's JSON schema. See docs/moat-link-server/schema.yml
+# for the format and moat/dev/heat/PATHS.md for the production survey.
+# Companion tables: data.md in this directory.
+
+_path: !P app.heat
+title: Heat controller
+description: >-
+  Data of the heat controller's units (moat.dev.heat, epic moat-n84).
+  Units communicate only through these items; each unit owns its `out`
+  and `state` subtrees. Everything here is retained.
+---
+_path: !P app.heat.target.out
+title: Target unit output
+description: >-
+  The heating curve and the heat demand, published by the `target` unit.
+type: object
+properties:
+  flow_temp:
+    type: number
+    title: Effective flow temperature
+    description: >-
+      The flow temperature to aim for: the curve value, or the
+      operator override when one is set. °C.
+  flow_temp_computed:
+    type: number
+    title: Computed flow temperature
+    description: The curve value, regardless of any override. °C.
+  overridden:
+    type: boolean
+    title: Flow temperature overridden
+  day_active:
+    type: boolean
+    title: Day (not night) reduction active
+  t_ext:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Outside temperature used
+    description: The last reading, or null when it is too stale. °C.
+  t_ext_stale:
+    type: boolean
+    title: Outside temperature stale
+  demand:
+    anyOf:
+    - type: "null"
+    - $ref: '#/$defs/demand'
+    title: Buffer demand
+    description: >-
+      The buffer temperatures to aim for; null while the setpoints are
+      unknown.
+$defs:
+  demand:
+    type: object
+    properties:
+      t_nom:
+        type: number
+        title: Nominal buffer temperature
+      t_low:
+        type: number
+        title: Lower buffer target
+      t_adj:
+        type: number
+        title: Adjusted target (switch-off)
+      t_set_on:
+        type: number
+        title: Start temperature
+      t_set_off:
+        type: number
+        title: Stop temperature
+      source:
+        enum: [heat, water]
+        title: Buffer that t_* refers to
+    required:
+    - t_nom
+    - t_low
+    - t_adj
+    - t_set_on
+    - t_set_off
+    - source
+required:
+- flow_temp
+- flow_temp_computed
+- overridden
+- day_active
+- t_ext
+- t_ext_stale
+- demand
+---
+_path: !P app.heat.heat_valve.out
+title: Heat-valve unit output
+description: The heating circuit's state, published by the `heat_valve` unit.
+type: object
+properties:
+  on:
+    type: boolean
+    title: Heating circuit on
+  pending:
+    type: boolean
+    title: Ok, waiting for the switch-on delay
+  hc:
+    type: integer
+    title: Reason code
+    description: >-
+      The legacy `log_hc` number, extended: 12 too cold while the heat
+      pump runs, 13 pellet burner, 14 heating disabled, 15 input missing.
+  reason:
+    type: string
+    title: Reason text
+required:
+- on
+- pending
+- hc
+- reason
+---
+_path: !P app.heat.flow.out
+title: Flow unit output
+description: >-
+  What the water pump is doing, published by the `flow` unit.
+type: object
+properties:
+  pwm:
+    type: number
+    minimum: 0
+    maximum: 1
+    title: Water-pump PWM
+  mode:
+    title: Control mode
+    description: >-
+      The request's mode (off, fixed, rate, rate_temp, temp, drain), or
+      override, freeze, safe (stale sensor), fallback, idle (no trusted
+      request), or frost (a frost-protection pulse).
+    enum:
+    - "off"
+    - fixed
+    - rate
+    - rate_temp
+    - temp
+    - drain
+    - override
+    - freeze
+    - safe
+    - fallback
+    - idle
+    - frost
+  stable:
+    type: boolean
+    title: Request satisfied
+  request_seq:
+    anyOf:
+    - type: "null"
+    - type: integer
+    title: Seq of the applied request
+required:
+- pwm
+- mode
+- stable
+- request_seq
+---
+_path: !P app.heat.pump.out
+title: Pump unit output
+description: >-
+  The heat pump's state and load control, published by the `pump` unit.
+type: object
+properties:
+  run:
+    title: Controller state
+    enum:
+    - "off"
+    - wait_time
+    - wait_flow
+    - flow
+    - wait_power
+    - temp
+    - run
+    - ice
+    - down
+  active:
+    type: boolean
+    title: Heat pump active
+    description: Anything but off and down.
+  heat_off:
+    type: boolean
+    title: Heating circuit must stay off in this state
+  load:
+    type: number
+    minimum: 0
+    maximum: 1
+    title: Commanded load
+  scaled_low:
+    type: number
+    title: Decayed low-limit indicator
+  cop:
+    type: number
+    title: COP estimate
+  avg_load:
+    type: number
+    title: Load average (dynamic load limit)
+  reason:
+    type: string
+    title: Why the state is what it is
+  t_cur:
+    type: number
+    title: Buffer temperature aimed at
+  t_pump:
+    type: number
+    title: Outflow setpoint
+  t_limit:
+    type: number
+    title: Maximum outflow setpoint
+  l_load:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Load PID output
+  l_buffer:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Buffer PID output
+  l_limit:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Limit PID output
+  l_buf:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Blended buffer/limit output
+  w:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Blend position
+  l_max:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Dynamic load limit
+required:
+- run
+- active
+- heat_off
+- load
+- scaled_low
+- cop
+- avg_load
+- reason
+---
+_path: !P app.heat.pellet.out
+title: Pellet unit output
+description: The pellet burner's state, published by the `pellet` unit.
+type: object
+properties:
+  t_pellet_on:
+    anyOf:
+    - type: boolean
+    - type: number
+    title: Burner settled
+    description: >-
+      False while off, True once settled, else the wall-clock time it
+      started.
+  pellet_on:
+    type: boolean
+    title: Burner seen running
+    description: KWB code 4 since it last started.
+  load:
+    type: number
+    minimum: 0
+    maximum: 1
+    title: Commanded load
+  hot:
+    type: boolean
+    title: Burner hot enough to take over
+  mode:
+    anyOf:
+    - type: "null"
+    - type: string
+      enum:
+      - "off"
+      - starting
+      - running
+    title: Classified burner mode
+  state_code:
+    anyOf:
+    - type: "null"
+    - type: integer
+    title: Raw KWB state code
+  reason:
+    type: string
+    title: Control branch
+required:
+- t_pellet_on
+- pellet_on
+- load
+- hot
+- mode
+- state_code
+- reason
+---
+_path: !P app.heat.selector.out
+title: Selector unit output
+description: >-
+  Which heat sources may run, published by the `selector` unit.
+type: object
+properties:
+  wp:
+    type: boolean
+    title: Heat pump may run
+  pellet:
+    type: boolean
+    title: Pellet burner may run
+  primary:
+    anyOf:
+    - type: "null"
+    - type: string
+      enum: [wp, pellet]
+    title: Primary source
+    description: Null if both sources are forced off.
+  phase:
+    type: string
+    enum: [steady, wp_to_pellet, pellet_to_wp]
+    title: Handover phase
+  reason:
+    type: string
+    title: Why
+  failed:
+    type: array
+    items:
+      enum: [wp, pellet]
+    title: Recently failed sources
+required:
+- wp
+- pellet
+- primary
+- phase
+- reason
+- failed
+---
+_path: !P app.heat.errors.out
+title: Errors unit output
+description: >-
+  Aggregated heat-pump errors, published by the `errors` unit. The pump
+  and selector units act on this; the errors unit never stops anything
+  itself.
+type: object
+properties:
+  errors:
+    type: object
+    title: Errors by feed-relative path
+    description: >-
+      Error codes keyed by their path relative to the error feed; the
+      key `stale` with value `stale` marks a stale feed. Injected
+      operator errors appear here too.
+    additionalProperties: true
+  severity:
+    enum: [none, warning, critical]
+    title: Highest severity
+  since:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: When the severity last changed
+    description: Wall-clock time.
+required:
+- errors
+- severity
+- since
+---
+_path: !P app.heat.frost.out
+title: Frost unit output
+description: >-
+  The frost-protection cycle's state, published by the `frost` unit. The
+  flow unit turns `pulse` into PWM while nothing else wants the pump.
+type: object
+properties:
+  active:
+    type: boolean
+    title: Frost cycle running
+  pulse:
+    type: number
+    minimum: 0
+    maximum: 1
+    title: Current pulse PWM
+  t_min:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Loop minimum temperature
+    description: The colder of the loop's inflow and outflow. °C.
+  reason:
+    type: string
+    title: Why
+required:
+- active
+- pulse
+- t_min
+- reason
+---
+_path: !P app.heat.watchdog.out
+title: Watchdog unit output
+description: >-
+  The watchdog's status and, after an intervention, a record of the
+  emergency shutdown it ran.
+type: object
+properties:
+  status:
+    enum: [watching, idle, disabled, passthru, shutdown, done]
+    title: Watchdog status
+  triggered_at:
+    type: number
+    title: When the last intervention started
+    description: Wall-clock time.
+  reason:
+    type: string
+    title: Why it fired
+  result:
+    type: string
+    title: Outcome of the emergency shutdown
+    description: cooled, timeout, total_timeout, or an error message.
+  duration:
+    type: number
+    title: Duration of the procedure
+  exit_delta:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Loop temperature difference afterwards
+required:
+- status
+---
+_path: !P _.pid_state
+title: PID controller state
+description: >-
+  Persistent state of one PID controller, referenced by the units' state
+  schemas ($ref: _.pid_state). The timestamp is stored as wall-clock
+  time and re-based on load.
+type: object
+properties:
+  i:
+    type: number
+    title: Integrator
+  e:
+    type: number
+    title: Last error
+  setpoint:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Setpoint
+  t:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Time of the last step
+    description: Wall-clock time.
+required:
+- i
+- e
+- setpoint
+- t
+---
+_path: !P app.heat.target.state
+title: Target unit state
+description: Persistent state of the `target` unit.
+type: object
+properties:
+  locks:
+    type: object
+    title: Force-switch locks
+    properties:
+      day:
+        type: boolean
+        title: Forced day
+      night:
+        type: boolean
+        title: Forced night
+    required:
+    - day
+    - night
+required:
+- locks
+---
+_path: !P app.heat.heat_valve.state
+title: Heat-valve unit state
+description: Persistent state of the `heat_valve` unit.
+type: object
+properties:
+  heat_ok:
+    type: boolean
+    title: Circuit on
+  pending:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Ok since
+    description: >-
+      Wall-clock time the circuit became ok, while the switch-on delay
+      runs.
+required:
+- heat_ok
+- pending
+---
+_path: !P app.heat.flow.state
+title: Flow unit state
+description: Persistent state of the `flow` unit.
+type: object
+properties:
+  flow:
+    $ref: _.pid_state
+    title: Flow-rate PID state
+  pump:
+    $ref: _.pid_state
+    title: Outflow-temperature PID state
+  pwm:
+    type: number
+    title: Last PWM written
+  seq:
+    anyOf:
+    - type: "null"
+    - type: integer
+    title: Seq of the last applied request
+required:
+- flow
+- pump
+- pwm
+- seq
+---
+_path: !P app.heat.pump.state
+title: Pump unit state
+description: >-
+  Persistent state of the `pump` unit. Timestamps are wall-clock time,
+  so a restart or reboot doesn't lose them.
+type: object
+properties:
+  run:
+    type: integer
+    minimum: 0
+    maximum: 8
+    title: Controller state
+    description: >-
+      A Run state as its number: 0 off, 1 wait_time, 2 wait_flow,
+      3 flow, 4 wait_power, 5 temp, 6 run, 7 ice, 8 down.
+  t_change:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Start of the current timed phase
+  t_load:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Last time the heat pump produced heat
+  t_run:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Start of the current run
+  scaled_low:
+    type: number
+    title: Decayed low-limit indicator
+  load_last:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Load to resume after a restart
+  avg_heat:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Averaged heating outflow temperature
+  avg_heat_t:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Averaged flow-temperature target
+  cop:
+    type: number
+    title: COP estimate
+  avg_load:
+    type: number
+    title: Load average (dynamic load limit)
+  pids:
+    type: object
+    title: PID states
+    properties:
+      load:
+        $ref: _.pid_state
+      buffer:
+        $ref: _.pid_state
+      limit:
+        $ref: _.pid_state
+    required:
+    - load
+    - buffer
+    - limit
+required:
+- run
+- t_change
+- t_load
+- t_run
+- scaled_low
+- load_last
+- avg_heat
+- avg_heat_t
+- cop
+- avg_load
+- pids
+---
+_path: !P app.heat.pellet.state
+title: Pellet unit state
+description: Persistent state of the `pellet` unit.
+type: object
+properties:
+  t_pellet_on:
+    anyOf:
+    - type: boolean
+    - type: number
+    title: Burner settled
+    description: >-
+      False while off, True once settled, else the wall-clock time it
+      started.
+  pellet_on:
+    type: boolean
+    title: Burner seen running
+  load:
+    type: number
+    title: Last commanded load
+  pids:
+    type: object
+    title: PID states
+    properties:
+      p_load:
+        $ref: _.pid_state
+      p_buffer:
+        $ref: _.pid_state
+    required:
+    - p_load
+    - p_buffer
+required:
+- t_pellet_on
+- pellet_on
+- load
+- pids
+---
+_path: !P app.heat.selector.state
+title: Selector unit state
+description: Persistent state of the `selector` unit.
+type: object
+properties:
+  primary:
+    anyOf:
+    - type: "null"
+    - type: string
+      enum: [wp, pellet]
+    title: Primary source
+  phase:
+    type: string
+    enum: [steady, wp_to_pellet, pellet_to_wp]
+    title: Handover phase
+  since:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Start of the current phase
+    description: Wall-clock time.
+  failed:
+    type: object
+    title: Failed sources
+    description: Source name to when it failed (wall-clock time).
+    additionalProperties:
+      type: number
+required:
+- primary
+- phase
+- since
+- failed
+---
+_path: !P app.heat.errors.state
+title: Errors unit state
+description: Persistent state of the `errors` unit.
+type: object
+properties:
+  severity:
+    enum: [none, warning, critical]
+    title: Published severity
+  since:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: When it last changed
+    description: Wall-clock time.
+required:
+- severity
+- since
+---
+_path: !P app.heat.watchdog.state
+title: Watchdog unit state
+description: >-
+  Persistent state of the `watchdog` unit: the record of its last
+  intervention, as published in app.heat.watchdog.out.
+type: object
+properties:
+  last:
+    anyOf:
+    - type: "null"
+    - type: object
+    title: Last intervention
+required:
+- last
+---
+_path: !P app.heat.flow.request
+title: Water-pump request
+description: >-
+  What the `pump` unit (and the emergency shutdown procedure) want the
+  water pump to do. Consumed by the `flow` unit.
+type: object
+properties:
+  mode:
+    enum: [off, fixed, rate, rate_temp, temp, drain]
+    title: Requested mode
+  pwm:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: PWM
+    description: The PWM in fixed mode, else the preload value.
+  rate:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Flow-rate setpoint
+    description: l/min, in rate, rate_temp and drain mode.
+  temp:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Outflow-temperature setpoint
+    description: °C, in rate_temp and temp mode.
+  min_pwm:
+    anyOf:
+    - type: "null"
+    - type: number
+    title: Lower PWM clamp
+    description: De-icing keeps the pump above this.
+  preload:
+    type: boolean
+    title: Preset the PID(s) on change
+  seq:
+    type: integer
+    title: Sequence number
+    description: Increments on every change.
+required:
+- mode
+- seq
+---
+_path: !P app.heat.force_start
+title: Force-start request
+description: >-
+  One-shot "start the heat pump even if the buffer is warm" (legacy
+  --force-on). Deleted by the `pump` unit when consumed.
+type: boolean
+---
+_path: !P app.heat.passthru.request
+title: Passthru request
+description: >-
+  Ask the `passthru` unit to hand the heat pump to its original
+  controller for maintenance. Switching happens only while the heat pump
+  is idle; the request waits until then.
+type: boolean
+---
+_path: !P app.heat.passthru.state
+title: Passthru state
+description: >-
+  Published by the `passthru` unit (moat-n84.26): who controls the heat
+  pump. In `original` the pump unit writes nothing and the watchdog is
+  inactive.
+type: string
+enum: [ours, switching, original]
+---
+_path: !P app.heat.watchdog.disable
+title: Watchdog disable
+description: >-
+  Disables the watchdog while set. Read like an override: a plain
+  boolean, or {value, expires, reason}; deleted when it expires.
+anyOf:
+- type: "null"
+- type: boolean
+- type: object
+  properties:
+    value:
+      type: boolean
+    expires:
+      type: number
+      title: Wall-clock time when this lapses
+    reason:
+      type: string
+  required:
+  - value
+  additionalProperties: false
+---
+_path: !P app.heat.override
+title: Operator overrides
+description: >-
+  One item per override. Absent or null means automatic; a plain value
+  applies until changed; {value, expires, reason} lapses at `expires`.
+  The schemas of the items are also published at runtime below
+  schema.app.heat.override, so malformed writes are rejected.
+---
+_path: !P app.heat.override.wp
+title: Heat-pump override
+description: >-
+  True forces the heat pump on, False off (not even as a fallback),
+  null/absent automatic.
+anyOf:
+- type: "null"
+- type: boolean
+- type: object
+  properties:
+    value:
+      type: boolean
+    expires:
+      type: number
+      title: Wall-clock time when this lapses
+    reason:
+      type: string
+  required:
+  - value
+  additionalProperties: false
+---
+_path: !P app.heat.override.pellet
+title: Pellet-burner override
+description: >-
+  True forces the burner on, False off (its load goes to zero; this unit
+  can't switch the burner off itself), null/absent automatic.
+anyOf:
+- type: "null"
+- type: boolean
+- type: object
+  properties:
+    value:
+      type: boolean
+    expires:
+      type: number
+      title: Wall-clock time when this lapses
+    reason:
+      type: string
+  required:
+  - value
+  additionalProperties: false
+---
+_path: !P app.heat.override.flow_temp
+title: Flow-temperature override
+description: >-
+  The flow temperature to use instead of the heating curve. °C.
+anyOf:
+- type: "null"
+- type: number
+- type: object
+  properties:
+    value:
+      type: number
+    expires:
+      type: number
+      title: Wall-clock time when this lapses
+    reason:
+      type: string
+  required:
+  - value
+  additionalProperties: false
+---
+_path: !P app.heat.override.pwm
+title: Water-pump PWM override
+description: The PWM the `flow` unit outputs regardless of any request.
+anyOf:
+- type: "null"
+- type: number
+  minimum: 0
+  maximum: 1
+- type: object
+  properties:
+    value:
+      type: number
+      minimum: 0
+      maximum: 1
+    expires:
+      type: number
+      title: Wall-clock time when this lapses
+    reason:
+      type: string
+  required:
+  - value
+  additionalProperties: false
+---
+_path: !P app.heat.override.errors
+title: Injected errors
+description: >-
+  Errors to inject into the `errors` unit, by key. Always in the
+  {value, expires, reason} form: a bare mapping would be read as the
+  override's metadata.
+anyOf:
+- type: "null"
+- type: object
+  properties:
+    value:
+      type: object
+      title: Error codes by key
+      additionalProperties:
+        type: integer
+    expires:
+      type: number
+      title: Wall-clock time when this lapses
+    reason:
+      type: string
+  required:
+  - value
+  additionalProperties: false
+---
+_path: !P app.heat.ha
+title: Home Assistant bridge
+description: >-
+  Endpoints the heat units read and write instead of Home Assistant
+  entities. Jobs on the main node copy between these and home.ass.dyn;
+  see examples/moat-dev-heat/HA.md.
+---
+_path: !P app.heat.ha.heat
+title: Heating enabled
+description: Echo of the `switch.heizung.main` switch. Read by the target, heat_valve and selector units.
+type: boolean
+---
+_path: !P app.heat.ha.force_day.cmd
+title: Force-day switch
+description: The `switch.heizung.day_mode` command. Setting it clears force-night.
+type: boolean
+---
+_path: !P app.heat.ha.force_day.state
+title: Force-day feedback
+description: The force-day switch's state, as published by the `target` unit.
+type: boolean
+---
+_path: !P app.heat.ha.force_night.cmd
+title: Force-night switch
+description: The `switch.heizung.night_mode` command. Setting it clears force-day.
+type: boolean
+---
+_path: !P app.heat.ha.force_night.state
+title: Force-night feedback
+description: The force-night switch's state, as published by the `target` unit.
+type: boolean
+---
+_path: !P app.heat.ha.t_air
+title: Outside temperature
+description: >-
+  Current outside temperature for the source selector, copied from the
+  compost-shade sensor. Also written by the plant simulator in tests. °C.
+type: number
+---
+_path: !P app.heat.ha.valve.cmd
+title: Heat-pump loop valve
+description: >-
+  The loop valve's command (smart plug `plug-n5.relay`), written by the
+  `frost` unit: open while anyone circulates water or a frost cycle runs.
+type: boolean
+---
+_path: !P app.heat.ha.valve.state
+title: Loop-valve feedback
+description: The valve's actual state, copied from the smart plug.
+type: boolean
+---
+_path: !P app.heat.ha.pump_state
+title: Heating-circuit pump
+description: Whether the heating circuit runs, published by the `heat_valve` unit.
+type: boolean
+---
+_path: !P app.heat.ha.heat_state
+title: Heating-enabled feedback
+description: Echo of heating enabled, published by the `heat_valve` unit.
+type: boolean
+---
+_path: !P app.heat.ha.wp_enabled
+title: Heat pump effectively enabled
+description: >-
+  Published by the `pump` unit: whether the heat pump may run. Shown in
+  Home Assistant as the wp override job's "actual" value.
+type: boolean
+---
+_path: !P app.heat.ha.de_ice
+title: Heat pump de-ices
+description: Published by the `pump` unit while the heat pump de-ices.
+type: boolean
+---
+_path: !P app.heat.ha.cop
+title: Heat-pump COP
+description: The COP estimate, published by the `pump` unit, rate-limited.
+type: number
+---
+_path: !P cfg.app.heat.#
+title: Heat unit configurations
+description: >-
+  One item per unit (and the shared `service` and `emergency` items):
+  the unit's configuration, merged over the package defaults of
+  moat/dev/heat/_cfg.yaml, with this item taking precedence. Validated
+  by the unit's pydantic model; an invalid update is ignored, deleting
+  the item reverts to the defaults. Written by `moat dev heat migrate`
+  and by operators.
+type: object
+---
+_path: !P heat.s.pump
+title: Heat pump
+description: >-
+  The Stiebel heat pump's sensors and commands, written by the Modbus
+  pollers (examples/moat-dev-heat/modbus.stiebel.yaml and .heat.yaml)
+  and by the heat units.
+---
+_path: !P heat.s.pump.temp.in
+title: Loop inflow temperature
+description: The heat-pump loop's inflow. °C.
+type: number
+---
+_path: !P heat.s.pump.temp.out
+title: Loop outflow temperature
+description: The heat-pump loop's outflow. °C.
+type: number
+---
+_path: !P heat.s.pump.flow
+title: Loop flow rate
+description: Water flow through the heat-pump loop. l/min.
+type: number
+---
+_path: !P heat.s.pump.de_ice
+title: De-icing
+description: The heat pump is de-icing.
+type: boolean
+---
+_path: !P heat.s.pump.power
+title: Power draw
+description: Electrical power drawn by the heat pump. kW.
+type: number
+---
+_path: !P heat.s.pump.state
+title: Heat-pump state
+description: >-
+  The heat pump's own state code, polled from the heat pump. The legacy
+  controller wrongly overwrote this; the new pump unit doesn't (its
+  legacy_state option is off by default).
+type: integer
+---
+_path: !P heat.s.pump.switchover
+title: Switchover valve
+description: >-
+  The heat pump feeds the water buffer instead of the heating buffer.
+  Polled from the Solvis controller.
+type: boolean
+---
+_path: !P heat.s.pump.err.#
+title: Heat-pump errors
+description: >-
+  One item per error slot: the Solvis/Stiebel error code, 0 meaning no
+  error. The `errors` unit aggregates this subtree.
+type: integer
+---
+_path: !P heat.s.pump.cmd.power
+title: Heat-pump load command
+description: >-
+  The commanded load, 0…1. Written by the `pump` unit and by the
+  emergency shutdown; forwarded to the heat pump by the poller.
+type: number
+minimum: 0
+maximum: 1
+---
+_path: !P heat.s.pump.cmd.mode
+title: Heat-pump mode command
+description: >-
+  The heat pump's operating mode (3 on, 0 off). Written by the `pump`
+  unit and by the emergency shutdown; forwarded by the poller.
+type: integer
+---
+_path: !P heat.s.pump.pid
+title: Water-pump PWM
+description: >-
+  The circulation pump's PWM, 0…1, written by the `flow` unit and
+  output by the `pwm` daemon on GPIO.
+type: number
+minimum: 0
+maximum: 1
+---
+_path: !P heat.s.pump.rate.cmd
+title: Flow-rate command
+description: >-
+  The Solvis controller's analog output for the circulation pump,
+  published as a read-back. Legacy bypass-mode flow command.
+type: number
+---
+_path: !P heat.s.pump.pct.#
+title: Pump PID outputs
+description: >-
+  PID output logs of the `flow` and `pump` units (flow, pump, load,
+  buffer, limit), by name. The paths are configurable.
+type: number
+---
+_path: !P heat.s.pump.set.#
+title: Pump PID setpoints
+description: >-
+  PID setpoint logs of the `flow` and `pump` units, by name. The paths
+  are configurable.
+type: number
+---
+_path: !P heat.s.pump.cmd.want.mode
+title: Original-controller mode request
+description: >-
+  Mirrored by the Solvis emulation (stiebelfake) during passthru: the
+  mode the original controller asks for. Legacy bypass-mode path.
+type: integer
+---
+_path: !P heat.s.pump.cmd.want.power
+title: Original-controller load request
+description: >-
+  Mirrored by the Solvis emulation during passthru: the load the
+  original controller asks for. Legacy bypass-mode path.
+type: number
+---
+_path: !P heat.s.pump.cmd.live
+title: Poller keepalive
+description: >-
+  Heartbeat between the Solvis emulation and the heat-pump poller;
+  written by the emulation, watched by the poller.
+type: integer
+---
+_path: !P heat.s.pump.cmd.reset
+title: Poller reset
+description: Reset handshake between the Solvis emulation and the heat-pump poller.
+type: integer
+---
+_path: !P heat.s.buffer.temp.water
+title: Water-buffer temperature
+description: Top of the hot-water section of the buffer. °C.
+type: number
+---
+_path: !P heat.s.buffer.temp.heat
+title: Heating-buffer temperature
+description: Top of the heating section of the buffer. °C.
+type: number
+---
+_path: !P heat.s.buffer.temp.mid
+title: Mid-buffer temperature
+description: Middle of the buffer. °C.
+type: number
+---
+_path: !P heat.s.buffer.temp.return
+title: Buffer return temperature
+description: Bottom of the buffer. °C.
+type: number
+---
+_path: !P heat.s.buffer.temp.switch
+title: Mixing-zone temperature
+description: The buffer's switchover/mixing zone. °C.
+type: number
+---
+_path: !P heat.s.heat.temp
+title: Heating setpoint
+description: >-
+  The Solvis controller's heating setpoint, as read back. The target
+  unit's curve is anchored here. °C.
+type: number
+---
+_path: !P heat.s.heat.temp_low
+title: Night heating setpoint
+description: The Solvis controller's reduced (night) heating setpoint, as read back. °C.
+type: number
+---
+_path: !P heat.s.heat.temp.cmd
+title: Heating flow-temperature command
+description: >-
+  The flow temperature the `target` unit asks the Solvis for
+  (the curve's value, rounded up). Forwarded by the poller.
+type: integer
+---
+_path: !P heat.s.heat.mode
+title: Heating mode
+description: The Solvis controller's heating-circuit mode, as read back.
+type: integer
+---
+_path: !P heat.s.heat.mode.cmd
+title: Heating mode command
+description: >-
+  The heating circuit's mode (3 day, 5 standby), written by the
+  `heat_valve` unit; forwarded to the Solvis by the poller.
+type: integer
+---
+_path: !P heat.s.water.temp
+title: Hot-water setpoint
+description: The Solvis controller's hot-water setpoint, as read back. °C.
+type: number
+---
+_path: !P heat.s.water.temp.cmd
+title: Hot-water setpoint command
+description: The hot-water setpoint, set by the operator; forwarded to the Solvis by the poller.
+type: number
+---
+_path: !P heat.s.heating.temp.out
+title: Heating outflow temperature
+description: The heating circuit's outflow. °C.
+type: number
+---
+_path: !P heat.s.pellets.state
+title: Pellet-burner state
+description: >-
+  The KWB burner's state code, polled by the Modbus poller. Off codes
+  are 0, 1, 3, 5-9, 21-35 and >=43; 2 starting; 4 running.
+type: integer
+---
+_path: !P heat.s.pellets.temp.top
+title: Burner temperature
+description: The pellet burner's top temperature. °C.
+type: number
+---
+_path: !P heat.s.pellets.temp.goal
+title: Burner temperature goal
+description: The burner's temperature goal, as read back. °C.
+type: number
+---
+_path: !P heat.s.pellets.temp.goal.cmd
+title: Burner temperature command
+description: >-
+  The temperature the `pellet` unit asks the burner for; forwarded by
+  the poller.
+type: number
+---
+_path: !P heat.s.pellets.load
+title: Burner load
+description: The burner's actual load, as read back. 0…1.
+type: number
+---
+_path: !P heat.s.pellets.load.goal
+title: Burner load goal
+description: The burner's load goal, as read back. 0…1.
+type: number
+---
+_path: !P heat.s.pellets.load.goal.cmd
+title: Burner load command
+description: >-
+  The load the `pellet` unit asks the burner for; forwarded by the
+  poller.
+type: number
+---
+_path: !P heat.s.pellets.load.force
+title: Forced burner load
+description: >-
+  Operator override: use this load instead of the controller's. Absent
+  or null: automatic.
+anyOf:
+- type: "null"
+- type: number
+  minimum: 0
+  maximum: 1
+---
+_path: !P heat.s.pellets.power
+title: Burner request
+description: The burner's request flag, as read back.
+type: boolean
+---
+_path: !P heat.s.pellets.power.cmd
+title: Burner request command
+description: >-
+  The burner's request flag, forwarded to the burner by the poller.
+  Historically set by a MoaT-KV rule; at cutover a job derives it from
+  power.cmd.auto (moat-n84.24).
+type: boolean
+---
+_path: !P heat.s.pellets.power.cmd.auto
+title: Automatic burner request
+description: >-
+  Written by the `selector` unit: whether the burner should run. Sole
+  writer; the manual switch is the pellet override.
+type: boolean
+---
+_path: !P heat.s.pellets.aux.#
+title: Burner auxiliary goals
+description: >-
+  Auxiliary temperature goals in the burner's controller (aux:1,
+  aux:2, aux:r-min) and their read-backs. The `pellet` unit patches the
+  start-up temperature into the goals while the burner warms up.
+type: number
+---
+_path: !P heat.s.pellets.pct.#
+title: Pellet PID outputs
+description: PID output logs of the `pellet` unit (load, buffer), by name. The paths are configurable.
+type: number
+---
+_path: !P heat.s.pellets.set.#
+title: Pellet PID setpoints
+description: PID setpoint logs of the `pellet` unit, by name. The paths are configurable.
+type: number
+---
+_path: !P heat.s.control.errors
+title: Solvis error count
+description: Number of errors the Solvis controller reports.
+type: integer
+---
+_path: !P heat.s.control.errors.#
+title: Solvis errors
+description: >-
+  The Solvis controller's error slots: `:n.code` (the code), `:n.time`
+  (when), `:n.p1`, `:n.p2` (parameters). The `modbus_mon` monitor
+  restarts the Solvis poller on code 26.
+type: object
+additionalProperties: true
+---
+_path: !P temp.avg.temp.aussen_kompost.min
+title: Outside temperature (daily minimum)
+description: >-
+  Smoothed outside temperature for the heating curve, aggregated on the
+  main node from the compost-shade sensor and gated to the heating
+  host. Read by the `target` unit. °C.
+type: number
+---
+_path: !P temp.min.forecast.#
+title: Forecast minimum temperature
+description: >-
+  Minimum outside temperature over the next n hours, one item per
+  horizon (4, 5, 6, 10, 12, 18, 24). Written by the weather.min-temp
+  job; the selector reads the 6-hour horizon. °C.
+type: number
+---
+_path: !P run.host.+.heat.+
+title: Heat service announcements
+description: >-
+  One item per heat unit (and the `pwm` daemon) under the
+  installation-wide host name (cfg.app.heat.service.host, default
+  `heat`): run.host.<host>.heat.<unit>. Presence of the announcement
+  is the unit's liveness signal; MoaT-Link removes it when the client
+  dies. A forced announcer (emergency shutdown, `moat dev heat off`)
+  supplants the running unit.
+type: object
+properties:
+  id:
+    type: string
+    title: Announcing client's ID
+  up:
+    type: boolean
+    title: Service is up
+  value:
+    title: Announced value
+  path:
+    type: array
+    title: Service path
+required:
+- id
+additionalProperties: true
+---
+_path: !P error.app.heat.#
+title: Heat unit failures
+description: >-
+  Reported by the system runner (`moat dev heat run`) when a unit
+  fails, and cleared after it runs again for cfg.app.heat.service's
+  `recovery` interval. Shape as error.#; `unit` names the unit.
+type: object
+properties:
+  msg:
+    type: string
+    title: Problem description
+  level:
+    type: integer
+    title: Severity
+  data:
+    title: Triggering data
+  unit:
+    type: string
+    title: Unit name
+required:
+- msg
+additionalProperties: true

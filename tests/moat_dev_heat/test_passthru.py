@@ -25,6 +25,7 @@ from typing import Any
 
 STATE = state_path("passthru")
 REQUEST = P("app.heat.passthru.request")
+FEEDBACK = P("app.heat.ha.passthru")
 POWER = P("heat.s.pump.power")
 COMPR = P("heat.s.pump.compr.speed")
 PUMP_OUT = P("app.heat.pump.out")
@@ -62,6 +63,7 @@ def test_idle_switch() -> None:
     assert r.step() == (False, None)
     assert r.step(request=True) == (True, None)
     assert r.res.save_now
+    assert r.res.outputs[FEEDBACK] is True
     assert r.step() == (True, None)
     assert not r.res.save
     assert r.step(request=False) == (False, None)
@@ -109,7 +111,7 @@ def test_emergency_end() -> None:
     r.step(request=True)
     assert r.step(m_power=3.0, compr=40) == (True, None)
     assert r.step(error_0={P("1.1sec"): {"exc": "TimeoutError"}}) == (False, None)
-    assert r.res.outputs == {REQUEST: False}
+    assert r.res.outputs == {REQUEST: False, FEEDBACK: False}
     assert r.res.save_now
     # the request is gone; a new one waits until the error is
     assert r.step(request=False) == (False, None)

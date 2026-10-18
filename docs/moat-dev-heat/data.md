@@ -21,8 +21,8 @@ Conventions:
 Units: `target` (heating curve, demand), `heat_valve` (heating circuit),
 `flow` (water-pump PWM), `pump` (heat pump), `pellet` (pellet burner),
 `selector` (which source runs), `errors` (aggregation), `frost` (loop
-frost protection), `watchdog` (crash cover); `passthru` (maintenance
-handover) is planned (moat-n84.26). Support processes: `pwm` (software PWM daemon),
+frost protection), `watchdog` (crash cover), `passthru` (maintenance
+handover to the original controller). Support processes: `pwm` (software PWM daemon),
 `modbus_mon` (Solvis poller babysitter), `run` (system runner).
 
 ## Unit coordination (`app.heat.*`)
@@ -40,8 +40,8 @@ handover) is planned (moat-n84.26). Support processes: `pwm` (software PWM daemo
 | `app.heat.watchdog.out` | watchdog | Status, and a record of the last emergency shutdown. |
 | `app.heat.flow.request` | pump, emergency shutdown | What the water pump should do (mode, rate, temp, PWM bounds, seq). |
 | `app.heat.force_start` | operator (CLI `--force-on`), pump | One-shot "start although the buffer is warm"; pump sets it to null when consumed. |
-| `app.heat.passthru.request` | operator | Planned: hand the heat pump to its original controller (passthru). |
-| `app.heat.passthru.state` | passthru (planned) | Who controls the heat pump: ours / switching / original. Read by pump and watchdog; nothing writes it yet. |
+| `app.heat.passthru.request` | HA job, passthru (reset) | Hand the heat pump to its original controller (passthru), or take it back. |
+| `app.heat.passthru.state` | passthru | `{bypass, switching}`: whether the original controller is in charge, and what a switch waits for. Read by pump, watchdog and the Modbus bypasses. |
 | `app.heat.watchdog.disable` | operator | Disable the watchdog; plain bool or `{value, expires, reason}`. |
 
 ## Operator overrides (`app.heat.override.*`)
@@ -90,6 +90,7 @@ operators.
 | `cfg.app.heat.emergency` | operator, migrate | Tunables of the emergency shutdown (rates, timeouts, paths). |
 | `cfg.app.heat.pwm` | operator, migrate | PWM daemon: GPIO pins, value paths, frequencies. |
 | `cfg.app.heat.modbus_mon` | operator | Solvis monitor: error path, poller config, timings. |
+| `cfg.app.heat.passthru` | operator | Passthru: idle threshold, and `errors`, the error subtrees that end a bypass (the Solvis host's poll errors, the Solvis poller's service). |
 
 ## Home-Assistant bridge (`app.heat.ha.*`)
 
@@ -111,6 +112,7 @@ these and `home.ass.dyn` (see `examples/moat-dev-heat/HA.md`).
 | `app.heat.ha.cop` | pump | COP estimate, rate-limited. |
 | `app.heat.ha.valve.cmd` | frost | Heat-pump loop valve (smart plug). |
 | `app.heat.ha.valve.state` | HA job | Loop-valve feedback. |
+| `app.heat.ha.passthru` | passthru | The original controller is in charge (passthru switch feedback). |
 
 ## Heat pump (`heat.s.pump.*`)
 
@@ -134,7 +136,8 @@ Polled from the Stiebel heat pump by the Modbus poller
 | `heat.s.pump.cmd.live` | stiebelfake | Keepalive between the Solvis emulation and the poller. |
 | `heat.s.pump.cmd.reset` | stiebelfake | Reset handshake between the emulation and the poller. |
 | `heat.s.pump.pid` | flow | Circulation-pump PWM, 0…1; output by the `pwm` daemon. |
-| `heat.s.pump.rate.cmd` | poller (read-back) | The Solvis' analog flow output; legacy bypass path. |
+| `heat.s.pump.rate.cmd` | poller (Solvis) | The Solvis' circulation-pump output (PWM 0…1), polled every second; followed while bypassed. |
+| `heat.s.pump.compr.speed` | poller | Compressor speed; 0 = off. |
 | `heat.s.pump.pct.NAME` | flow, pump | PID output logs (flow, pump, load, buffer, limit). |
 | `heat.s.pump.set.NAME` | flow, pump | PID setpoint logs. |
 | `heat.s.pump._c:N`, `_x:N`, `_y:N` | poller | Raw diagnostic registers. |

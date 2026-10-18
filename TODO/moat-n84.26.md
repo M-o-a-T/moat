@@ -124,7 +124,7 @@ pump's power: risk of overheating. So the bypass is force-ended.
   MoaT-Link server is (i3), or the record never appears; to be checked
   on the real setup.
 
-4. **Other units**: `heat_valve`, `pellet`, `selector`, `target`,
+4. **Other units** — nothing to do: `heat_valve`, `pellet`, `selector`, `target`,
    `errors`, `frost` keep running unchanged. While bypassed the pump
    unit reports `run: off` (reason `passthru`), so heat_valve uses its
    pre-heat test and the selector sees an idle heat pump; the burner is
@@ -132,14 +132,16 @@ pump's power: risk of overheating. So the bypass is force-ended.
    Solvis reads the real register through the Modbus bypass, so nothing
    to do here.
 
-5. **Configs and docs**: enable the `bypass` blocks in
+5. **Configs and docs** — done: enable the `bypass` blocks in
    `examples/moat-dev-heat/modbus.stiebel{,fake}.yaml`; HEAT.md §2.8/§3.9
    (spec as implemented, open items resolved), `docs/moat-dev-heat`
    `schema.yaml` and `data.md` (state shape, writer, `passthru` no longer
    "planned"), and an HA switch for the request:
    `examples/moat-dev-heat/HA.md` gets a `switch.heizung.passthru` whose
-   command is copied to `app.heat.passthru.request` and whose state is
-   `app.heat.passthru.state`'s `bypass`. No CLI command.
+   command is copied to `app.heat.passthru.request`; its state comes
+   from `app.heat.ha.passthru`, which the passthru unit publishes (the
+   copy jobs can't extract an attribute). No CLI command. I3.md: the
+   `errors` setting, and that `moat-link-host` must run on i3.
 
 6. **Tests** (`tests/moat_dev_heat/test_passthru.py`):
    - core, table-driven: request while the heat pump runs is deferred

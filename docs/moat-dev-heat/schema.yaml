@@ -201,6 +201,9 @@ properties:
   reason:
     type: string
     title: Why the state is what it is
+  pwm:
+    type: number
+    title: Circulation-pump PWM passed on while bypassed (passthru)
   t_cur:
     type: number
     title: Buffer temperature aimed at
@@ -772,20 +775,39 @@ anyOf:
 _path: !P app.heat.passthru.request
 title: Passthru request
 description: >-
-  Planned (moat-n84.26; not implemented yet). Ask the `passthru` unit
-  to hand the heat pump to its original controller for maintenance. Switching happens only while the heat pump
-  is idle; the request waits until then.
+  Ask the `passthru` unit to hand the heat pump to its original
+  controller (the Solvis) for maintenance, or to take it back.
+  Switching happens only while the heat pump is idle; the request waits
+  until then. Copied from the HA switch `switch.heizung.passthru`;
+  reset to false by the passthru unit when it ends a bypass because
+  the Solvis can't be polled.
 type: boolean
 ---
 _path: !P app.heat.passthru.state
 title: Passthru state
 description: >-
-  Planned (moat-n84.26): to be published by the `passthru` unit, which
-  doesn't exist yet. The pump and watchdog units already read it: who
-  controls the heat pump. In `original` the pump unit writes nothing and the watchdog is
-  inactive.
-type: string
-enum: [ours, switching, original]
+  Who controls the heat pump; the `passthru` unit's persistent state.
+  While `bypass` is true, the Modbus shim and the heat-pump poller
+  forward the Solvis' requests to the heat pump, the pump unit sends no
+  commands to the heat pump but runs the circulation pump as the Solvis
+  says, and the watchdog is inactive.
+type: object
+properties:
+  bypass:
+    type: boolean
+    title: The original controller is in charge
+  switching:
+    anyOf:
+    - type: "null"
+    - enum: [heatpump_idle, sensors, solvis]
+    title: What a requested switch waits for
+    description: >-
+      heatpump_idle: the heat pump runs; sensors: its power or compressor
+      reading is missing; solvis: the Solvis can't be polled. Null if
+      there is nothing to switch.
+required:
+- bypass
+- switching
 ---
 _path: !P app.heat.watchdog.disable
 title: Watchdog disable
@@ -982,6 +1004,13 @@ title: Loop-valve feedback
 description: The valve's actual state, copied from the smart plug.
 type: boolean
 ---
+_path: !P app.heat.ha.passthru
+title: Passthru feedback
+description: >-
+  Published by the `passthru` unit: whether the original controller is
+  in charge. Shown in Home Assistant as `switch.heizung.passthru`'s state.
+type: boolean
+---
 _path: !P app.heat.ha.pump_state
 title: Heating-circuit pump
 description: Whether the heating circuit runs, published by the `heat_valve` unit.
@@ -1100,10 +1129,11 @@ minimum: 0
 maximum: 1
 ---
 _path: !P heat.s.pump.rate.cmd
-title: Flow-rate command
+title: Solvis circulation-pump output
 description: >-
-  The Solvis controller's analog output for the circulation pump,
-  published as a read-back. Legacy bypass-mode flow command.
+  The Solvis controller's output for the circulation pump (analog.out:4,
+  a PWM duty cycle 0…1), polled every second. While bypassed
+  (passthru), the pump unit passes it on to the flow unit.
 type: number
 ---
 _path: !P heat.s.pump.pct.#
@@ -1118,6 +1148,11 @@ title: Pump PID setpoints
 description: >-
   PID setpoint logs of the `flow` and `pump` units, by name. The paths
   are configurable.
+type: number
+---
+_path: !P heat.s.pump.compr.speed
+title: Compressor speed
+description: The heat pump's compressor speed; 0 when it's off. Read by the `passthru` unit.
 type: number
 ---
 _path: !P heat.s.pump.cmd.want.mode

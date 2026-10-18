@@ -415,7 +415,7 @@ For manufacturer maintenance, the original heat-pump controller (the
 Solvis controller, talking to our Modbus shim, currently
 `modbus.stiebelfake.yaml`) must control the heat pump (the bus polled
 via `modbus.stiebel.yaml`) directly. Our pump controller is then
-disabled and replaced by a data bridge. The legacy code did this with
+replaced by a data bridge. The legacy code did this with
 MoaT-KV data; the new design uses MoaT-Link and the switchable `bypass`
 of `moat.modbus` server units (moat-nnz, see
 `docs/moat-modbus/dev-poll.md`):
@@ -432,23 +432,44 @@ Real passthru needs forwarding because the original controller's reads
 must see live data, not stored values. The two Modbus processes stay
 separate.
 
-The `passthru` unit coordinates the switch:
+The `passthru` unit (`passthru.py`) coordinates the switch:
 
-- Input `app.heat.passthru.request` (bool). Output
-  `app.heat.passthru.state` = `{bypass: bool, switching: str|None}`:
-  whether the original controller is in charge, and what a pending
-  switch waits for (typically `heatpump_idle`), `None` when settled.
-- The switch happens **only while the heat pump is idle**: towards
-  the original controller when `pump.out.run == off` and the heat pump
-  reports no power/compressor activity; back when the original
-  controller has the heat pump idle. Otherwise the request waits.
-- While bypassed: the pump unit stands down without writing `cmd.*`,
-  the watchdog is inactive, the shim forwards everything, and sensor
-  data keeps flowing to MoaT-Link.
-
-Open items, to settle when implementing: who drives the circulation
-pump during passthru; the shim's `de_ice.fake` register; what `pellet`
-and `heat_valve` do meanwhile.
+- Input `app.heat.passthru.request` (bool; HA switch
+  `switch.heizung.passthru`). Output `app.heat.passthru.state` =
+  `{bypass: bool, switching: str|None}`: whether the original controller
+  is in charge, and what a pending switch waits for (`heatpump_idle`,
+  `sensors`, `solvis`), `None` when settled. This is the unit's
+  persistent state, saved at once, so a restart resumes. `bypass` is
+  also published as `app.heat.ha.passthru` for HA.
+- The switch happens **only while the heat pump is idle**: power below
+  `p_idle` and compressor speed 0; towards the original controller also
+  `pump.out.run == off`. Otherwise the request waits. While a switch to
+  the original controller is pending, the pump unit doesn't start the
+  heat pump (a running one finishes normally).
+- While bypassed:
+  - the pump unit sends no commands to the heat pump, but runs the
+    circulation pump as the Solvis says: its flow request is `fixed` at
+    the Solvis' pump output `heat.s.pump.rate.cmd` (`analog.out:4`, a
+    PWM duty cycle, polled every second), or at `bypass_pwm` while that
+    has no value. `pump.out` shows `run: off`, reason `passthru`;
+  - the watchdog is inactive, the shim forwards everything, and sensor
+    data keeps flowing to MoaT-Link;
+  - the other units carry on: they see an idle heat pump;
+  - the shim's `de_ice.fake` doesn't matter: the Solvis reads the real
+    register through the bypass.
+- When the bypass ends, the pump unit restarts its state machine, which
+  begins with `down`: heat pump off, circulation pump on until
+  `t_out - t_in` is small. That step re-sends all of its outputs, as the
+  heat pump's commands are the Solvis' at that point.
+- **Emergency end**: if the Solvis can't be polled, `rate.cmd` freezes,
+  so our circulation pump no longer follows it while it may raise the
+  heat pump's power. The passthru unit watches the error records listed
+  in its `errors` setting (below `error`: the Solvis host's poll errors,
+  `app.modbus.tcp.<host>.<port>…`, and the Solvis poller's service,
+  `run.host.…`, which `moat-link-host` reports when the poller is gone).
+  Any record ends the bypass at once and resets the request; the pump
+  unit then cools the heat pump down as above. A record also blocks
+  entering the bypass (`switching: solvis`).
 
 ## 3. Unit specifications
 

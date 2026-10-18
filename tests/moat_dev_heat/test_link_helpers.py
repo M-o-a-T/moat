@@ -164,3 +164,23 @@ def test_switch() -> None:
     assert r.value == (True, 2)
     r.feed(None, 4, "op")
     assert r.value == (None, 3)
+
+
+def test_reader_age():
+    "every update renews a value; an old first value gets at least a tenth of max_age"
+    from moat.util.time import patch_clock  # noqa: PLC0415
+
+    r = Reader[float](None, P("test.heat.age"), max_age=100)  # ty: ignore[invalid-argument-type]
+    assert r.age(1000) is None
+    with patch_clock(time=lambda: 1000):
+        r.feed(12.5, 500)  # 500 s old on arrival
+    assert r.age(1000) == 90
+    assert r.age(1005) == 95
+    with patch_clock(time=lambda: 1010):
+        r.feed(12.5, 1010)  # the same value, sent again
+    assert r.age(1020) == 10
+
+    young = Reader[float](None, P("test.heat.age2"), max_age=100)  # ty: ignore[invalid-argument-type]
+    with patch_clock(time=lambda: 1000):
+        young.feed(1.0, 980)
+    assert young.age(1000) == 20

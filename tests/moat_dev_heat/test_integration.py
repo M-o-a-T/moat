@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import anyio
 import pytest
+from contextlib import suppress
 from functools import partial
 from time import time as _real_time
 
@@ -19,6 +20,8 @@ from moat.dev.heat.system.runner import DEFAULT, run_units
 from moat.lib.path import P
 from moat.link._test import Scaffold
 from moat.util.time import patch_clock
+
+from typing import Any
 
 CM_HEAT = P("app.heat.ha.heat")
 PUMP_OUT = out_path("pump")
@@ -68,4 +71,37 @@ async def test_warmup(cfg, autojump_clock) -> None:
                     except KeyError:
                         pass
                     await anyio.sleep(10)
+            tg.cancel_scope.cancel()
+
+
+async def _until_run(c: Any, limit: float) -> None:
+    "wait until the pump unit reports ``run``"
+    with anyio.fail_after(limit):
+        while True:
+            with suppress(KeyError):
+                if (await c.d_get(PUMP_OUT))["run"] == "run":
+                    return
+            await anyio.sleep(10)
+
+
+@pytest.mark.slow
+@pytest.mark.trio
+async def test_steady_run(cfg, autojump_clock) -> None:
+    "steady sensor values are re-sent, so a long run isn't mistaken for dead sensors"
+    autojump_clock.autojump_threshold = 0.005
+    with patch_clock(time=WallClock()):
+        async with (
+            Scaffold(cfg, use_servers=True) as sf,
+            sf.server_(init={}),
+            sf.client_() as c,
+            anyio.create_task_group() as tg,
+        ):
+            await c.d_set(CM_HEAT, True, retain=True)
+            await tg.start(SimLink(c, Scenario.from_dict({})).run)
+            await tg.start(partial(run_units, sf.client_, DEFAULT, retry=True))
+            await _until_run(c, 600)
+            await anyio.sleep(16 * 60)  # longer than the pump's stale timeout
+            assert (await c.d_get(PUMP_OUT))["run"] in ("run", "ice")
+            with pytest.raises(KeyError):
+                await c.d_get(P("error.app.heat.pump"))
             tg.cancel_scope.cancel()

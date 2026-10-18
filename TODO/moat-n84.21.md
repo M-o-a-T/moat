@@ -115,7 +115,7 @@ scenarios move into `test_closed_loop.py`.
 Review: Link scenarios stay ≤ 15 simulated minutes, marked `slow`; long
 ones are closed-loop only. Stale sensors: (d), below.
 
-## Step 1b: refreshing steady values (review answer d)
+## Step 1b: refreshing steady values (review answer d) — done
 
 Values are published on change, so a steady reading looks like a dead
 sensor. Fix: the poller re-publishes an unchanged value regularly, and

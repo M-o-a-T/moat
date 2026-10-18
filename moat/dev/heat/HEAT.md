@@ -207,7 +207,14 @@ delay until the next wake-up and handled by the adapter (§5.2).
 
 #### Staleness
 
-Each input has a configurable `max_age`. Default reactions:
+Values are published on change, and the Modbus poller re-sends a steady
+value every 120 s (its registers' `idem`), so every received update,
+changed or not, means the value is current. An input's age is the age
+of its datum's timestamp (`Reader.age`); the first value counts as at
+most 9/10 of the reader's `max_age` old, so it gets at least a tenth of
+the timeout to be renewed. Adapters pass the ages to their cores as
+`inputs["_age"]`. Each input has a configurable `max_age`. Default
+reactions:
 
 - `pump`: a stale critical sensor (`t_in`, `t_out`, `r_flow`,
   `m_power`, buffer temperatures) while active → emergency shutdown
@@ -600,10 +607,9 @@ Request (`app.heat.flow.request`, written by the pump unit and by
 | `drain` | emergency | `pid.flow` at `rate`, ≥ `safe_pwm` |
 
 The request is written with plain types (`FlowRequest.to_link()`). A
-sensor counts as stale when its value has not changed for `max_age`
-seconds, because values are published on change; `max_age` must
-therefore be longer than a sensor's longest steady spell. A PID whose
-output is not used follows the time without integrating.
+sensor counts as stale when it has not been updated for `max_age`
+seconds (300; the poller re-sends steady values every 120 s). A PID
+whose output is not used follows the time without integrating.
 
 The pellet unit never requests flow. `flow.out.pwm` replaces the old
 `state.last_pwm` for its consumers (`pump`, `heat_valve`).
@@ -677,7 +683,7 @@ As implemented (`PumpUnit`):
   emergency shutdown shielded, with `from_pump=True`, then re-raise:
   `errors.out` with severity `critical` while active (a warning only
   stops the heat pump the normal way), a stale sensor while active
-  (`stale`, default 900 s without a change, for `stale_sensors`, default
+  (`stale`, default 900 s without an update, for `stale_sensors`, default
   `t_in`, `t_out`, `r_flow`, `m_power`), a core timeout, any other
   exception, and cancellation. Afterwards the saved state is `off`
   without `load_last`, so a restart doesn't resume the run.

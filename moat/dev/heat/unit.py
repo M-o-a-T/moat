@@ -80,8 +80,10 @@ class Core(Protocol[C_contra]):
 
         Args:
             inputs: The current value of every input, by name; `None` if
-                unknown. Units with :attr:`Unit.local_time` also get
-                ``local``, the local date and time (a naive `datetime`).
+                unknown. ``_age`` maps every input's name to the age of
+                its value in seconds (`~moat.dev.heat.link.Reader.age`).
+                Units with :attr:`Unit.local_time` also get ``local``,
+                the local date and time (a naive `datetime`).
             now: The current monotonic time.
         """
         ...
@@ -237,6 +239,7 @@ class Unit(Generic[C, S]):
                 inputs, scope = await self._start_inputs(tg, new)
 
             snap = inputs.snapshot()
+            snap["_age"] = inputs.ages(mtime.time())
             if self.local_time:
                 snap["local"] = datetime.fromtimestamp(mtime.time())  # noqa: DTZ006
             now = anyio.current_time()

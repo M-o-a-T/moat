@@ -310,9 +310,10 @@ class PumpCfg(UnitCfg):
     own state (HEAT.md §1), hence off by default."""
 
     stale: float | None = 900
-    """While active, a sensor in `stale_sensors` that has not changed for this
-    long (or has no value) stops the unit with an emergency shutdown;
-    `None`: never."""
+    """While active, a sensor in `stale_sensors` that has not been updated
+    for this long (or has no value) stops the unit with an emergency
+    shutdown; `None`: never. The pollers re-send steady values, so an
+    unchanged value is not stale."""
     stale_sensors: list[str] = ["t_in", "t_out", "r_flow", "m_power"]
     pwm_grace: float | None = 3
     """The PWM daemon (service ``heat.pwm``) drives the water pump. When it
@@ -1023,8 +1024,6 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
 
     def __init__(self, *a: Any, **kw: Any) -> None:
         super().__init__(*a, **kw)
-        self._seen: dict[str, Any] = {}
-        self._changed: dict[str, float] = {}
         self._pwm_gone: float | None = None
 
     async def run(self, **kw: Any) -> None:
@@ -1040,7 +1039,11 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
     def make_inputs(self, cfg: PumpCfg) -> dict[str, Reader[Any]]:
         """Sensors, peer units, override, force start."""
         rd: dict[str, Reader[Any]] = {
-            k: Reader[Any](self.link, getattr(cfg, k))
+            k: Reader[Any](
+                self.link,
+                getattr(cfg, k),
+                max_age=cfg.stale if k in cfg.stale_sensors else None,
+            )
             for k in (
                 "t_in",
                 "t_out",
@@ -1099,11 +1102,6 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
         assert isinstance(self.core, PumpCore)
         cfg = self.core.cfg
         recheck = self._check_pwm(inputs, now)
-        for k in cfg.stale_sensors:
-            v = inputs.get(k)
-            if k not in self._seen or self._seen[k] != v:
-                self._seen[k] = v
-                self._changed[k] = now
         if self.store.state.run in (R.off, R.down) or passthru(inputs.get("passthru")):
             return recheck
         if inputs.get("pwm") is False:
@@ -1112,8 +1110,10 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
         if isinstance(err, dict) and err.get("errors") and err.get("severity") == "critical":
             raise PumpAbort(f"errors: {err['errors']}")
         if cfg.stale is not None:
+            ages = inputs.get("_age") or {}
             for k in cfg.stale_sensors:
-                if inputs.get(k) is None or now - self._changed[k] > cfg.stale:
+                age = ages.get(k)
+                if age is None or age > cfg.stale:
                     raise PumpAbort(f"stale sensor: {k}")
         return recheck
 

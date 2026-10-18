@@ -133,23 +133,27 @@ timestamp comparisons.
    is re-sent at most 1.5 N after the last write. Register option `idem`
    (number; default N = 120 s, so the flow unit's 300 s is met). Test
    with a fake device and Scaffold; document in `dev-poll.md`.
-3. `moat.dev.heat`:
-   - `Reader` records when it last received an update (`t_upd`, on
-     `loop_time()`), for every message, equal or not. The first value is
-     primed from its age (`time() - timestamp`), capped at 9/10 of the
-     reader's `max_age` (new optional argument), so at least 1/10 of the
-     timeout remains: for the pump's 900 s, a value older than 810 s
-     gets 90 s.
-   - `Unit` adds these to the snapshot (`inputs["_upd"]`: name →
-     `t_upd`); `ClosedLoop` too (and patches `monotonic` to its `now`,
-     also while adding cores).
-   - Pump adapter: stale = no update for `stale` (900 s); its readers
-     for `stale_sensors` get `max_age=stale`.
-   - Flow core: a sensor is stale after `max_age` (300 s, unchanged)
-     without an update; readers get `max_age`. Without `_upd` (direct
-     core tests) it falls back to value changes, as now.
+3. `moat.dev.heat`: staleness is the age of the datum's own timestamp
+   (`Reader.ts`, wall clock, refreshed by every message, equal value or
+   not). Nothing monotonic is involved, nothing new is stored.
+   - `Reader` gets an optional `max_age` and an `age()` method:
+     `time() - ts`, except that the first value's age is capped at 9/10
+     of `max_age` (measured from when the reader got it), so at least
+     1/10 of the timeout remains: for the pump's 900 s, a value older
+     than 810 s gets 90 s.
+   - `Unit` adds the ages to the snapshot (`inputs["_age"]`: name →
+     seconds, or `None` without a value); `ClosedLoop` too (its readers
+     are fed under its patched clock, also while adding cores). Cores
+     stay clock-free: they get ages, and their wake-up time follows.
+   - Pump adapter: stale = `age > stale` (900 s) or no value; its
+     readers for `stale_sensors` get `max_age=stale`.
+   - Flow core: a sensor is stale when its age exceeds `max_age` (300 s,
+     unchanged); its readers get `max_age`. Without `_age` (direct core
+     tests) it falls back to value changes, as now.
    - Check the other units for value-change-based staleness (`target`'s
      `t_ext` comes from the aggregation job, not the poller).
    - Simulator publishers (`SimLink`, `ClosedLoop.publish_sensors`)
      re-send a steady value every 120 s, as the poller does.
+   - Wall-clock jumps: systemd units should wait for synchronized time
+     (moat-sndx).
 4. Then `test_warmup` runs 30 simulated minutes without a stale abort.

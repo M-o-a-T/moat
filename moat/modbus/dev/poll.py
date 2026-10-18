@@ -15,15 +15,54 @@ from moat.modbus.server import create_server
 from .device import ClientDevice, ServerDevice, fixup
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from anyio.abc import TaskGroup
     from pathlib import Path as FSPath
 
     from moat.link.client import Link
-    from moat.modbus.client import HostCommon
+    from moat.modbus.client import HostCommon, Unit
 
 logger = logging.getLogger(__name__)
+
+
+async def _start_bypass(
+    cl: ModbusClient,
+    tg: TaskGroup,
+    link: Link | None,
+    ctx: Any,
+    cfg: Mapping,
+    unit: Unit | None,
+) -> None:
+    """
+    Set up a server unit's bypass and start watching its flag.
+
+    Args:
+        cl: The poller's Modbus client.
+        tg: The poller's task group.
+        link: The MoaT-Link client.
+        ctx: The server unit's context.
+        cfg: The unit's ``bypass`` section.
+        unit: The client unit the server unit is attached to, if any.
+    """
+    from .bypass import Bypass  # noqa: PLC0415
+
+    if link is None:
+        raise ValueError("'bypass' requires MoaT-Link")
+    if getattr(ctx, "bypass", None) is not None:
+        raise ValueError("A server unit can only have one 'bypass'")
+    if (dest := cfg.get("dest")) is not None:
+        port = dest.get("port", 502)
+        host = cl.hosts.get((dest["host"], port))
+        if host is None:
+            host = await cl.host_service(dest["host"], port)
+        target = host.unit(dest["unit"])
+    else:
+        assert unit is not None
+        target = unit
+    ctx.bypass = bp = Bypass(link, cfg, target, gate=unit)
+    await tg.start(bp.run)
 
 
 async def dev_poll(
@@ -52,6 +91,8 @@ async def dev_poll(
 
     async with ModbusClient(link=link) as cl, anyio.create_task_group() as tg:
         nd = 0
+        # (server unit context, bypass config, attached client unit)
+        bypasses: list[tuple[Any, Mapping, Unit | None]] = []
 
         async def make_dev(v, Reg, host: HostCommon, **kw) -> ClientDevice:
             kw = to_attrdict(kw)
@@ -94,6 +135,13 @@ async def dev_poll(
                 dev = ServerDevice(factory=RegS)
                 await dev.load(data=v)
                 srv.add_unit(u, dev)
+                if (bp := v.get("bypass")) is not None:
+                    if "dest" not in bp:
+                        raise ValueError(
+                            f"Server unit {u}: 'bypass' without 'dest' "
+                            "belongs to a client unit (next to its 'server')"
+                        )
+                    bypasses.append((dev, bp, None))
                 nd += 1
 
             srv.add_ignored_unit(*s.get("ignored", ()))
@@ -163,6 +211,9 @@ async def dev_poll(
 
             add_registers(dev.data)
 
+            if (bp := v.get("bypass")) is not None:
+                bypasses.append((unit_ctx, bp, dev.unit))
+
             nonlocal nd
             nd += 1
 
@@ -201,6 +252,9 @@ async def dev_poll(
                     dev = await make_dev(v, Reg, tcp_host, unit=u)
                     tg.start_soon(dev.poll)
                     do_attach(v, dev)
+
+        for ctx, bp, unit in bypasses:
+            await _start_bypass(cl, tg, link, ctx, bp, unit)
 
         for s, srv in zip(cfg.get("server", ()), servers, strict=False):
             evt = anyio.Event()

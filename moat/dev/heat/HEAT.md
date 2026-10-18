@@ -416,15 +416,17 @@ Solvis controller, talking to our Modbus shim, currently
 `modbus.stiebelfake.yaml`) must control the heat pump (the bus polled
 via `modbus.stiebel.yaml`) directly. Our pump controller is then
 disabled and replaced by a data bridge. The legacy code did this with
-MoaT-KV data; the new design uses MoaT-Link and two extensions of
-`moat.modbus` (tracked outside this epic):
+MoaT-KV data; the new design uses MoaT-Link and the switchable `bypass`
+of `moat.modbus` server units (moat-nnz, see
+`docs/moat-modbus/dev-poll.md`):
 
-- `moat modbus dev poll` offers a MoaT-Link RPC service that executes
-  raw Modbus requests on a client unit, serialised with its own polling.
-- A server unit (the shim) can be switched at runtime between serving
-  stored values (normal) and forwarding every read and write verbatim
-  to that RPC service. In forward mode, the poller's `src` writes of
-  our `cmd.*` values are suppressed.
+- The shim's server unit has `bypass: {when: [!P
+  app.heat.passthru.state, !P bypass], dest: …}`, pointing at the unit
+  that the `modbus.stiebel.yaml` poller serves for the heat pump. While
+  bypassed, it forwards every read and write verbatim, via Modbus-TCP.
+- That poller's client unit has `bypass: {when: …}` (same flag, no
+  `dest`): it then executes those requests on the heat pump directly,
+  and pauses its own `src` writes (our `cmd.*` values).
 
 Real passthru needs forwarding because the original controller's reads
 must see live data, not stored values. The two Modbus processes stay
@@ -433,14 +435,15 @@ separate.
 The `passthru` unit coordinates the switch:
 
 - Input `app.heat.passthru.request` (bool). Output
-  `app.heat.passthru.state` = `ours` | `switching` | `original`, plus
-  the reason when waiting.
+  `app.heat.passthru.state` = `{bypass: bool, switching: str|None}`:
+  whether the original controller is in charge, and what a pending
+  switch waits for (typically `heatpump_idle`), `None` when settled.
 - The switch happens **only while the heat pump is idle**: towards
-  `original` when `pump.out.run == off` and the heat pump reports no
-  power/compressor activity; back to `ours` when the original
+  the original controller when `pump.out.run == off` and the heat pump
+  reports no power/compressor activity; back when the original
   controller has the heat pump idle. Otherwise the request waits.
-- In `original`: the pump unit stands down without writing `cmd.*`,
-  the watchdog is inactive, the shim is in forward mode, and sensor
+- While bypassed: the pump unit stands down without writing `cmd.*`,
+  the watchdog is inactive, the shim forwards everything, and sensor
   data keeps flowing to MoaT-Link.
 
 Open items, to settle when implementing: who drives the circulation

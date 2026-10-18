@@ -96,6 +96,8 @@ server:
       2:
         regs:
           ...
+        bypass:         # optional, see "Bypass"
+          ...
     ignored:            # Units to silently ignore
       - 99
     repeat: 2           # see below
@@ -120,7 +122,42 @@ Each unit (under `hostports`, `hosts`, or `ports`) contains:
     forwarding not yet implemented. Currently behaves like `false`)
   - `false`: Only serve explicitly configured registers (returns zeros/errors for
     unconfigured registers)
+- **`bypass`**: Switchable bypass of the server unit (see below)
 - **`regs`**: Register definitions (see below)
+
+### Bypass
+
+A served unit can be switched, at runtime, to forward *every* request
+unchanged instead of answering it from its registers. This allows a
+transparent Modbus gateway, e.g. so that a device's original controller,
+which talks to a unit we serve, can control the real device.
+
+```yaml
+bypass:
+  when: !P path.to.flag
+  dest:                 # only on a unit in the "server" section
+    host: name
+    port: 502           # default
+    unit: 3
+  timeout: 1.5          # per request, seconds (default)
+```
+
+- **`when`**: The MoaT-Link item that switches the bypass on (`true`)
+  and off (anything else, or missing). It can also be a list
+  `[path, attr]`: the flag is the `attr` element of the value at `path`,
+  e.g. `[!P app.heat.passthru.state, !P bypass]`.
+- **`dest`**: Where requests are sent, via Modbus-TCP. A unit in the
+  `server` section needs it.
+- Without `dest`, `bypass` belongs to a client unit (next to its
+  `server` key). While active, requests to the served unit are executed
+  on the client unit directly, i.e. the cached register values are
+  ignored, and the client unit's own writes (`src` registers) pause; the
+  values that changed meanwhile are written when the bypass ends. Polling
+  continues.
+
+The device's exception responses are passed back unchanged. If the
+target can't be reached within `timeout`, the reply is
+`GATEWAY_TARGET_NO_RESPONSE`.
 
 ### Register Configuration
 

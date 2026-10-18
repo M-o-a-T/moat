@@ -1,5 +1,7 @@
 # moat-nnz: switchable Modbus-TCP bypass for server units
 
+Status: all steps done.
+
 Goal: transparent gatewaying for heat passthru (moat-n84.26). The Solvis
 talks to our shim (`modbus.stiebelfake.yaml`, RTU server unit 101); in
 passthru, every request must reach the real heat pump (polled by
@@ -34,9 +36,10 @@ bypass:
   the client unit's own writes (`src` registers) pause, so they don't
   fight the original controller. Polling (`dest`) continues.
 
-`bypass` is accepted both in `server[].units.N` and in the config of a
-client unit that has `server:`; both end up on the same unit context.
-It requires a MoaT-Link client.
+`bypass` with `dest` is accepted both in `server[].units.N` and in the
+config of a client unit that has `server:`; without `dest`, only in the
+latter (a server-section unit has no client unit). It requires a
+MoaT-Link client.
 
 ## Steps
 

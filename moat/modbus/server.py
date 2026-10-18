@@ -190,12 +190,20 @@ class BaseModbusServer(CtxObj):
         raise NotImplementedError("You need to override .serve")
 
     async def process_request(self, request: PDU) -> PDU:
-        """Basic request processor."""
+        """
+        Basic request processor.
+
+        If the unit has an active bypass (`moat.modbus.dev.bypass.Bypass`),
+        the request is forwarded by it.
+        """
         try:
             context = self.units[request.unit_id]
         except KeyError:
             raise KeyError(request.unit_id) from None
 
+        bypass = getattr(context, "bypass", None)
+        if bypass is not None and bypass.active:
+            return await bypass.forward(request)
         if hasattr(context, "process_request"):
             response = await context.process_request(request)
         else:

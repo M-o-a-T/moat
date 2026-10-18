@@ -819,6 +819,9 @@ class Unit(CtxObj):
 
     _running = False
 
+    writes_paused = False
+    """While set, the slots don't write; changed values are kept until it's cleared."""
+
     def __init__(self, host, unit) -> None:
         self.host = host
         self.unit = unit
@@ -888,16 +891,42 @@ class Unit(CtxObj):
         for slot in s.values():
             await slot.aclose()
 
+    def pause_writes(self, paused: bool) -> None:
+        """
+        Pause or resume writing to this unit.
+
+        Values changed while paused are written when writing resumes.
+        """
+        if paused == self.writes_paused:
+            return
+        self.writes_paused = paused
+        if not paused:
+            for slot in self.slots.values():
+                slot.trigger_send()
+
     async def process_request(self, request):
         """
         Forward a request to the host.
+
+        The device's exception responses are returned unchanged; an
+        unreachable device results in ``GATEWAY_TARGET_NO_RESPONSE``.
         """
         request.unit_id = self.unit
         try:
             response = await self.host.execute(request)
-        except Exception as exc:
-            _logger.exception("Handler for %d: %r", self.unit, exc)  # noqa: TRY401
+        except ModbusError as exc:
+            if isinstance(exc.result, ExceptionResponse):
+                return exc.result
+            _logger.error("Handler for %d: %r", self.unit, exc)
             response = ExceptionResponse(request.function_code, ExcCodes.DEVICE_FAILURE)
+        except Exception as exc:
+            if _is_transient(exc):
+                _logger.warning("Handler for %d: %r", self.unit, exc)
+                code = ExcCodes.GATEWAY_TARGET_NO_RESPONSE
+            else:
+                _logger.exception("Handler for %d: %r", self.unit, exc)  # noqa: TRY401
+                code = ExcCodes.DEVICE_FAILURE
+            response = ExceptionResponse(request.function_code, code)
 
         return response
 
@@ -1267,8 +1296,11 @@ class Slot(CtxObj):
     async def write(self, changed: bool = True) -> None:
         """Write this slot's data.
 
-        If @changed is set, only write changed data.
+        If @changed is set, only write changed data. Nothing is written
+        while the unit's writes are paused.
         """
+        if self.unit.writes_paused:
+            return
         async with self.write_lock:
             await self.setValues(changed=changed)
 

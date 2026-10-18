@@ -30,6 +30,10 @@ ports:
     101:
       server: 3
       ref: inc.stiebel
+      # Passthru (moat-n84.26): requests via the server go to the heat
+      # pump directly; our own cmd.* writes pause.
+      # bypass:
+      #   when: [!P app.heat.passthru.state, !P bypass]
       regs:
         op:
           mode:

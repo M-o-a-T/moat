@@ -316,10 +316,10 @@ hosts:
             slot: 5min
         ef2:
           kesseltempsoll1:
-            dest: !P heat.s.pellets.aux:1.goal
-            src: !P heat.s.pellets.aux:1
+            src: !P heat.s.pellets.aux:1.goal
+            dest: !P heat.s.pellets.aux:1
             slot: 1min
           kesseltempsoll2:
-            dest: !P heat.s.pellets.aux:2.goal
-            src: !P heat.s.pellets.aux:2
+            src: !P heat.s.pellets.aux:2.goal
+            dest: !P heat.s.pellets.aux:2
             slot: 1min

@@ -118,31 +118,38 @@ ones are closed-loop only. Stale sensors: (d), below.
 ## Step 1b: refreshing steady values (review answer d)
 
 Values are published on change, so a steady reading looks like a dead
-sensor. Fix: the poller re-publishes an unchanged value once the stored
-one is older than 600 s, and staleness is judged by the item's
-timestamp, not by value changes.
+sensor. Fix: the poller re-publishes an unchanged value regularly, and
+the heat units treat *every* received update as fresh: no value or
+timestamp comparisons.
 
 1. `moat.link`: `LinkSender.set(…, idem=…)` takes a bool or a number.
    A number N: an equal stored value is only left alone if it is younger
    than N seconds (by its metadata timestamp); else it is written again.
-   Test, and the docstring.
+   Test, docstring.
 2. `moat.modbus` (`dev/link.py`, `Register.to_link`): send with
-   `self._link.set(dest, val, idem=600, …)` instead of the local
-   `last_sent_value` comparison, and also wake up after 600 s without a
+   `self._link.set(dest, val, idem=N, …)` instead of the local
+   `last_sent_value` comparison, and also wake up every N/2 s without a
    change (the slot only notifies on a changed value), so a steady value
-   is refreshed. Register option `idem` (number; default 600) to tune
-   it. Test with a fake device and Scaffold; document in `dev-poll.md`.
+   is re-sent at most 1.5 N after the last write. Register option `idem`
+   (number; default N = 120 s, so the flow unit's 300 s is met). Test
+   with a fake device and Scaffold; document in `dev-poll.md`.
 3. `moat.dev.heat`:
-   - `Unit` adds the inputs' timestamps to the snapshot (`inputs["_ts"]`
-     = name → wall-clock timestamp of the reader's value), and
-     `ClosedLoop` does the same (it already keeps `ts` per path).
-   - The pump adapter's stale check uses those timestamps (`stale` 900
-     s stays above the 600 s refresh).
-   - The flow core judges sensor staleness by timestamp too; its
-     `max_age` default goes from 300 s to 900 s.
-   - Other value-change-based staleness: `target`'s `t_ext` (`max_age`
-     3600, from the aggregation job, not the poller) stays as it is;
-     check the remaining units while at it.
-   - The simulator publishers (`SimLink`, `ClosedLoop.publish_sensors`)
-     re-publish a steady value after 600 s, as the poller does.
-4. Then `test_warmup` runs 30 simulated minutes without the stale abort.
+   - `Reader` records when it last received an update (`t_upd`, on
+     `loop_time()`), for every message, equal or not. The first value is
+     primed from its age (`time() - timestamp`), capped at 9/10 of the
+     reader's `max_age` (new optional argument), so at least 1/10 of the
+     timeout remains: for the pump's 900 s, a value older than 810 s
+     gets 90 s.
+   - `Unit` adds these to the snapshot (`inputs["_upd"]`: name →
+     `t_upd`); `ClosedLoop` too (and patches `monotonic` to its `now`,
+     also while adding cores).
+   - Pump adapter: stale = no update for `stale` (900 s); its readers
+     for `stale_sensors` get `max_age=stale`.
+   - Flow core: a sensor is stale after `max_age` (300 s, unchanged)
+     without an update; readers get `max_age`. Without `_upd` (direct
+     core tests) it falls back to value changes, as now.
+   - Check the other units for value-change-based staleness (`target`'s
+     `t_ext` comes from the aggregation job, not the poller).
+   - Simulator publishers (`SimLink`, `ClosedLoop.publish_sensors`)
+     re-send a steady value every 120 s, as the poller does.
+4. Then `test_warmup` runs 30 simulated minutes without a stale abort.

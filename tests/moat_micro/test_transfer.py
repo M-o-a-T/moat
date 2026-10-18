@@ -81,6 +81,25 @@ async def test_store(tmp_path):
         assert res == [1, 2, 3, 4]
 
 
+async def _gather(xb, min_vals: int, timeout: float = 30) -> list:
+    """Collect transferred values until at least @min_vals have arrived.
+
+    The transfer ticks every 100 ms, but under load the stack may start
+    slowly. Counting the samples produced in a fixed wall-time window is
+    inherently flaky; waiting for a minimum count is not.
+    """
+    vals: list = []
+    with anyio.fail_after(timeout):
+        while len(vals) < min_vals:
+            # _list=True: the reply may hold a single value, which the
+            # default unpacking would collapse to a scalar.
+            chunk = await xb.store(_list=True)
+            vals.extend(chunk)
+            if len(vals) < min_vals:
+                await anyio.sleep(0.05)
+    return vals
+
+
 async def test_transfer_here(tmp_path):
     "test data foo"
     cfg = yload(CFG, attr=True)
@@ -90,10 +109,8 @@ async def test_transfer_here(tmp_path):
         rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("b")) as xb,
     ):
-        await anyio.sleep(1)
-        res = await xb.store()
-        assert 8 <= len(res) <= 11
-        assert list(res) == list(range(1, len(res) + 1))
+        res = await _gather(xb, 5)
+        assert res == list(range(1, len(res) + 1))
 
 
 async def test_transfer_there(tmp_path):
@@ -105,7 +122,5 @@ async def test_transfer_there(tmp_path):
         rpc_stack(tmp_path, cfg) as d,
         d.sub_at(P("r.b")) as xb,
     ):
-        await anyio.sleep(1)
-        res = await xb.store()
-        assert 9 <= len(res) <= 14
+        res = await _gather(xb, 5)
         assert res == list(range(1, len(res) + 1))

@@ -143,13 +143,12 @@ async def test_stack(tmp_path):
             with anyio.CancelScope() as sc:
                 await run("-c", str(cfx), "-VVV", "micro", "run")
 
-        for _ in range(20):
-            await anyio.sleep(0.1)
-            if port.exists():
-                break
-        else:
-            raise RuntimeError("Startup failed, no socket")
-
+        # Under load the embedded interpreter may take much longer than
+        # 2 s to come up; wait for the socket with a generous deadline.
+        # No event to wait on: the socket is created by a subprocess.
+        with anyio.fail_after(30):
+            while not port.exists():  # noqa: ASYNC110
+                await anyio.sleep(0.1)
         async with (
             rpc_stack(tmp_path / "x", cfg.moat.micro.connect) as d,
             d.sub_at(P("r.s")) as s,

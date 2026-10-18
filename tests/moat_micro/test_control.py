@@ -111,28 +111,21 @@ w:
 
 @pytest.mark.anyio
 async def test_e2e_ctrl_read(tmp_path):
-    "cmd_r returns the current [0..1] output; force overrides the normal value"
-    async with rpc_stack(tmp_path, E2E_CTRL_CFG) as d, anyio.create_task_group() as tg:
+    "cmd_w returns the [0..1] output; force overrides the normal value"
+    async with rpc_stack(tmp_path, E2E_CTRL_CFG) as d:
         w = d.sub_at(P("w"))
 
-        @tg.start_soon
-        async def rdr():
-            assert await w.r() == pytest.approx(0.42)
-            assert await w.r() == pytest.approx(0.77)
-            assert await w.r() == pytest.approx(0.42)
-
-        await anyio.sleep(0.01)
-
-        await w.w(42)
-        await anyio.sleep(0.01)
-
-        # Force a different value; cmd_r must reflect it.
-        await w.w(77, f=True)
-        await anyio.sleep(0.01)
-
-        # Clear the force; cmd_r reverts to the underlying value.
-        await w.w(None, f=True)
-        await anyio.sleep(0.01)
+        # cmd_r is edge-triggered: it waits for the *next* output change,
+        # and a write landing while the reader is between two calls is lost.
+        # No writer-side gating can fix that — the reader's park position is
+        # not observable — so the value semantics are asserted through the
+        # synchronous cmd_w reply and cmd_s instead. cmd_r's own behaviour
+        # (blocking until a write, then reporting the output) is covered by
+        # test_e2e_ctrl_read_blocks.
+        steps = ((42, {}, 0.42), (77, {"f": True}, 0.77), (None, {"f": True}, 0.42))
+        for val, kw, expected in steps:
+            await w.w(val, **kw)
+            assert (await w.s())["out"] == pytest.approx(expected)
 
 
 @pytest.mark.anyio

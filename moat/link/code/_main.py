@@ -16,7 +16,7 @@ from moat.lib.run import AliasedGroup, attr_args
 from moat.link.client import Link
 from moat.link.code import CODE_EXEC_ROOT
 from moat.link.code.case import CodeTest, del_test, get_test, is_test_path, list_tests, set_test
-from moat.link.code.io import path_from_file, read_snippet, split_snippet, write_snippet
+from moat.link.code.io import TESTS, path_from_file, read_snippet, split_snippet, write_snippet
 from moat.link.code.run import make_proc
 from moat.link.code.steps import StepSyntaxError, format_editor, parse_editor
 from moat.link.code.testrun import run_tests
@@ -197,6 +197,9 @@ async def get(obj, script, recursive) -> None:
 async def set_(obj, thread, script, data, use_async, use_sync, info, **kw) -> None:
     """
     Save Python code.
+
+    A ``tests`` section in the data file adds to or modifies the snippet's
+    test cases; it is not stored in the entry itself.
     """
     if use_async and use_sync:
         raise click.UsageError("--async and --sync are opposites.")
@@ -207,6 +210,14 @@ async def set_(obj, thread, script, data, use_async, use_sync, info, **kw) -> No
         msg = yload(data)
     else:
         msg = await obj.conn.d_get(CODE_EXEC_ROOT + obj.path)
+
+    tests = msg.pop(TESTS, None) or {}
+    if not isinstance(tests, Mapping):
+        raise click.UsageError(f"A '{TESTS}' section must be a mapping")
+    cases = {
+        (k if isinstance(k, Path) else P(str(k))): CodeTest.model_validate(v)
+        for k, v in tests.items()
+    }
 
     if thread:
         msg["is_async"] = False
@@ -229,6 +240,8 @@ async def set_(obj, thread, script, data, use_async, use_sync, info, **kw) -> No
 
     _check_exec_syntax(msg, obj.path)
     res = await obj.conn.d_set(CODE_EXEC_ROOT + obj.path, msg)
+    for case, test in cases.items():
+        await set_test(obj.conn, obj.path, case, test)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 

@@ -31,6 +31,66 @@ steps:
 - [result, "result == 6"]
 """
 
+SNIP = """\
+code: |
+  return a + b
+
+info: sum
+is_async: true
+vars:
+- a
+- b
+tests:
+  sum:
+    info: two plus three
+    args: {a: 2, b: 3}
+    steps:
+    - [result, "result == 5"]
+"""
+
+SNIP2 = """\
+code: |
+  return a + b
+
+info: sum
+is_async: true
+vars:
+- a
+- b
+tests:
+  sum:
+    info: changed
+    args: {a: 2, b: 3}
+    steps:
+    - [result, "result == 5"]
+  twice:
+    info: doubled
+    args: {a: 2, b: 2}
+    steps:
+    - [result, "result == 4"]
+"""
+
+SUM = """\
+info: two plus three
+args: {a: 2, b: 3}
+steps:
+- [result, "result == 5"]
+"""
+
+SUM_CHANGED = """\
+info: changed
+args: {a: 2, b: 3}
+steps:
+- [result, "result == 5"]
+"""
+
+TWICE = """\
+info: doubled
+args: {a: 2, b: 2}
+steps:
+- [result, "result == 4"]
+"""
+
 
 def _case(text: str) -> CodeTest:
     return CodeTest.model_validate(yload(text))
@@ -100,6 +160,42 @@ async def test_crud(cfg, tmp_path):
         await c.i_sync()
         with pytest.raises(KeyError):
             await get_test(c, P("test.add"), P("bad.sum"))
+
+
+async def test_set_routes_tests(cfg, tmp_path):
+    """A 'tests' section in ``code set -d`` updates the test cases,
+    not the entry."""
+    async with (
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!"}),
+        sf.client_() as c,
+    ):
+        f = tmp_path / "snip.yaml"
+        f.write_text(SNIP)
+        await sf.run(f"link code test.snip set -d {f}")
+        await c.i_sync()
+
+        body = await c.d_get(CODE_EXEC_ROOT + P("test.snip"))
+        assert "tests" not in body
+        assert body["code"] == "return a + b\n"
+        assert await get_test(c, P("test.snip"), P("sum")) == _case(SUM)
+
+        # a second 'set' modifies the named case and adds a new one
+        f.write_text(SNIP2)
+        await sf.run(f"link code test.snip set -d {f}")
+        await c.i_sync()
+
+        body = await c.d_get(CODE_EXEC_ROOT + P("test.snip"))
+        assert "tests" not in body
+        assert await get_test(c, P("test.snip"), P("sum")) == _case(SUM_CHANGED)
+        assert await get_test(c, P("test.snip"), P("twice")) == _case(TWICE)
+
+        r = await sf.run("link code test.snip test")
+        assert sorted(r.stdout.splitlines()) == ["sum :: changed", "twice :: doubled"]
+
+        # the test cases actually run
+        r = await sf.run("link code test.snip test - run")
+        assert r.stdout.count(": OK (") == 2
 
 
 async def test_run(cfg):

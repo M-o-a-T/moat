@@ -17,6 +17,7 @@ from moat.dev.heat.errors import ErrorsUnit
 from moat.dev.heat.flow import FlowUnit
 from moat.dev.heat.frost import FrostUnit
 from moat.dev.heat.heat_valve import HeatValveUnit
+from moat.dev.heat.passthru import PassthruUnit
 from moat.dev.heat.pellet import PelletUnit
 from moat.dev.heat.pump import PumpUnit
 from moat.dev.heat.selector import SelectorUnit
@@ -51,6 +52,7 @@ UNITS: dict[str, type[Unit[Any, Any]]] = {
         SelectorUnit,
         ErrorsUnit,
         FrostUnit,
+        PassthruUnit,
         WatchdogUnit,
     )
 }

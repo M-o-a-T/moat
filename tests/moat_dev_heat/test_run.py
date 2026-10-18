@@ -25,6 +25,7 @@ def test_units() -> None:
         "selector",
         "errors",
         "frost",
+        "passthru",
         "watchdog",
     }
     assert "watchdog" not in DEFAULT

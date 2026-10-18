@@ -13,7 +13,7 @@ Modbus side is done (moat-nnz: switchable `bypass` of server units).
   and what the heat units act on.
 - `switching`: what a requested switch is waiting for, `None` when the
   request is satisfied. Values: `heatpump_idle` (normally),
-  `sensors` (power/compressor readings missing or stale), `solvis`
+  `sensors` (power/compressor readings missing), `solvis`
   (the Solvis poll reports an error, see "Emergency end").
 
 This item is the passthru unit's persistent state
@@ -26,8 +26,7 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
 
 ## Steps
 
-0. **`moat.modbus` prerequisites** (separate commits, with tests and
-   `docs/moat-modbus/dev-poll.md`):
+0. **`moat.modbus` prerequisites** — done (5b2b2e3fb, 6dece0dce):
    - a. **Configurable request timeout per host**: a `timeout` key next
      to the units of a `hosts` / `hostports` entry (TCP; default 10 s as
      now), passed to `Host`. Serial ports already take `timeout` in
@@ -38,15 +37,16 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
      its servers run. `moat-link-host`'s service monitor then records
      `error.run.host.<path>` when the poller is gone or not up.
 
-1. **`passthru` unit** (`moat/dev/heat/passthru.py`, sans-IO core +
+1. **`passthru` unit** — done. (`moat/dev/heat/passthru.py`, sans-IO core +
    `Unit` adapter, in `system/runner.UNITS` and `DEFAULT`).
    - Inputs: `request`, `pump` (`app.heat.pump.out`), `m_power`
      (`heat.s.pump.power`), `compr` (`heat.s.pump.compr.speed`,
      optional), `cfg.p_idle` (power below this counts as idle; default
-     the pump unit's `start.min_power`), `cfg.max_age` for staleness.
+     the pump unit's `start.min_power`).
    - Heat pump idle = power below `p_idle`, compressor (if configured)
-     at 0, both fresh; towards bypass additionally `pump.out.run ==
-     "off"`.
+     at 0; towards bypass additionally `pump.out.run == "off"`. These
+     are published on change, so their age means nothing: only a
+     missing value counts (`switching: sensors`).
    - `request != bypass`: if idle, flip `bypass` and clear `switching`;
      else set `switching` and wait. Request withdrawn while waiting:
      clear `switching`.
@@ -143,7 +143,7 @@ pump's power: risk of overheating. So the bypass is force-ended.
    - core, table-driven: request while the heat pump runs is deferred
      (`switching: heatpump_idle`), switches once idle; switch back
      deferred while the Solvis runs it; request withdrawn while waiting;
-     stale sensors → `switching: sensors`;
+     missing sensors → `switching: sensors`;
    - restart in either state resumes (state store);
    - an error entry (in any of the watched subtrees) while bypassed:
      immediate end, request reset; an entry blocks entering

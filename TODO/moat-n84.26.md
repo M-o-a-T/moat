@@ -49,8 +49,8 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
 
 3. **Circulation pump during passthru** (the open item): as in the
    legacy bypass mode, the flow unit follows the Solvis' own pump output
-   `heat.s.pump.rate.cmd` (0…1, used as PWM directly by the legacy
-   code). New flow inputs `passthru` and `rate_cmd`; while `bypass`:
+   `heat.s.pump.rate.cmd` (0…1: the pump is PWM controlled, so it is
+   used as PWM directly, as in the legacy code). New flow inputs `passthru` and `rate_cmd`; while `bypass`:
    mode `passthru`, PWM = clamped `rate_cmd`; a stale/missing value
    holds the last PWM for `freeze`, then `safe_pwm` (as for stale
    sensors). The PWM override still wins. Without this the pump unit's
@@ -70,8 +70,10 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
    `examples/moat-dev-heat/modbus.stiebel{,fake}.yaml`; HEAT.md §2.8/§3.9
    (spec as implemented, open items resolved), `docs/moat-dev-heat`
    `schema.yaml` and `data.md` (state shape, writer, `passthru` no longer
-   "planned"), `examples/moat-dev-heat/HA.md` if a switch for the
-   request is wanted (see questions).
+   "planned"), and an HA switch for the request:
+   `examples/moat-dev-heat/HA.md` gets a `switch.heizung.passthru` whose
+   command is copied to `app.heat.passthru.request` and whose state is
+   `app.heat.passthru.state`'s `bypass`. No CLI command.
 
 6. **Tests** (`tests/moat_dev_heat/test_passthru.py`):
    - core, table-driven: request while the heat pump runs is deferred
@@ -88,18 +90,6 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
      while the heat pump runs → switch only after it has cooled down;
      the "original controller" (test code writing `cmd.mode`/`power`
      and `rate.cmd`) runs the heat pump; our units write nothing to
-     `cmd.*`; switching back waits until it's idle. The Modbus
-     forwarding itself is covered by moat-nnz's tests, so the E2E test
-     doesn't add Modbus devices.
-
-## Questions (for review)
-
-- **E2E scope**: the acceptance criteria ask for fake Modbus devices on
-  both sides. The simulator talks MoaT-Link, not Modbus; putting it
-  behind fake devices is a sizeable side project. OK to cover Modbus by
-  moat-nnz's tests as above?
-- **Request UI**: add an HA switch (`app.heat.ha.passthru` job, with the
-  state as feedback) and/or a `moat dev heat passthru on|off` command?
-- **`rate.cmd` scale**: the Solvis register is `uint`, `scale: -3`; the
-  legacy code used it directly as duty cycle 0…1. Confirm that this is
-  0…1 and not volts (0…10).
+     `cmd.*`; switching back waits until it's idle. No Modbus devices:
+     the forwarding is covered by moat-nnz's tests, and the whole chain
+     gets tested on the real hardware.

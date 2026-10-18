@@ -1,5 +1,7 @@
 # moat-n84.26: passthru mode
 
+Status: all steps done; to be verified on the real hardware.
+
 Hand the heat pump to its original controller (the Solvis) for
 maintenance, and take it back, only while the heat pump is idle. The
 Modbus side is done (moat-nnz: switchable `bypass` of server units).

@@ -112,20 +112,37 @@ assert it explicitly instead.
 Review: MockClock approved (step 1 confirms it); existing closed-loop
 scenarios move into `test_closed_loop.py`.
 
-## Questions (for review, after the spike)
+Review: Link scenarios stay ≤ 15 simulated minutes, marked `slow`; long
+ones are closed-loop only. Stale sensors: (d), below.
 
-- **Link scenario length**: at ~24× real time, keep every Link scenario
-  to ≤ 15 simulated minutes (≈ 40 s each; emergency, stale sensor,
-  restart, watchdog, override expiry with short durations, force start
-  all fit), and leave the long ones (handover, day/night, cycling) to
-  the closed loop? Mark the Link scenarios `slow`?
-- **Stale-sensor check**: the pump unit treats a sensor value that hasn't
-  changed for `stale` (900 s) as stale and stops the heat pump. With
-  publish-on-change, a steady reading (flow at a fixed PWM, quantised)
-  looks exactly like a dead sensor. Options: (a) keep it, and give the
-  simulator's flow sensor some noise (assumes the real one fluctuates);
-  (b) like passthru, judge staleness by the pollers' error records
-  (`error.app.modbus…`, `error.run.host…`) instead of value age;
-  (c) both: value age only for sensors that are known to fluctuate
-  (temperatures). Production data (PATHS.md update rates) might tell
-  whether real flow readings ever sit still for 15 min.
+## Step 1b: refreshing steady values (review answer d)
+
+Values are published on change, so a steady reading looks like a dead
+sensor. Fix: the poller re-publishes an unchanged value once the stored
+one is older than 600 s, and staleness is judged by the item's
+timestamp, not by value changes.
+
+1. `moat.link`: `LinkSender.set(…, idem=…)` takes a bool or a number.
+   A number N: an equal stored value is only left alone if it is younger
+   than N seconds (by its metadata timestamp); else it is written again.
+   Test, and the docstring.
+2. `moat.modbus` (`dev/link.py`, `Register.to_link`): send with
+   `self._link.set(dest, val, idem=600, …)` instead of the local
+   `last_sent_value` comparison, and also wake up after 600 s without a
+   change (the slot only notifies on a changed value), so a steady value
+   is refreshed. Register option `idem` (number; default 600) to tune
+   it. Test with a fake device and Scaffold; document in `dev-poll.md`.
+3. `moat.dev.heat`:
+   - `Unit` adds the inputs' timestamps to the snapshot (`inputs["_ts"]`
+     = name → wall-clock timestamp of the reader's value), and
+     `ClosedLoop` does the same (it already keeps `ts` per path).
+   - The pump adapter's stale check uses those timestamps (`stale` 900
+     s stays above the 600 s refresh).
+   - The flow core judges sensor staleness by timestamp too; its
+     `max_age` default goes from 300 s to 900 s.
+   - Other value-change-based staleness: `target`'s `t_ext` (`max_age`
+     3600, from the aggregation job, not the poller) stays as it is;
+     check the remaining units while at it.
+   - The simulator publishers (`SimLink`, `ClosedLoop.publish_sensors`)
+     re-publish a steady value after 600 s, as the poller does.
+4. Then `test_warmup` runs 30 simulated minutes without the stale abort.

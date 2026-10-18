@@ -61,8 +61,8 @@ def _in(**kw: Any) -> dict[str, Any]:
         ({"pump": None, "pump_state": {"run": 0}}, "idle", False),
         ({"pump": None, "pump_state": None}, "shutdown", True),
         ({"pump": None, "disable": True}, "disabled", False),
-        ({"pump": None, "passthru": "original"}, "passthru", False),
-        ({"pump": None, "passthru": "ours"}, "shutdown", True),
+        ({"pump": None, "passthru": {"bypass": True, "switching": None}}, "passthru", False),
+        ({"pump": None, "passthru": {"bypass": False, "switching": None}}, "shutdown", True),
     ],
 )
 def test_decision(kw: dict[str, Any], status: str, fires: bool) -> None:
@@ -174,7 +174,7 @@ async def test_unit_other_host(heat) -> None:
     ("item", "value", "status"),
     [
         (P("app.heat.watchdog.disable"), True, "disabled"),
-        (P("app.heat.passthru.state"), "original", "passthru"),
+        (P("app.heat.passthru.state"), {"bypass": True, "switching": None}, "passthru"),
     ],
 )
 async def test_unit_inactive(heat, item, value, status) -> None:

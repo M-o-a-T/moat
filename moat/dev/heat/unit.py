@@ -60,6 +60,9 @@ class Step:
     save_now: bool = False
     """The state has changed and must be saved right away."""
 
+    force: bool = False
+    """Write all outputs, even those that haven't changed."""
+
     act: Any = None
     """Something for the adapter to do (see `Unit.act`)."""
 
@@ -244,7 +247,9 @@ class Unit(Generic[C, S]):
                 # a path we also watch may have been changed by someone
                 # else since we last wrote it
                 r = watched.get(path)
-                await self.writer.set(path, value, force=r is not None and r.differs(value))
+                await self.writer.set(
+                    path, value, force=res.force or (r is not None and r.differs(value))
+                )
             if res.save or res.save_now:
                 self.store.changed(immediate=res.save_now)
             wake_in = res.wake_in

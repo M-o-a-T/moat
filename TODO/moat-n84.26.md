@@ -53,14 +53,14 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
    - No `out` item: the state item says it all; the reason is logged.
    - Emergency end, see below.
 
-2. **Consumers use the new shape** (`(state or {}).get("bypass")`):
+2. **Consumers use the new shape** — done. (`(state or {}).get("bypass")`):
    - `pump`: see step 3. Also, it doesn't *start* while a switch towards
      bypass is pending (`bypass` false and `switching` set: `enabled` is
      false, reason `passthru`). A running heat pump finishes normally.
    - `watchdog`: status `passthru` while `bypass`.
-   - Shared helper `link.passthru(value) -> bool` for the test.
+   - Shared helper `passthru.passthru(value) -> bool` for the test.
 
-3. **The pump unit during passthru.** It can't stand down: the Solvis
+3. **The pump unit during passthru** — done. It can't stand down: the Solvis
    runs the heat pump, but the circulation pump is ours (GPIO PWM via
    the flow unit), so it must follow the Solvis' own pump output
    `analog.out:4` (`heat.s.pump.rate.cmd`, 0…1; the pump is PWM
@@ -72,7 +72,7 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
        the Modbus bypass);
      - writes the flow request `{mode: fixed, pwm: rate.cmd}` (clamped
        to 0…1), updated whenever the value changes; while the value is
-       missing, `fixed` at `passthru.pwm` (new config, default 0.5), so
+       missing, `fixed` at `bypass_pwm` (new config, default 0.5), so
        the water keeps moving;
      - publishes `pump.out` with `run: off`, reason `passthru`, and the
        PWM it passes on;
@@ -89,7 +89,9 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
      `down`, as the legacy code did: heat pump off (`cmd.mode` off,
      `cmd.power` 0), the circulation pump keeps running until
      `t_out - t_in` is below `stop.delta`, then `off`. After a normal
-     end the heat pump is idle already, so this is short.
+     end the heat pump is idle already, so this is short. That first
+     step re-sends all our outputs (`Step.force`), since the heat
+     pump's commands are the original controller's at that point.
 
 ### Emergency end
 
@@ -149,7 +151,7 @@ pump's power: risk of overheating. So the bypass is force-ended.
      immediate end, request reset; an entry blocks entering
      (`switching: solvis`); clearing it unblocks;
    - pump core: while bypassed no `cmd.*`, flow request `fixed` at
-     `rate.cmd` (and at `passthru.pwm` while it's missing), `run: off`;
+     `rate.cmd` (and at `bypass_pwm` while it's missing), `run: off`;
      doesn't start while a switch is pending; enters `down` when the
      bypass ends (heat pump off, water pump on until cooled);
    - watchdog: `passthru` status while bypassed;

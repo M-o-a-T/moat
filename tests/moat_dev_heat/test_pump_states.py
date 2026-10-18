@@ -107,6 +107,7 @@ def _inputs(**kw: Any) -> dict[str, Any]:
         "errors": None,
         "flow_out": None,
         "passthru": None,
+        "rate_cmd": None,
         "override": None,
         "force_start": None,
     }
@@ -382,13 +383,51 @@ def test_override_true_beats_selector():
     assert d.run == "wait_flow"
 
 
+BYPASS = {"bypass": True, "switching": None}
+
+
 def test_passthru():
-    "in passthru 'original' the core writes no commands"
+    "bypassed: no heat-pump commands; the water pump follows the original controller"
     d = _running()
-    res = d.step(passthru="original")
+    res = d.step(passthru=BYPASS, rate_cmd=0.7)
     assert d.cfg.power not in res.outputs
-    assert d.cfg.flow_request not in res.outputs
+    assert d.cfg.mode not in res.outputs
     assert res.outputs[OUT]["reason"] == "passthru"
+    assert d.run == "off"
+    assert d.req["mode"] == "fixed"
+    assert d.req["pwm"] == 0.7
+    assert d.step(rate_cmd=1.3).outputs[OUT]["pwm"] == 1.0
+    d.step(rate_cmd=None)
+    assert d.req["pwm"] == d.cfg.bypass_pwm
+
+
+def test_passthru_end():
+    "after a bypass: cool down, re-sending our commands"
+    d = _running()
+    d.step(passthru=BYPASS, rate_cmd=0.7)
+    res = d.step(passthru={"bypass": False, "switching": None})
+    assert d.run == "down"
+    assert res.force
+    assert res.outputs[d.cfg.power] == 0
+    assert res.outputs[d.cfg.mode] == d.cfg.mode_off
+    assert d.req["mode"] == "rate_temp"
+    assert not d.step().force
+    d.step(t_out=34.5, tb_heat=55.0)  # cooled down; the buffer is warm
+    assert d.run == "off"
+
+
+def test_passthru_pending():
+    "a pending switch to passthru doesn't stop a running heat pump, but prevents a start"
+    pending = {"bypass": False, "switching": "heatpump_idle"}
+    d = _running()
+    d.step(passthru=pending)
+    assert d.run == "run"
+    d = Drive()
+    d.step(passthru=pending)
+    assert d.run == "off"
+    assert d.out[OUT]["reason"] == "passthru"
+    d.step(passthru={"bypass": False, "switching": None})
+    assert d.run != "off"
 
 
 def test_missing_sensor():

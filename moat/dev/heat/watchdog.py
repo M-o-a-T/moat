@@ -29,6 +29,7 @@ from moat.util.time import time
 from .config import EmergencyCfg, UnitCfg, load_config
 from .emergency import emergency_shutdown
 from .link import Override, Reader, ServiceMonitor, is_up, out_path
+from .passthru import passthru
 from .state import State, state_path
 from .unit import Step, Unit
 
@@ -123,7 +124,7 @@ class WatchdogCore:
             self.status = "shutdown"
         elif inputs.get("disable"):
             self.status = "disabled"
-        elif inputs.get("passthru") == "original":
+        elif passthru(inputs.get("passthru")):
             self.status = "passthru"
         elif up:
             self.status = "watching"

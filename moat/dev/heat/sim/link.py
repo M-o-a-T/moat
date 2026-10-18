@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import anyio
 import logging
+from math import inf
 
 from moat.dev.heat.config import ServiceCfg, load_config
 from moat.dev.heat.link import PWM_UNIT, Inputs, Reader, Writer
 from moat.lib.path import P
+from moat.util.time import time
 
+from .loop import REFRESH
 from .paths import INPUT_PATHS, SENSOR_PATHS, sensor_items
 from .scenario import Scenario
 
@@ -53,7 +56,12 @@ class SimLink:
         scale: Simulated seconds per real second.
         sensors: Plant sensor name → paths to publish it at.
         inputs: Plant input name → path to read it from.
+        refresh: A steady reading is published again after this many
+            seconds, as the Modbus poller does.
     """
+
+    refresh: float
+    """A steady reading is published again after this many seconds."""
 
     def __init__(
         self,
@@ -65,6 +73,7 @@ class SimLink:
         scale: float = 1,
         sensors: Mapping[str, tuple[Path, ...]] = SENSOR_PATHS,
         inputs: Mapping[str, Path] = INPUT_PATHS,
+        refresh: float = REFRESH,
     ) -> None:
         self.link = link
         self.scenario = scenario or Scenario()
@@ -77,14 +86,20 @@ class SimLink:
         for name, path in inputs.items():
             self.inputs.add(name, Reader[Any](link, path))
         self._errors: set[str] = set()
+        self.refresh = refresh
+        self._sent: dict[Path, float] = {}
 
     async def publish(self) -> None:
-        """Publish the plant's changed sensor readings."""
+        """Publish the plant's changed sensor readings, and steady ones every `refresh` seconds."""
+        now = time()
+        stale = {p for s in self.plant.faults.stale for p in self.sensors.get(s, ())}
         for path, value in sensor_items(self.plant.sensors(), self.sensors, self._errors):
             if value is None:
                 await self.link.d_set(path, retain=True)
-            else:
-                await self.writer.set(path, value)
+                continue
+            force = path not in stale and now - self._sent.get(path, -inf) >= self.refresh
+            if await self.writer.set(path, value, force=force):
+                self._sent[path] = now
 
     def apply_inputs(self) -> None:
         """Copy the latest commands into the plant."""

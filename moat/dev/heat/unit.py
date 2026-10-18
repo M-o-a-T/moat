@@ -60,6 +60,9 @@ class Step:
     save_now: bool = False
     """The state has changed and must be saved right away."""
 
+    force: bool = False
+    """Write all outputs, even those that haven't changed."""
+
     act: Any = None
     """Something for the adapter to do (see `Unit.act`)."""
 
@@ -77,8 +80,10 @@ class Core(Protocol[C_contra]):
 
         Args:
             inputs: The current value of every input, by name; `None` if
-                unknown. Units with :attr:`Unit.local_time` also get
-                ``local``, the local date and time (a naive `datetime`).
+                unknown. ``_age`` maps every input's name to the age of
+                its value in seconds (`~moat.dev.heat.link.Reader.age`).
+                Units with :attr:`Unit.local_time` also get ``local``,
+                the local date and time (a naive `datetime`).
             now: The current monotonic time.
         """
         ...
@@ -234,6 +239,7 @@ class Unit(Generic[C, S]):
                 inputs, scope = await self._start_inputs(tg, new)
 
             snap = inputs.snapshot()
+            snap["_age"] = inputs.ages(mtime.time())
             if self.local_time:
                 snap["local"] = datetime.fromtimestamp(mtime.time())  # noqa: DTZ006
             now = anyio.current_time()
@@ -244,7 +250,9 @@ class Unit(Generic[C, S]):
                 # a path we also watch may have been changed by someone
                 # else since we last wrote it
                 r = watched.get(path)
-                await self.writer.set(path, value, force=r is not None and r.differs(value))
+                await self.writer.set(
+                    path, value, force=res.force or (r is not None and r.differs(value))
+                )
             if res.save or res.save_now:
                 self.store.changed(immediate=res.save_now)
             wake_in = res.wake_in

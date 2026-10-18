@@ -61,8 +61,14 @@ def _in(**kw: Any) -> dict[str, Any]:
         ({"pump": None, "pump_state": {"run": 0}}, "idle", False),
         ({"pump": None, "pump_state": None}, "shutdown", True),
         ({"pump": None, "disable": True}, "disabled", False),
-        ({"pump": None, "passthru": "original"}, "passthru", False),
-        ({"pump": None, "passthru": "ours"}, "shutdown", True),
+        ({"passthru": {"bypass": True, "switching": None}}, "passthru", False),
+        ({"pump": None, "passthru": {"bypass": True, "switching": None}}, "shutdown", True),
+        (
+            {"pump": None, "pump_out": {"run": "off"}, "passthru": {"bypass": True}},
+            "shutdown",
+            True,
+        ),
+        ({"pump": None, "passthru": {"bypass": False, "switching": None}}, "shutdown", True),
     ],
 )
 def test_decision(kw: dict[str, Any], status: str, fires: bool) -> None:
@@ -70,6 +76,19 @@ def test_decision(kw: dict[str, Any], status: str, fires: bool) -> None:
     res = _core().step(_in(**kw), 1)
     assert res.outputs[OUT]["status"] == status
     assert (res.act is not None) is fires
+
+
+def test_passthru_pump_gone() -> None:
+    "the pump unit dies while bypassed: end the bypass, then shut down"
+    bypass = {"bypass": True, "switching": None}
+    core = _core()
+    core.step(_in(passthru=bypass, pump_out={"run": "off"}), 0)
+    res = core.step(_in(pump=None, passthru=bypass, pump_out={"run": "off"}), 1)
+    assert res.act is None  # grace
+    res = core.step(_in(pump=None, passthru=bypass, pump_out={"run": "off"}), 7)
+    assert res.act == "pump service gone while bypassed"
+    assert res.outputs[P("app.heat.passthru.state")] == {"bypass": False, "switching": None}
+    assert res.outputs[P("app.heat.passthru.request")] is False
 
 
 def test_grace() -> None:
@@ -174,7 +193,7 @@ async def test_unit_other_host(heat) -> None:
     ("item", "value", "status"),
     [
         (P("app.heat.watchdog.disable"), True, "disabled"),
-        (P("app.heat.passthru.state"), "original", "passthru"),
+        (P("app.heat.passthru.state"), {"bypass": True, "switching": None}, "passthru"),
     ],
 )
 async def test_unit_inactive(heat, item, value, status) -> None:

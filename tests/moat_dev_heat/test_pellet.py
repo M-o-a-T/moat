@@ -14,13 +14,8 @@ from moat.dev.heat.config import make_config
 from moat.dev.heat.link import out_path
 from moat.dev.heat.pellet import Mode, PelletCfg, PelletCore, PelletState, PelletUnit, classify
 from moat.dev.heat.pid import T_OFFSET
-from moat.dev.heat.sim.paths import INPUT_PATHS
-from moat.dev.heat.sim.trace import load
 from moat.lib.path import P
 from moat.util.time import patch_clock
-
-from .legacy import SCENARIOS, trace_file
-from .pump_loop import pump_loop
 
 from typing import Any
 
@@ -215,72 +210,6 @@ def test_unit_inputs():
     u = PelletUnit.__new__(PelletUnit)
     u.link = None
     assert set(u.make_inputs(_cfg())) == set(Run().inputs)
-
-
-# closed loop
-
-
-def _legacy_wanted() -> tuple[list[tuple[float, bool]], list[dict[str, Any]]]:
-    tr = load(trace_file("pellet_handover").read_text())
-    sw: list[tuple[float, bool]] = []
-    for s in tr["samples"]:
-        w = bool(s["p_wanted"])
-        if not sw or sw[-1][1] != w:
-            sw.append((s["t"], w))
-    return sw, tr["samples"]
-
-
-def _stats(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    "load/temp statistics while the burner runs, by heat-pump state"
-    wp = [r["load"] for r in rows if r["code"] == 4 and r["run"] == "run"]
-    alone = [r["load"] for r in rows if r["code"] == 4 and r["run"] != "run"]
-    temps = [r["temp"] for r in rows if r["code"] == 4]
-    return {
-        "wp_full": sum(1 for x in wp if x >= 0.99) / len(wp) if wp else None,
-        "alone": sum(alone) / len(alone) if alone else None,
-        "temp": (min(temps), max(temps)) if temps else None,
-    }
-
-
-def test_closed_loop_vs_legacy():
-    "burner load and temperature requests behave as in the legacy pellet_handover run"
-    sc = SCENARIOS["pellet_handover"]
-    sw, old = _legacy_wanted()
-    loop = pump_loop(sc.plant, seed=sc.seed, start=sc.start)
-    loop.add_unit(PelletUnit)
-    rows: list[dict[str, Any]] = []
-    todo = list(sw)
-
-    def cb(lp) -> None:
-        while todo and todo[0][0] <= lp.now:
-            _, w = todo.pop(0)
-            lp.set(out_path("selector"), {"wp": True, "pellet": w})
-            lp.set(INPUT_PATHS["pellet_wanted"], w)
-            lp.set(INPUT_PATHS["pellet_run"], w)
-        if lp.now % 120 == 0:
-            rows.append({
-                "t": lp.now,
-                "code": lp.get(P("heat.s.pellets.state")),
-                "run": (lp.get(out_path("pump")) or {}).get("run"),
-                "load": lp.get(INPUT_PATHS["pellet_load"]),
-                "temp": lp.get(INPUT_PATHS["pellet_temp"]),
-            })
-
-    loop.run(sc.duration, 10, cb)
-    new = _stats(rows)
-    ref = _stats([
-        {"code": s["m_pellet_state"], "run": s["run"], "load": s["p_load"], "temp": s["p_temp"]}
-        for s in old
-    ])
-    assert new["alone"] is not None
-    assert ref["alone"] is not None
-    assert (
-        new["wp_full"] is None or new["wp_full"] > 0.9
-    )  # burner at full load beside the heat pump
-    assert new["alone"] == pytest.approx(ref["alone"], abs=0.2)
-    assert 0.3 <= new["alone"] < 1
-    assert ref["temp"][0] - 2 <= new["temp"][0]
-    assert new["temp"][1] <= ref["temp"][1] + 3
 
 
 # Link

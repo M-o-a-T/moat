@@ -385,3 +385,13 @@ def test_cpid_call_matches_integrate():
     b.setpoint(25)
     assert a(20.0, t=2) == 5.0
     assert b.sum(b.integrate(20.0, t=2)) == 5.0
+
+
+def test_cpid_clock():
+    "without an explicit time, a CPID uses the replaceable clock; t=0 is a time"
+    from moat.util.time import patch_clock  # noqa: PLC0415
+
+    cfg = attrdict(p=1, i=0, d=0, tf=0, min=-100, max=100)
+    with patch_clock(monotonic=lambda: 42.0):
+        assert CPID(cfg).get_state()[0] == 42.0
+        assert CPID(cfg, t=0).get_state()[0] == 0

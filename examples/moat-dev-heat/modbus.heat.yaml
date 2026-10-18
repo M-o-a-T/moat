@@ -67,6 +67,8 @@ ports:
                 dest: !P grid.s.heat.meter
 hosts:
   wp.hz.smurf.noris.de:
+    # Notice an unresponsive Solvis quickly: passthru depends on it.
+    timeout: 3
     1:
       server: 1
       ref: inc.wp

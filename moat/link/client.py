@@ -675,7 +675,7 @@ class LinkSender(MsgSender, MsgRoot):
         return res
 
     async def set(
-        self, path: Path, data: Any = NotGiven, *, idem: bool = False, **kw: Any
+        self, path: Path, data: Any = NotGiven, *, idem: bool | float = False, **kw: Any
     ) -> bool | tuple[Any, MsgMeta | None] | None:
         """
         Store @data at @path. Frontend for `d_set`; all its keywords are
@@ -684,13 +684,22 @@ class LinkSender(MsgSender, MsgRoot):
         If @idem is set, nothing is written when the stored value equals
         @data (or is missing and @data is `NotGiven`). The result is then
         `False`, or the stored value and its metadata if @with_prev is set.
+
+        If @idem is a number, an equal stored value is only left alone if
+        it is younger than that many seconds; an older one is written
+        again, so that readers see that the value is still current.
         """
-        if idem:
+        if idem is not False:
             try:
                 old = await self.d_get(path, meta=True)
             except KeyError:
                 old = (NotGiven, None)
-            if old[0] == data:
+            if old[0] == data and (
+                idem is True
+                or old[1] is None
+                or old[1].timestamp is None
+                or mtime.time() - old[1].timestamp < idem
+            ):
                 return old if kw.get("with_prev") else False
         return await self.d_set(path, data, **kw)
 

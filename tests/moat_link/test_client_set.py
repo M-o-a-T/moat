@@ -72,6 +72,24 @@ async def test_set_idem(cfg):
         assert await c.set(P("test.sg.nothing"), NotGiven, idem=True) is False
 
 
+async def test_set_idem_age(cfg):
+    "with a numeric idem, an unchanged value is written again once it's that old"
+    from moat.util.time import patch_clock  # noqa: PLC0415
+
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.server(init="INIT")
+        c = await sf.client()
+        p = P("test.sg.idem_age")
+        assert await c.set(p, 5, idem=60) is True
+        await c.i_sync()
+        _, meta = await c.get(p, meta=True)
+        with patch_clock(time=lambda: meta.timestamp + 30):
+            assert await c.set(p, 5, idem=60) is False
+        with patch_clock(time=lambda: meta.timestamp + 90):
+            assert await c.set(p, 5, idem=60) is True
+            assert await c.set(p, 6, idem=60) is True
+
+
 async def test_call_admin_set_passes_keywords():
     "_self.set forwards keywords to _link.set"
     from moat.link.job.runner import CallAdmin  # noqa: PLC0415

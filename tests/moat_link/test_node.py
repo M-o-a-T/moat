@@ -196,3 +196,14 @@ def test_collect_uses_partial_matches_if_path_breaks():
     assert n.set(P("a.+"), dict(a_plus=1), m)
 
     assert n.collect(P("a.c.z")) == dict(hash_=1)
+
+
+def test_equal_newer_updates_meta():
+    "equal data with a newer timestamp: not a change, but the timestamp moves on"
+    n = Node()
+    assert n.set(P("x"), 1, MsgMeta(origin="A", timestamp=100))
+    assert n.set(P("x"), 1, MsgMeta(origin="B", timestamp=200)) is None
+    assert n.get(P("x")).meta.timestamp == 200
+    assert n.set(P("x"), 1, MsgMeta(origin="C", timestamp=150)) is None
+    assert n.get(P("x")).meta.timestamp == 200
+    assert n.get(P("x")).meta.origin == "B"

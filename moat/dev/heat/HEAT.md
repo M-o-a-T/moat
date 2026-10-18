@@ -371,6 +371,12 @@ sensor_in:      !P heat.s.pump.temp.in
 sensor_out:     !P heat.s.pump.temp.out
 ```
 
+Residual risk: the procedure relies on the flow unit to execute its
+drain and stop requests. Without a flow unit, the water pump keeps the
+last PWM it was given: that protects the heat pump from overheating, but
+nobody stops the water pump afterwards
+(`test_integration.py::test_flow_dead_during_emergency`).
+
 ### 2.7 Operator overrides
 
 Overrides replace the old bypass mode and the per-unit override of
@@ -1092,13 +1098,24 @@ scenario:
 The closed-loop checks are `Invariants` in `test_closed_loop.py`; the
 end-to-end ones are `CheckedSim` in `test_integration.py`.
 
-Scenarios: cold start / warm-up, steady state, de-ice, WP → pellet and
-pellet → WP handover (no buffer dip below `t_low`), pellet ignition
-failure → fallback, day/night switch, error mid-run → emergency
-shutdown, stale sensor, flow unit dead during emergency (documented
-residual risk), pump restart mid-run with and without watchdog, each
-override with expiry, passthru requested while the heat pump runs
-(deferred until idle), force start.
+Scenarios:
+
+| Scenario | Closed loop (`test_closed_loop.py`) | MoaT-Link (`test_integration.py`, `test_restart.py`) |
+| --- | --- | --- |
+| cold start, steady cycling, de-ice | vs. legacy | warm-up to `run`; 16 min steady run |
+| heating circuit, day/night | vs. legacy | |
+| WP → pellet → WP handover | vs. legacy; no buffer dip | |
+| pellet ignition failure | fallback to the heat pump | |
+| error mid-run | stop, burner takes over | emergency shutdown |
+| no power | vs. legacy, start-up timeout | |
+| stale sensor | | emergency shutdown |
+| flow unit dead during emergency | | residual risk (§2.6) |
+| pump unit killed | | restart resumes; watchdog shutdown |
+| overrides with expiry | flow temperature | heat pump, burner |
+| passthru | deferred switch, Solvis runs, emergency end | |
+| force start | | warm buffer, started once |
+
+The Link scenarios are kept to at most about 15 simulated minutes.
 
 Reference traces are refreshed only via an explicit pytest option
 (`--heat-refresh`); a missing reference fails;

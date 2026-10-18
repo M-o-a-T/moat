@@ -1,5 +1,7 @@
 # moat-n84.21: system runner and end-to-end scenarios
 
+Status: all steps done.
+
 The runner (`system/runner.py`, `moat dev heat run`) exists and is
 tested (`test_run.py`); this issue is about the scenarios.
 
@@ -108,8 +110,8 @@ assert it explicitly instead.
    new closed-loop ones.
 3. Done: `test_integration.py`, the Link scenarios above.
 4. Done: `test_restart.py`.
-5. HEAT.md §5 (time handling for Link tests, as implemented; scenario
-   table), close.
+5. Done: HEAT.md §5 (time handling for Link tests, scenario table),
+   §2.6 (residual risk).
 
 Review: MockClock approved (step 1 confirms it); existing closed-loop
 scenarios move into `test_closed_loop.py`.

@@ -26,6 +26,18 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
 
 ## Steps
 
+0. **`moat.modbus` prerequisites** (separate commits, with tests and
+   `docs/moat-modbus/dev-poll.md`):
+   - a. **Configurable request timeout per host**: a `timeout` key next
+     to the units of a `hosts` / `hostports` entry (TCP; default 10 s as
+     now), passed to `Host`. Serial ports already take `timeout` in
+     their `serial` section; document it.
+   - b. **`moat modbus dev poll` announces itself** with
+     `link.announcing()` (service name from the systemd unit, as
+     `announcing` discovers it; `MT_SERVICE` overrides), marked up once
+     its servers run. `moat-link-host`'s service monitor then records
+     `error.run.host.<path>` when the poller is gone or not up.
+
 1. **`passthru` unit** (`moat/dev/heat/passthru.py`, sans-IO core +
    `Unit` adapter, in `system/runner.UNITS` and `DEFAULT`).
    - Inputs: `request`, `pump` (`app.heat.pump.out`), `m_power`
@@ -90,19 +102,25 @@ pump's power: risk of overheating. So the bypass is force-ended.
   `error.app.modbus.tcp.<addr>.<port>`, an unresponsive one (after the
   host's request timeout, 10 s for TCP) at
   `….<port>.<unit>.<slot>`. Both are deleted on recovery.
-- New passthru config `error: Path | None` (default `None`: no check):
-  the error subtree to watch, relative to `error`; production:
-  `app.modbus.tcp.<Solvis host>.502` (the host name as one path
-  element). The unit watches it with a `TreeReader`.
-- While `bypass` and that subtree has an entry: set `bypass` false and
+- New passthru config `errors: list[Path]` (default empty: no check):
+  error subtrees to watch, relative to `error`; production:
+  - `app.modbus.tcp.<Solvis host>.502` (poll failures; the host name
+    as one path element),
+  - `run.host.<host>.<poller service>` (the poller process is gone, via
+    step 0b).
+  The unit watches each with a `TreeReader`.
+- While `bypass` and any of them has an entry: set `bypass` false and
   `switching` `None` at once (no idle wait), reset
   `app.heat.passthru.request` to false (so it doesn't re-enter by
   itself; the HA switch shows "off"), log an error. The pump unit then
   runs `down` (step 3): heat pump off, water pump on until cooled.
 - An entry also blocks entering bypass (`switching: solvis`).
-- Not covered: the Solvis poller *process* dying (it then reports
-  nothing). Its service supervision (systemd) has to restart it; see
-  questions.
+- Detection delay: an unreachable Solvis at once; an unresponsive
+  one after the host's request timeout (step 0a; set it to a few
+  seconds for the Solvis); a dead poller after `moat-link-host`'s
+  ping-down timeout. That monitor must run where the heat units'
+  MoaT-Link server is (i3), or the record never appears; to be checked
+  on the real setup.
 
 4. **Other units**: `heat_valve`, `pellet`, `selector`, `target`,
    `errors`, `frost` keep running unchanged. While bypassed the pump
@@ -127,8 +145,9 @@ pump's power: risk of overheating. So the bypass is force-ended.
      deferred while the Solvis runs it; request withdrawn while waiting;
      stale sensors → `switching: sensors`;
    - restart in either state resumes (state store);
-   - an error entry while bypassed: immediate end, request reset; an
-     entry blocks entering (`switching: solvis`); clearing it unblocks;
+   - an error entry (in any of the watched subtrees) while bypassed:
+     immediate end, request reset; an entry blocks entering
+     (`switching: solvis`); clearing it unblocks;
    - pump core: while bypassed no `cmd.*`, flow request `fixed` at
      `rate.cmd` (and at `passthru.pwm` while it's missing), `run: off`;
      doesn't start while a switch is pending; enters `down` when the
@@ -144,13 +163,3 @@ pump's power: risk of overheating. So the bypass is force-ended.
      heat pump off, water pump runs until the loop has cooled. No Modbus devices:
      the forwarding is covered by moat-nnz's tests, and the whole chain
      gets tested on the real hardware.
-
-## Questions (for review)
-
-- Poller process death isn't reported (see "Emergency end"). Accept,
-  or also require the Solvis poller's MoaT-Link client to be alive
-  (e.g. via a service announcement of `moat modbus dev poll`, which it
-  doesn't make yet)?
-- Detecting an unresponsive Solvis takes the TCP host timeout (10 s,
-  not configurable in `dev poll` configs). Acceptable, or make it
-  configurable per host?

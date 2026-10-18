@@ -125,6 +125,16 @@ def test_emergency_end() -> None:
     assert r.step(error_0={}) == (True, None)
 
 
+def test_ended_by_others() -> None:
+    "somebody else (the watchdog) ends the bypass: the core goes along"
+    r = Run(state=PassthruState(bypass=True))
+    assert r.step(request=True, state=({"bypass": True, "switching": None}, 1)) == (True, None)
+    assert r.step(state=({"bypass": False, "switching": None}, 2)) == (False, None)
+    assert r.res.save_now
+    # the request is still on: it switches again once the heat pump is idle
+    assert r.step(request=False) == (False, None)
+
+
 def test_restart() -> None:
     "a new core resumes from the saved state"
     r = Run(state=PassthruState(bypass=True))

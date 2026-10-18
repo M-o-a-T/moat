@@ -40,8 +40,8 @@ handover to the original controller). Support processes: `pwm` (software PWM dae
 | `app.heat.watchdog.out` | watchdog | Status, and a record of the last emergency shutdown. |
 | `app.heat.flow.request` | pump, emergency shutdown | What the water pump should do (mode, rate, temp, PWM bounds, seq). |
 | `app.heat.force_start` | operator (CLI `--force-on`), pump | One-shot "start although the buffer is warm"; pump sets it to null when consumed. |
-| `app.heat.passthru.request` | HA job, passthru (reset) | Hand the heat pump to its original controller (passthru), or take it back. |
-| `app.heat.passthru.state` | passthru | `{bypass, switching}`: whether the original controller is in charge, and what a switch waits for. Read by pump, watchdog and the Modbus bypasses. |
+| `app.heat.passthru.request` | HA job, passthru and watchdog (reset) | Hand the heat pump to its original controller (passthru), or take it back. |
+| `app.heat.passthru.state` | passthru; watchdog (ends a bypass when the pump unit dies) | `{bypass, switching}`: whether the original controller is in charge, and what a switch waits for. Read by pump, watchdog and the Modbus bypasses. |
 | `app.heat.watchdog.disable` | operator | Disable the watchdog; plain bool or `{value, expires, reason}`. |
 
 ## Operator overrides (`app.heat.override.*`)

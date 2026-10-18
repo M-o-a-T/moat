@@ -26,8 +26,8 @@ from moat.lib.path import (
 )
 
 from .config import UnitCfg
-from .link import Reader, TreeReader, out_path
-from .state import State
+from .link import Reader, Switch, TreeReader, out_path
+from .state import State, state_path
 from .unit import Step, Unit
 
 from typing import Any
@@ -90,12 +90,15 @@ class PassthruCore:
     Sans-IO core of the passthru unit.
 
     Inputs: ``request``, ``pump`` (the pump unit's output), ``m_power``,
-    ``compr``, and ``error_N`` (the configured error subtrees).
+    ``compr``, ``error_N`` (the configured error subtrees), and ``state``
+    (its own state item, as a `~moat.dev.heat.link.Switch`): when somebody
+    else ends the bypass there, the core goes along.
     """
 
     def __init__(self, cfg: PassthruCfg, state: PassthruState, now: float) -> None:  # noqa: ARG002
         self.cfg = cfg
         self.state = state
+        self._n: int | None = None
 
     def update_cfg(self, cfg: PassthruCfg) -> None:
         """Apply a changed configuration."""
@@ -118,6 +121,14 @@ class PassthruCore:
                 return IDLE
         return None
 
+    def _ended_by_others(self, sw: tuple[Any, int] | None) -> bool:
+        "whether somebody else has just written a state without bypass"
+        if sw is None:
+            return False
+        value, n = sw
+        seen, self._n = self._n, n
+        return seen is not None and n != seen and self.state.bypass and not passthru(value)
+
     @staticmethod
     def _failing(inputs: dict[str, Any]) -> bool:
         return any(v for k, v in inputs.items() if k.startswith("error_"))
@@ -129,7 +140,11 @@ class PassthruCore:
         out: dict[Path, Any] = {}
         want = inputs.get("request") is True
 
-        if st.bypass and self._failing(inputs):
+        if self._ended_by_others(inputs.get("state")):
+            # e.g. the watchdog, when the pump unit died
+            _logger.error("Passthru: bypass ended by somebody else")
+            st.bypass, st.switching = False, None
+        elif st.bypass and self._failing(inputs):
             _logger.error("Passthru: Solvis poll failed, emergency end")
             st.bypass, st.switching = False, None
             out[self.cfg.request] = False
@@ -161,10 +176,11 @@ class PassthruUnit(Unit[PassthruCfg, PassthruState]):
         return PassthruCore(cfg, state, now)
 
     def make_inputs(self, cfg: PassthruCfg) -> dict[str, Reader[Any]]:
-        """The request, the pump unit's output, power, compressor, error subtrees."""
+        """The request, the pump unit's output, power, compressor, error subtrees, own state."""
         rd: dict[str, Reader[Any]] = {
             k: Reader[Any](self.link, getattr(cfg, k)) for k in ("request", "pump", "m_power")
         }
+        rd["state"] = Switch(self.link, state_path(self.name))
         if cfg.compr is not None:
             rd["compr"] = Reader[Any](self.link, cfg.compr)
         for i, p in enumerate(cfg.errors):

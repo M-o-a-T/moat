@@ -790,7 +790,8 @@ description: >-
   While `bypass` is true, the Modbus shim and the heat-pump poller
   forward the Solvis' requests to the heat pump, the pump unit sends no
   commands to the heat pump but runs the circulation pump as the Solvis
-  says, and the watchdog is inactive.
+  says. If the pump unit dies meanwhile, the watchdog ends the bypass
+  (writes bypass false here) and shuts the heat pump down.
 type: object
 properties:
   bypass:

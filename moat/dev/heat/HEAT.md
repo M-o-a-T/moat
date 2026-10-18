@@ -464,8 +464,12 @@ The `passthru` unit (`passthru.py`) coordinates the switch:
     the Solvis' pump output `heat.s.pump.rate.cmd` (`analog.out:4`, a
     PWM duty cycle, polled every second), or at `bypass_pwm` while that
     has no value. `pump.out` shows `run: off`, reason `passthru`;
-  - the watchdog is inactive, the shim forwards everything, and sensor
-    data keeps flowing to MoaT-Link;
+  - the shim forwards everything, and sensor data keeps flowing to
+    MoaT-Link;
+  - if the pump unit dies, nothing makes our water pump follow the
+    Solvis any more: the watchdog ends the bypass and runs the emergency
+    shutdown (§3.8). The passthru unit goes along when somebody else
+    ends the bypass in its state item;
   - the other units carry on: they see an idle heat pump;
   - the shim's `de_ice.fake` doesn't matter: the Solvis reads the real
     register through the bypass.
@@ -847,8 +851,12 @@ Handles the case where the pump unit cannot run its own shutdown
   `app.heat.watchdog.disable` (`bool`).
 - **Acts**: when the pump service is gone and the last `pump.out.run`
   is active (anything but `off`/`down`), runs
-  `emergency_shutdown(from_pump=False)`. Inactive while disabled or
-  in passthru `original`.
+  `emergency_shutdown(from_pump=False)`. Inactive while disabled.
+  While passthru is bypassed, the heat pump's state doesn't matter (the
+  original controller runs it): when the pump service is gone, the
+  watchdog first ends the bypass (writes `{bypass: false}` to
+  `app.heat.passthru.state` and resets the request), so that nothing
+  runs the heat pump with our water pump unattended, then shuts down.
 - **Publishes**: `app.heat.watchdog.out` = `{triggered_at, reason,
   duration, exit_delta}` for auditing.
 - Never restarts the pump unit; that is up to systemd or the operator.
@@ -1110,7 +1118,7 @@ Scenarios:
 | no power | vs. legacy, start-up timeout | |
 | stale sensor | | emergency shutdown |
 | flow unit dead during emergency | | residual risk (§2.6) |
-| pump unit killed | | restart resumes; watchdog shutdown |
+| pump unit killed | | restart resumes; watchdog shutdown; while bypassed: bypass ended, shutdown |
 | overrides with expiry | flow temperature | heat pump, burner |
 | passthru | deferred switch, Solvis runs, emergency end | |
 | force start | | warm buffer, started once |

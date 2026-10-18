@@ -1,12 +1,15 @@
 """
-Tests for poll failures as reported to MoaT-Link by `moat.modbus.dev.poll.dev_poll`.
+Tests for what `moat.modbus.dev.poll.dev_poll` tells MoaT-Link: poll
+failures, and its service announcement.
 """
 
 from __future__ import annotations
 
 import anyio
+import platform
 import pytest
 import socket
+from functools import partial
 
 from moat.util import yload
 from moat.lib.path import P
@@ -39,7 +42,7 @@ def _dead_port() -> int:
 
 
 async def _wait_err(c: Any, path: P, limit: float) -> Any:
-    "wait for an error record at @path; fail after @limit seconds"
+    "wait for an item (e.g. an error record) at @path; fail after @limit seconds"
     with anyio.fail_after(limit):
         while True:
             try:
@@ -86,3 +89,35 @@ async def test_unresponsive_timeout(cfg):  # noqa: ARG001
         err = await _wait_err(c, ERR / str(port) / "1" / "1sec", 4)
         assert "exc" in err
         tg.cancel_scope.cancel()
+
+
+@pytest.mark.anyio
+async def test_announce(cfg, monkeypatch):  # noqa: ARG001
+    "the poller announces itself while it runs"
+    monkeypatch.setenv("MT_SERVICE", "test.poller")
+    path = P("run.host") / platform.node() / "test" / "poller"
+    async with (
+        Scaffold(True, use_servers=True) as sf,
+        sf.server_(init={"x": 1}),
+        sf.client_() as c,
+    ):
+        async with anyio.create_task_group() as tg:
+            await tg.start(
+                partial(dev_poll, announce=True),
+                yload("server: [{host: 127.0.0.1, port: 0}]", attr=True),
+                c,
+            )
+            await c.i_sync()
+            ann = await _wait_err(c, path, 5)
+            with anyio.fail_after(5):
+                while not ann.get("up"):
+                    await anyio.sleep(0.1)
+                    ann = await c.d_get(path)
+            tg.cancel_scope.cancel()
+        with anyio.fail_after(5):
+            while True:
+                try:
+                    await c.d_get(path)
+                except KeyError:
+                    break
+                await anyio.sleep(0.1)

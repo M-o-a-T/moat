@@ -46,6 +46,7 @@ async def poll(ctx, path) -> None:
     """Poll Modbus devices as directed via YAML.
 
     Readiness is signalled to systemd as soon as the servers are running.
+    With MoaT-Link, the poller also announces itself as a service.
     """
     obj = ctx.obj
 
@@ -61,4 +62,6 @@ async def poll(ctx, path) -> None:
         ln_ctx = nullcontext(None)
 
     async with ln_ctx as mt_ln, as_service(obj) as srv:
-        await dev_poll(cfg, link=mt_ln, this_file=path, task_status=srv)
+        await dev_poll(
+            cfg, link=mt_ln, this_file=path, announce=mt_ln is not None, task_status=srv
+        )

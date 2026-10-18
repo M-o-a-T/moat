@@ -385,3 +385,10 @@ moat modbus dev poll CONFIG.yaml
 ```
 
 Starts the gateway with the given configuration.
+
+With a MoaT-Link configuration, the gateway announces itself as a
+service at `run.host.<hostname>.<service>`. The service name is that of
+its systemd unit, or the value of `$MT_SERVICE`; without either, there
+is no announcement. It is marked "up" once the servers run, and
+withdrawn when the gateway stops. `moat-link-host`'s service monitor
+reports a missing or not-up service at `error.run.host.…`.

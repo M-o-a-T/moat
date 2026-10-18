@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+from contextlib import nullcontext
 from functools import partial
 
 from moat.util import attrdict, merge, to_attrdict
@@ -75,6 +76,7 @@ async def dev_poll(
     link: Link | None,
     *,
     this_file: FSPath | None = None,
+    announce: bool = False,
     task_status=anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """
@@ -85,7 +87,13 @@ async def dev_poll(
 
     Pass *this_file* (the path the config was loaded from) so that
     ``include:`` directives are resolved relative to the config file too.
+
+    With *announce*, the poller announces itself as a MoaT-Link service
+    (named after its systemd unit, or ``$MT_SERVICE``), which is up once
+    setup is complete.
     """
+    if announce and link is None:
+        raise ValueError("Announcing requires MoaT-Link")
     sl = cfg.setdefault("slots", attrdict())
     sl.setdefault("write", attrdict())
     sl._apply_default = True  # noqa:SLF001
@@ -94,7 +102,11 @@ async def dev_poll(
     s = cfg.setdefault("src", attrdict())
     sl = cfg.slots
 
-    async with ModbusClient(link=link) as cl, anyio.create_task_group() as tg:
+    async with (
+        link.announcing() if announce and link is not None else nullcontext() as ann,
+        ModbusClient(link=link) as cl,
+        anyio.create_task_group() as tg,
+    ):
         nd = 0
         # (server unit context, bypass config, attached client unit)
         bypasses: list[tuple[Any, Mapping, Unit | None]] = []
@@ -271,6 +283,8 @@ async def dev_poll(
                 s["port"] = srv.port
 
         task_status.started(cfg)
+        if ann is not None:
+            ann.set()
 
         if nd:
             logger.info("Server running.")

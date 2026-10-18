@@ -218,7 +218,10 @@ The transformations apply:
 #### MQTT Integration (requires MoaT-Link)
 
 - **`dest`**: MQTT topic(s) to send values to (Path or list of Paths)
-  - Written whenever the slot reads new data
+  - Written whenever the slot reads a changed value
+- **`idem`**: An unchanged value is sent again once the stored one is
+  this old, in seconds (default 120; `false`: never), so that its readers
+  can tell a steady value from a dead poller
 - **`src`**: MQTT topic to read values from (Path)
   - Values written to this topic are sent to the Modbus device
 - **`mirror`**: If true, echo writes from MQTT back to MQTT on `dest`

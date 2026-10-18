@@ -121,3 +121,51 @@ async def test_announce(cfg, monkeypatch):  # noqa: ARG001
                 except KeyError:
                     break
                 await anyio.sleep(0.1)
+
+
+@pytest.mark.anyio
+async def test_refresh(cfg):  # noqa: ARG001
+    "a steady value is sent again, so its timestamp shows that it's current"
+    from moat.modbus.server import UnitContext, create_server  # noqa: PLC0415
+    from moat.modbus.types import HoldingRegisters, IntValue  # noqa: PLC0415
+
+    async with (
+        Scaffold(True, use_servers=True) as sf,
+        sf.server_(init={"x": 1}),
+        sf.client_() as c,
+        anyio.create_task_group() as tg,
+    ):
+        dev = create_server({"host": "127.0.0.1", "port": 0})
+        ctx = UnitContext()
+        dev.add_unit(1, ctx)
+        ctx.add(HoldingRegisters, 1, IntValue).value = 42
+        evt = anyio.Event()
+        tg.start_soon(partial(dev.serve, opened=evt))
+        await evt.wait()
+
+        cfg_ = yload(
+            f"""
+slots:
+  1sec:
+    read_delay: 0.2
+hostports:
+  127.0.0.1:
+    {dev.port}:
+      1:
+        regs:
+          r: {{reg_type: h, register: 1, type: uint, len: 1, slot: 1sec, dest: !P test.r, idem: 1}}
+""",
+            attr=True,
+        )
+        await tg.start(dev_poll, cfg_, c)
+        await _wait_err(c, P("test.r"), 5)
+        _, m1 = await c.d_get(P("test.r"), meta=True)
+        with anyio.fail_after(5):
+            while True:
+                await anyio.sleep(0.2)
+                v, m2 = await c.d_get(P("test.r"), meta=True)
+                if m2.timestamp > m1.timestamp:
+                    break
+        assert v == 42
+        assert m2.timestamp - m1.timestamp < 2
+        tg.cancel_scope.cancel()

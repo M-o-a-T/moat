@@ -15,6 +15,7 @@ import pytest
 from moat.util import attrdict
 from moat.lib.path import P
 from moat.link._test import Scaffold
+from moat.link.exceptions import RemoteDead
 from moat.link.gate import run_gate
 from moat.link.meta import MsgMeta
 
@@ -319,6 +320,76 @@ async def test_gate_send_wraps_source_metadata(cfg):
                             break
                     if anyio.current_time() >= deadline:
                         raise AssertionError(f"Source metadata lost: {m!r}") from None
+                    await anyio.sleep(0.1)
+
+                tg.cancel_scope.cancel()
+
+
+async def test_gate_ping_dead_remote(cfg, monkeypatch):
+    """A link gate with ``ping`` detects a dead remote and stops.
+
+    The gate probes the remote server with ``i.stamp`` calls. Hanging the
+    remote server's stamps (network-dead remote: the broker still works,
+    so no MQTT error ever arrives) must make the gate raise ``RemoteDead``
+    after ``miss`` consecutive timeouts, ending the gate so its
+    announcements go away.
+    """
+    gcfg = attrdict(
+        driver="link",
+        src=P("x"),
+        server="SRVP",
+        delay=0.1,
+        ping=0.2,
+        miss=2,
+    )
+
+    async with (
+        Scaffold(copy.deepcopy(cfg), use_servers=True) as sf_l,
+        Scaffold(copy.deepcopy(cfg), use_servers=True) as sf_r,
+    ):
+        await sf_l.server(name="SRVL", init="TEST")
+        srv_r = await sf_r.server(name="SRVP", init="TEST")
+        gcfg["backend"] = dict(sf_r.cfg.backend)
+
+        async with (
+            sf_l.client_() as cl,
+            sf_r.client_() as cr,
+        ):
+            await cl.d_set(P("x.a"), 1)
+            await cl.i_sync()
+
+            await cl.d_set(P("gate.pingtest"), gcfg)
+            await cl.i_sync()
+
+            async with anyio.create_task_group() as tg:
+
+                async def _gate(*, task_status) -> None:
+                    """Run the gate; its death by ``RemoteDead`` is the point."""
+                    try:
+                        await run_gate(sf_l.cfg, cl, P("gate.pingtest"), task_status=task_status)
+                    except* RemoteDead:
+                        pass
+
+                await tg.start(_gate)
+
+                # The gate is up and synced.
+                assert await _d_get(cr, P("x.a")) == 1
+
+                # Kill the remote server's responsiveness: stamps hang.
+                async def _hang(*a, **k):  # noqa: ARG001
+                    await anyio.sleep_forever()
+
+                monkeypatch.setattr(srv_r, "new_stamp", _hang)
+
+                # The gate must die: its remote-side announcement goes away.
+                deadline = anyio.current_time() + 10
+                while True:
+                    try:
+                        await cr.d_get(P("run.host.gate.pingtest"))
+                    except KeyError:
+                        break
+                    if anyio.current_time() >= deadline:
+                        raise AssertionError("Gate survived its dead remote") from None
                     await anyio.sleep(0.1)
 
                 tg.cancel_scope.cancel()

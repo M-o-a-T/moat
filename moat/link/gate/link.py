@@ -10,7 +10,9 @@ from __future__ import annotations
 import anyio
 
 from moat.util import attrdict
+from moat.lib.path import P
 from moat.link.client import Link
+from moat.link.exceptions import RemoteDead
 from moat.link.meta import MsgMeta
 from moat.util.dict import combine_dict as _combine_dict
 
@@ -30,7 +32,11 @@ MoaT-Link-to-Link gateway parameters (use ``-s KEY VALUE`` to set):
   server   Name of the remote MoaT-Link server (required).
   delay    Conflict-resolution delay in seconds (default: 0.1).
   skip     Extra path prefixes to exclude from sync (in addition to "run").
-  backend  Dict to override the MQTT broker for the remote connection.\
+  backend  Dict to override the MQTT broker for the remote connection.
+  ping     Probe the remote server every N seconds (0 = off, the default);
+           after ``miss`` consecutive missed probes the gate considers
+           the remote dead and stops.
+  miss     Failed probes before the remote is considered dead (default: 2).
 """
 
 
@@ -48,6 +54,10 @@ class Gate(DelayedGate):
         delay: float - delay in seconds (default 0.1)
         skip: list[str] - additional path prefixes to skip (default: ["run"])
         backend: dict - overrides the MQTT broker the remote Link connects to
+        ping: float - probe the remote server every N seconds; 0 disables
+            probing (the default)
+        miss: int - consecutive failed probes before the remote is
+            considered dead (default: 2)
 
     The gateway monitors the same path on the remote server and synchronizes
     changes bidirectionally, using the DelayedGate delay mechanism to handle
@@ -71,6 +81,8 @@ class Gate(DelayedGate):
         # Build the set of paths to skip
         extra_skip = cf.get("skip", [])
         self._skip_paths = SKIP_PATHS | frozenset(extra_skip)
+        self._ping_every = float(cf.get("ping", 0))
+        self._ping_miss = int(cf.get("miss", 2))
 
     def _should_skip(self, path: Path) -> bool:
         """
@@ -129,11 +141,41 @@ class Gate(DelayedGate):
             ) as ann,
         ):
             self._remote = remote
+            if self._ping_every > 0:
+                self.tg.start_soon(self._ping_remote)
             await super().run_(task_status=task_status)
             # The initial sync is done: report the gate as running on the
             # remote side, lest ``wait_sr`` complain that it never started.
             ann.started("running")
             await anyio.sleep_forever()
+
+    async def _ping_remote(self) -> None:
+        """
+        Probe the remote server, so that a network-dead remote is noticed.
+
+        A silent MQTT connection (half-open TCP, wedged NAT, a remote
+        host that froze) would otherwise keep the gate — and its
+        announcements — looking alive forever. Each probe is a trivial
+        ``i.stamp`` call; after ``miss`` consecutive failures the gate
+        raises :exc:`RemoteDead`, which ends it (and thereby withdraws
+        its announcements) so that monitoring notices.
+        """
+        missed = 0
+        while True:
+            await anyio.sleep(self._ping_every)
+            try:
+                with anyio.fail_after(self._ping_every):
+                    await self._remote.cmd(P("i.stamp"))
+            except TimeoutError:
+                missed += 1
+            except Exception as exc:
+                # Includes ServerLinkLost: the connection is gone.
+                raise RemoteDead(str(self.cf.get("server"))) from exc
+            else:
+                missed = 0
+                continue
+            if missed >= self._ping_miss:
+                raise RemoteDead(str(self.cf.get("server")))
 
     async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> None:
         """

@@ -52,6 +52,17 @@ class ServiceSupplanted(MoaTLinkError):  # noqa: D101
     pass
 
 
+@as_proxy("_EMLClRd")
+class RemoteDead(MoaTLinkError):
+    """
+    The remote side of a link gate stopped responding.
+
+    Raised by a link gate's ping loop after repeated probes of the
+    remote server went unanswered, so that the gate ends (withdrawing
+    its announcements) instead of silently assuming all is well.
+    """
+
+
 @as_proxy("_EMLClClr")
 class ServiceCleared(MoaTLinkError):  # noqa: D101
     pass

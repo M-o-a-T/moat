@@ -41,19 +41,15 @@ offline with the generated KWB files, 2026-09-28): 3277, 276 and 55
 registers in `heat`, `aux` and `stiebel`, plus the `stiebelfake` server
 unit. No destination is a marked (`:…`) or `legacy.…` path any more.
 
-## Switching the pollers (stage 2)
+## Switching the pollers
 
-The `gate.kv.heat` and `gate.kv.temp` gateways are bidirectional. While
-they run, whatever the Link pollers write is mirrored to MoaT-KV, so the
-legacy controller (`moat dev heat solvis`, still on MoaT-KV) keeps
-working. The pollers can therefore be switched before the cutover; the
-gateways must stay until the legacy controller is gone (moat-n84.24).
-
-On the poller host:
+`heat`, `stiebel` and `stiebelfake` run on the standalone heating host,
+`aux` stays on the main node. I3.md has the hosts' configuration and the
+order of the deployment. Per poller host:
 
 1. Install the current MoaT (with the Link-based `moat modbus dev poll`)
    and run `code/rebuild.sh` as above.
-2. Copy the four files to `/etc/moat/modbus/{heat,aux,stiebel,stiebelfake}.yaml`
+2. Copy the files to `/etc/moat/modbus/{heat,aux,stiebel,stiebelfake}.yaml`
    (the name `packaging/moat-modbus/systemd/moat-modbus-poll@.service`
    expects) and put the `!env DEV_STIEBEL` / `!env DEV_SOLVIS` port tags
    back.
@@ -61,18 +57,19 @@ On the poller host:
    `systemctl enable --now moat-modbus-poll@heat` (etc.).
 4. Check that values arrive from the new poller:
    `moat link -m data heat.s.pump.temp.in` shows a fresh timestamp and the
-   poller's client as origin; the legacy controller's view in MoaT-KV
-   keeps updating through the gateway. The `grid.s.*` power readings are
-   now retained.
+   poller's client as origin. The `grid.s.*` power readings are now
+   retained.
 5. Put the forecast job into production (see below), then stop the
    `temp_min` cron job.
 
-After the cutover (moat-n84.24):
+The `gate.kv.heat` and `gate.kv.temp` gateways are disabled, so the
+legacy MoaT-KV controller (`moat dev heat solvis`) no longer sees what
+the Link pollers write: the heating is uncontrolled between switching
+the `heat` poller and starting the heat units.
 
-6. Delete the gateways and the stale trees, e.g.
-   `moat link data gate.kv.heat delete -r`, likewise `gate.kv.temp`,
-   `legacy.heat` and `legacy.temp`. Don't use `moat link gate … delete`
-   for this: it deletes the path without the `gate.` prefix (moat-pxqy).
+After the cutover (moat-n84.24), delete the gateways and the stale
+trees: `moat link gate kv.heat delete -r`, likewise `kv.temp`, and
+`moat link data legacy.heat delete -r`, likewise `legacy.temp`.
 
 ## Home Assistant
 

@@ -21,13 +21,18 @@ bypass:
 ```
 
 - `when` is a path, or `[path, attr]`: watch `path`, the flag is
-  `value.get_(attr)`. A missing or non-true value means "off".
+  `value.get_(attr)`. A missing or non-true value means "off". Heat
+  passthru publishes `app.heat.passthru.state` as `{bypass: bool,
+  switching: str|None}` (moat-n84.26), so its configs use
+  `when: [!P app.heat.passthru.state, !P bypass]`.
 - With `dest` (sender side, e.g. the shim): while the flag is true,
   every request to this unit is sent to `dest` via Modbus-TCP.
 - Without `dest` (recipient side, e.g. the stiebel poller): only valid on
   a server unit that is attached to a client unit (`server:` key of a
   client unit). While the flag is true, every request is executed on the
-  client unit directly: the cached registers are treated as stale.
+  client unit directly: the cached registers are treated as stale, and
+  the client unit's own writes (`src` registers) pause, so they don't
+  fight the original controller. Polling (`dest`) continues.
 
 `bypass` is accepted both in `server[].units.N` and in the config of a
 client unit that has `server:`; both end up on the same unit context.
@@ -55,11 +60,17 @@ It requires a MoaT-Link client.
    returns `GATEWAY_TARGET_NO_RESPONSE`. Unit ID and transaction ID are
    restored by the server as now.
 
-4. **Wiring in `dev_poll`**: create the `Bypass` for server units and
+4. **Pause our own writes.** A client `Unit` gets a write gate:
+   while it is closed, `Slot.write` returns without writing and the
+   changed values stay marked as changed; opening it triggers a write of
+   whatever changed meanwhile. The recipient-side `Bypass` closes the
+   gate of its client unit while active.
+
+5. **Wiring in `dev_poll`**: create the `Bypass` for server units and
    for attached client units; reject `bypass` without `dest` on a unit
    with no client unit, and any `bypass` without a link.
 
-5. **Tests** (`tests/moat_modbus/test_bypass.py`, `Scaffold`, all TCP):
+6. **Tests** (`tests/moat_modbus/test_bypass.py`, `Scaffold`, all TCP):
    a fake device server (C); poller B polls C and serves it as unit 3
    with `bypass: {when: …}`; poller A serves unit 101 from Link data
    with `bypass: {when: …, dest: B/3}`.
@@ -70,25 +81,13 @@ It requires a MoaT-Link client.
    - C's exception (illegal address) arrives at A's client with the
      same code; C unreachable → `GATEWAY_TARGET_NO_RESPONSE`;
    - toggling the flag takes effect on the next request;
-   - `when` as `[path, attr]`.
+   - `when` as `[path, attr]`;
+   - while B's bypass is on, B's `src` writes don't reach C; they are
+     written when it goes off.
 
-6. **Docs**: `docs/moat-modbus/dev-poll.md` (the `bypass` section;
+7. **Docs**: `docs/moat-modbus/dev-poll.md` (the `bypass` section;
    replaces the "forward: true not fully implemented" note if that's
    now moot), `moat/dev/heat/HEAT.md` §2.8 (replace the RPC-service
    description), and the example configs
    (`modbus.stiebelfake.yaml`, `modbus.stiebel.yaml`) with a commented
    `bypass` section pointing at `app.heat.passthru.state`.
-
-## Open questions (for review)
-
-- **Our own writes on the recipient side.** `modbus.stiebel.yaml`
-  writes `cmd.mode`/`cmd.power` from `src` every 5 s. In bypass those
-  would fight the original controller. HEAT.md §2.8 and moat-n74 want
-  them suppressed. Proposal: while a unit's bypass is active, its
-  client unit's slot writes pause (resume, with current values, when
-  it ends). Part of this issue, or separate?
-- **moat-n74** (forward to an RPC unit) is superseded by this design.
-  Close it, or keep it for the write suppression above?
-- With `when` pointing at `app.heat.passthru.state`, the flag would be
-  `state == "original"`, not a bool. Either the passthru unit also
-  publishes a bool, or `when` gets an optional value to compare with.

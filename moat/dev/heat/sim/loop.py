@@ -139,7 +139,8 @@ class ClosedLoop:
         self.ts: dict[Path, float] = {}
         self.origin: dict[Path, str | None] = {}
         self.slots: list[CoreSlot] = []
-        self.writes: list[tuple[float, Path, Any]] = []
+        self.writes: list[tuple[float, Path, Any, str]] = []
+        """The cores' outputs that changed something: time, path, value, core."""
         self.watchers: list[Callable[[float, Path, Any], None]] = []
         self.refresh = refresh
         self._errors: set[str] = set()
@@ -324,7 +325,7 @@ class ClosedLoop:
                 slot.wake_at = inf if res.wake_in is None else self.now + res.wake_in
                 for path, value in res.outputs.items():
                     if self.set(path, value, slot.name):
-                        self.writes.append((self.now, path, value))
+                        self.writes.append((self.now, path, value, slot.name))
                         busy = True
             if not busy and not any(s.dirty for s in self.slots):
                 return

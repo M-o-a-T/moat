@@ -99,7 +99,10 @@ assert it explicitly instead.
    Scaffold (spurious timeouts), fall back to real time with
    `SimLink(scale=…)` and shortened unit timings via config items;
    record the outcome here before going on.
-2. Invariant checker + `full_loop()`; move the existing closed-loop
+2. (In progress: checker and move done; the invariants found
+   moat-coaw and moat-h082, and that `pump_loop` didn't announce the
+   pump service. New closed-loop scenarios still to add.)
+   Invariant checker + `full_loop()`; move the existing closed-loop
    scenarios (`test_pump_states`, `test_pellet`, `test_frost`,
    `test_passthru`) into `test_closed_loop.py` with the checker (their
    unit-specific helpers move along or into a shared module), add the

@@ -21,10 +21,6 @@ from moat.dev.heat.pump import (
     TransitionError,
     next_state,
 )
-from moat.dev.heat.sim.trace import load
-
-from .legacy import trace_file
-from .pump_loop import pump_loop
 
 from typing import Any
 
@@ -508,74 +504,6 @@ def test_cop():
     assert all(b >= a for a, b in pairwise(cops))
     # legacy gain: 0.0001 * m_power per step
     assert want - d.state.cop == pytest.approx((want - 3.0) * (1 - 0.0002) ** 3000, abs=0.01)
-
-
-# closed loop
-
-
-def _metrics(runs: list[tuple[float, str]], end: float) -> dict[str, float]:
-    "first start, time spent running, number of runs and of de-ice cycles"
-    first = next((t for t, r in runs if r == "run"), None)
-    t_run = 0.0
-    for (t, r), (t2, _) in zip(runs, [*runs[1:], (end, "")], strict=True):
-        if r == "run":
-            t_run += t2 - t
-    return {
-        "first": first,
-        "frac": t_run / end,
-        "runs": sum(1 for _, r in runs if r == "run"),
-        "ice": sum(1 for _, r in runs if r == "ice"),
-    }
-
-
-def _legacy(name: str) -> tuple[dict[str, float], dict[str, Any]]:
-    tr = load(trace_file(name).read_text())
-    runs = []
-    for t, what, val in tr["events"]:
-        if what == "run" and (not runs or runs[-1][1] != val):
-            runs.append((t, val))
-    end = tr["samples"][-1]["t"]
-    return _metrics(runs, end), tr["samples"][-1]
-
-
-SCEN = {
-    "cold_start": ({"buffer": {"t_init": (32, 22)}, "weather": {"mean": 2, "amp": 3}}, 10, 6),
-    "steady": ({"buffer": {"t_init": (50, 35)}, "weather": {"mean": 6, "amp": 3}}, 8, 12),
-    "deice": (
-        {
-            "buffer": {"t_init": (35, 22)},
-            "weather": {"mean": 1.5, "amp": 1, "rh_mean": 0.95, "rh_amp": 0},
-        },
-        10,
-        6,
-    ),
-}
-
-
-@pytest.mark.parametrize("name", list(SCEN))
-def test_closed_loop_vs_legacy(name: str) -> None:
-    "the new core behaves like the legacy controller in the same plant"
-    plant, start_h, hours = SCEN[name]
-    loop = pump_loop(plant, start=start_h * 3600)
-    runs: list[tuple[float, str]] = []
-
-    def cb(lp) -> None:
-        r = (lp.get(OUT) or {}).get("run")
-        if r and (not runs or runs[-1][1] != r):
-            runs.append((lp.now, r))
-
-    loop.run(hours * 3600, 10, cb)
-    new = _metrics(runs, hours * 3600)
-    old, last = _legacy(name)
-    tr = loop.plant.truth()
-
-    assert new["first"] is not None
-    assert abs(new["first"] - old["first"]) < 300
-    assert new["frac"] == pytest.approx(old["frac"], abs=0.2)
-    assert abs(new["ice"] - old["ice"]) <= 1
-    assert abs(new["runs"] - old["runs"]) <= max(3, old["runs"] // 2)
-    assert tr["tb_water"] == pytest.approx(last["tb_water"], abs=10)
-    assert tr["tb_heat"] == pytest.approx(last["tb_heat"], abs=10)
 
 
 def test_unit_inputs():

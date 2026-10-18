@@ -63,6 +63,10 @@ class Node:
           * ``None``: incoming data are equal
           * ``False``: incoming timestamp is older
           * ``True``: otherwise
+
+        Equal data with a newer timestamp update the stored metadata (but
+        still return ``None``): the timestamp then says when the value was
+        last confirmed.
         """
         assert isinstance(meta, MsgMeta)
         s = self.get(item)
@@ -76,6 +80,8 @@ class Node:
                     return None
                 return False
             if same:
+                if meta.timestamp > s._meta.timestamp:  # noqa:SLF001
+                    s._meta = meta  # noqa:SLF001
                 return None
             if meta.timestamp < s._meta.timestamp:  # noqa:SLF001
                 return False

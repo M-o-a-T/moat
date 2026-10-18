@@ -31,6 +31,7 @@ from .unit import Step, Unit
 from typing import Any
 
 __all__ = [
+    "CLEANING",
     "Mode",
     "PelletCfg",
     "PelletCore",
@@ -46,14 +47,26 @@ class Mode(StrEnum):
     OFF = "off"
     STARTING = "starting"
     RUNNING = "running"
-    """Codes 2 and 4. The load is controlled only in this mode."""
+    """Code 4. The load is controlled only in this mode."""
 
 
-def classify(code: int) -> Mode:
-    """Classify a KWB state code (legacy ``run_set_pellet``)."""
+CLEANING = 2
+"""The KWB state code for cleaning, which happens while starting or running."""
+
+
+def classify(code: int, prev: Mode = Mode.RUNNING) -> Mode:
+    """
+    Classify a KWB state code (legacy ``run_set_pellet``).
+
+    Args:
+        code: The burner's state code.
+        prev: The mode before; cleaning doesn't change it.
+    """
+    if code == CLEANING:
+        return prev
     if code in (0, 1, 3, 5, 6, 7, 8, 9) or 21 <= code <= 35 or code >= 43:
         return Mode.OFF
-    if code not in (2, 4):
+    if code != 4:
         return Mode.STARTING
     return Mode.RUNNING
 
@@ -192,6 +205,15 @@ class PelletCore:
         self.pid_load.update_cfg(cfg.p_load)
         self.pid_buffer.update_cfg(cfg.p_buffer)
 
+    def _mode(self) -> Mode:
+        "the mode the state says the burner is in"
+        st = self.state
+        if st.pellet_on:
+            return Mode.RUNNING
+        if st.t_pellet_on is not False:
+            return Mode.STARTING
+        return Mode.OFF
+
     def _limits(self, v: dict[str, float], dem: dict[str, Any]) -> tuple[float, float]:
         "``tp_limit`` (legacy run_pump) and the start-up temperature"
         a = self.cfg.adj
@@ -279,7 +301,7 @@ class PelletCore:
         save = self._edges(wanted, vals, now)
         old = (st.t_pellet_on, st.pellet_on, st.load)
 
-        mode = classify(int(code))
+        mode = classify(int(code), self._mode())
         tp_limit, start = self._limits(vals, dem)
         used = False
         if mode == Mode.OFF:

@@ -164,7 +164,7 @@ Polled from the KWB burner (`modbus.heat.yaml`).
 
 | Path | Writer | Description |
 | --- | --- | --- |
-| `heat.s.pellets.state` | poller | KWB state code (off: 0,1,3,5–9,21–35,≥43; 2 starting; 4 running). |
+| `heat.s.pellets.state` | poller | KWB state code (off: 0,1,3,5–9,21–35,≥43; 4 running; 2 cleaning, mode unchanged; else starting). |
 | `heat.s.pellets.temp.top` | poller | Burner top temperature. °C. |
 | `heat.s.pellets.temp.goal(.cmd)` | poller / pellet | Temperature goal, read back and commanded. °C. |
 | `heat.s.pellets.load` | poller | Actual burner load. 0…1. |

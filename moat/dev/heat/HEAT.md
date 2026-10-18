@@ -685,8 +685,8 @@ Owns `p_load`, `p_buffer`.
 
 Port of `run_set_pellet` plus the pellet writes from `run_pump`:
 
-- State-code classification (off codes 0,1,3,5–9,21–35,≥43; starting;
-  running = 4); tri-state `t_pellet_on`: `False` (off),
+- State-code classification (off codes 0,1,3,5–9,21–35,≥43; running
+  = 4; cleaning = 2 keeps the previous mode; starting otherwise); tri-state `t_pellet_on`: `False` (off),
   start timestamp (starting / running < `lim.pellet.t_min`), `True`
   (settled). `hot` tells the selector the burner can take over.
 - Load branches: `force` input, preload when far below setpoint,
@@ -703,7 +703,9 @@ Port of `run_set_pellet` plus the pellet writes from `run_pump`:
 
 As implemented (`pellet.py`):
 
-- `mode` is `off`, `starting` or `running` (codes 2 and 4); the load is
+- `mode` is `off`, `starting` or `running` (code 4). Cleaning (code 2)
+  happens while starting or running and leaves the mode as it was; after
+  a restart that mode is taken from the saved state. The load is
   controlled only while `running`. Until the burner reports code 4
   (`pellet_on`), the unit asks for load 1 and the start-up temperature
   (`startup.buf` above the warmer buffer sensor, also written to the patch

@@ -69,11 +69,26 @@ class Run:
 
 
 def test_classify():
-    "every KWB state code: off, starting, or running (2 and 4)"
+    "every KWB state code: off, starting, running (4), or unchanged (2, cleaning)"
     off = {0, 1, 3, 5, 6, 7, 8, 9, *range(21, 36), *range(43, 60)}
     for c in range(60):
-        want = Mode.RUNNING if c in (2, 4) else Mode.OFF if c in off else Mode.STARTING
+        if c == 2:
+            for m in Mode:
+                assert classify(c, m) == m
+            continue
+        want = Mode.RUNNING if c == 4 else Mode.OFF if c in off else Mode.STARTING
         assert classify(c) == want, c
+
+
+@pytest.mark.parametrize("before", [0, 11, 4])
+def test_cleaning(before: int):
+    "code 2 (cleaning) keeps the mode, also across a restart"
+    r = Run()
+    r.step(state=before)
+    mode = r.step()[OUT]["mode"]
+    assert r.step(state=2)[OUT]["mode"] == mode
+    r = Run(pstate=r.st)
+    assert r.step(state=2)[OUT]["mode"] == mode
 
 
 def test_t_pellet_on():

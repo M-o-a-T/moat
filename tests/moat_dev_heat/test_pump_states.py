@@ -440,6 +440,21 @@ def test_seq_continues():
     assert d2.req["seq"] >= seq
 
 
+def test_hot_inflow():
+    "the heat pump stops before its inflow trips it, and doesn't start again while the buffer is hot"
+    d = _running()
+    d.step(t_in=56.0, t_out=60.0)
+    assert d.run == "down"
+    assert d.out[OUT]["reason"] == "OFF inflow hot"
+    d.step(t_in=50.0, t_out=51.0, tb_low=50.0)
+    assert d.run == "off"
+    d.step(force_start=True)
+    assert d.run == "off"
+    assert d.out[OUT]["reason"] == "inflow hot"
+    d.step(tb_low=49.5)
+    assert d.run != "off"
+
+
 def test_missing_sensor():
     "without all sensors the core doesn't start"
     d = Drive()

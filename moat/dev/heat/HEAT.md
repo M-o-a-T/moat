@@ -661,6 +661,12 @@ Core structure:
   the 30 s no-power rule.
 - `pid.load` gains (Kd/Tf) follow `pellet.out.mode` (formerly changed
   by the pellet code).
+- Inflow limit (new; the legacy code relied on the heat pump's own
+  over-temperature cutout): in `wait_power`, `temp` and `run`, the heat
+  pump is stopped once `t_in` reaches `stop.max_in` (default 55 °C;
+  reason `OFF inflow hot`), and `off` doesn't start it, not even when
+  forced, while the buffer return `tb_low` is at least `stop.max_start`
+  (default 50 °C).
 - `t_change_max` exceeded → abnormal exit → emergency shutdown.
 - `avg_heat`/`avg_heat_t` (used for the pellet-assisted start
   decision) belong to pump state only.

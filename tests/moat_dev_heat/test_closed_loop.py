@@ -66,19 +66,11 @@ class Invariants:
     - the pump unit doesn't command the heat pump while it is bypassed.
 
     Brief violations, as sensor lag and start-up cause, are allowed for
-    the given grace periods (seconds). ``trip=False`` skips the trip
-    check, for scenarios where a trip is known to happen.
+    the given grace periods (seconds).
     """
 
-    def __init__(
-        self,
-        stop_delta: float = 3,
-        flow_grace: float = 30,
-        pwm_grace: float = 120,
-        trip: bool = True,
-    ):
+    def __init__(self, stop_delta: float = 3, flow_grace: float = 30, pwm_grace: float = 120):
         self.stop_delta = stop_delta
-        self.trip = trip
         self.flow_grace = flow_grace
         self.pwm_grace = pwm_grace
         self._no_flow: float | None = None
@@ -92,11 +84,8 @@ class Invariants:
         now = lp.now
         bypassed = passthru(lp.get(PASSTHRU))
 
-        if self.trip:
-            assert hp.stage != "trip", f"t={now}: the heat pump tripped"
-            assert tr["t_out"] < lp.plant.cfg.heat_pump.trip_out, (
-                f"t={now}: t_out {tr['t_out']:.1f}"
-            )
+        assert hp.stage != "trip", f"t={now}: the heat pump tripped"
+        assert tr["t_out"] < lp.plant.cfg.heat_pump.trip_out, f"t={now}: t_out {tr['t_out']:.1f}"
 
         if hp.stage == "run" and tr["r_flow"] < 0.5:
             if self._no_flow is None:
@@ -335,10 +324,7 @@ def test_pellet_vs_legacy():
                 "temp": lp.get(INPUT_PATHS["pellet_temp"]),
             })
 
-    # The selector is pinned to "heat pump allowed", so the heat pump runs
-    # on while the burner heats the buffer, until its inflow trips it, as
-    # in the legacy trace (moat-h082).
-    loop.run(sc.duration, 10, _with(Invariants(trip=False), cb))
+    loop.run(sc.duration, 10, _with(Invariants(), cb))
     new = _pellet_stats(rows)
     ref = _pellet_stats([
         {"code": s["m_pellet_state"], "run": s["run"], "load": s["p_load"], "temp": s["p_temp"]}

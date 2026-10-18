@@ -296,7 +296,8 @@ async def test_flow_dead_during_emergency(cfg, jump) -> None:  # noqa: ARG001
         await anyio.sleep(30)
         h.sim.plant.inject_error(":2", 123)
         await h.until(lambda: h.get(PUMP_ERR), 120)
-        await h.until(lambda: _is(_mode(h.get(FLOW_REQ)), "off"), 600)
+        await h.until(lambda: _is(h.get(MODE), 0), 120)
+        await anyio.sleep(300)
         assert await h.get(MODE) == 0
         assert await h.get(PWM) == pwm  # unchanged: nobody turns it off
         assert h.sim.plant.inputs.pwm == pwm
@@ -328,7 +329,8 @@ async def test_overrides(cfg, jump) -> None:  # noqa: ARG001
 @pytest.mark.trio
 async def test_force_start(cfg, jump) -> None:  # noqa: ARG001
     "a warm buffer keeps the heat pump off, unless it is forced on once"
-    warm = {"buffer": {"t_init": (65, 60)}, "weather": {"mean": 15, "amp": 1}}
+    # warm at the top, but below the start limit at the bottom
+    warm = {"buffer": {"t_init": (62, 45)}, "weather": {"mean": 15, "amp": 1}}
     async with Heat(cfg, {"plant": warm}) as h:
         await anyio.sleep(120)
         assert await h.run() == "off"

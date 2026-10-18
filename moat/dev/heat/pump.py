@@ -242,6 +242,14 @@ class _Stop(BaseModel):
     (``lim.defrost.temp``)"""
     idle: float = 25
     """… but ends once it is warmer than that and cooler than this (``lim.idle``)."""
+    max_in: float | None = 55
+    """
+    Stop the heat pump when its inflow ``t_in`` reaches this, °C, before
+    its own over-temperature cutout trips. `None`: no limit.
+    """
+    max_start: float | None = 50
+    """Don't start the heat pump while the buffer return ``tb_low`` is this warm, °C.
+    `None`: no limit."""
 
 
 class _DeIce(BaseModel):
@@ -437,6 +445,14 @@ class PumpCore:
             self._power, self._mode = 0, self.cfg.mode_off
         else:
             self._power, self._mode = min(p, 1), self.cfg.mode_on
+
+    def _hot_inflow(self, v: dict[str, Any]) -> bool:
+        "whether the heat pump's inflow is too hot to go on; sets the reason"
+        lim = self.cfg.stop.max_in
+        if lim is None or v["t_in"] < lim:
+            return False
+        self._reason = "OFF inflow hot"
+        return True
 
     def _seen_seq(self, req: Any) -> None:
         """
@@ -819,6 +835,9 @@ class PumpCore:
             if self._pending:
                 self._reason = "passthru"  # about to hand the heat pump over
                 return None
+            if stp.max_start is not None and v["tb_low"] >= stp.max_start:
+                self._reason = "inflow hot"  # not even when forced
+                return None
             if force:
                 r = None
             elif t_pellet_on is True:
@@ -860,8 +879,12 @@ class PumpCore:
         if run == R.flow:
             return R.wait_power if v["r_flow"] >= s.init.rate * 3 / 4 else None
         if run == R.wait_power:
+            if self._hot_inflow(v):
+                return R.off
             return R.temp if v["m_power"] >= s.min_power else None
         if run == R.temp:
+            if self._hot_inflow(v):
+                return R.off
             st.t_load = now
             return R.run if t_out - t_in > s.delta else None
         if run == R.run:
@@ -903,6 +926,9 @@ class PumpCore:
         st = self.state
         a = cfg.adj
         t_cur, t_adj = t["t_cur"], t["t_adj"]
+
+        if self._hot_inflow(v):
+            return R.off
 
         if pellet_on and v["tb_heat"] > t_cur:
             # (never true while heating: then t_cur is tb_heat; legacy quirk)

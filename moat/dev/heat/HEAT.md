@@ -1013,8 +1013,16 @@ persisted PID timestamps, override expiry and comparison with MoaT-Link
 message timestamps, comes from `moat.util.time.time()`; tests patch it to
 advance together with the mock clock. Closed-loop tests of the cores need
 neither: they call `core.step()` and `sim.step()` in a plain loop.
-Scaffold tests use real time (MoaT-Link message timestamps are
-wall-clock).
+
+Most Scaffold tests use real time with short timeouts. The end-to-end
+scenarios (`test_integration.py`, `test_restart.py`) run all units, the
+simulator and a Scaffold under trio's `MockClock` with autojump (5 ms
+threshold), at about 24× real time. Their wall clock (`WallClock`)
+follows the mock clock and never goes backwards, not even from one test
+to the next (the Link server's connection-rate check keeps state across
+the tests in a process), and it advances between any two readings
+(MoaT-Link keeps an update only if its timestamp is newer). They are marked `slow` and not run by default
+(`pytest -m slow`).
 
 ### 5.3 Plant simulator
 
@@ -1078,7 +1086,11 @@ scenario:
 - the heat pump never has load while flow is zero,
 - `t_out` stays below the trip temperature,
 - PWM is > 0 whenever `t_out - t_in > stop_delta`,
-- no output is written by the pump unit while passthru is `original`.
+- the pump unit sends no commands to the heat pump while passthru is
+  bypassed.
+
+The closed-loop checks are `Invariants` in `test_closed_loop.py`; the
+end-to-end ones are `CheckedSim` in `test_integration.py`.
 
 Scenarios: cold start / warm-up, steady state, de-ice, WP → pellet and
 pellet → WP handover (no buffer dip below `t_low`), pellet ignition

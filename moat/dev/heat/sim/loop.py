@@ -210,8 +210,13 @@ class ClosedLoop:
         A steady reading is sent again after `refresh` seconds, as the
         Modbus poller does.
         """
+        stale = {p for s in self.plant.faults.stale for p in self.sensors.get(s, ())}
         for p, v in sensor_items(self.plant.sensors(), self.sensors, self._errors):
-            force = v is not None and self.wall - self.ts.get(p, -inf) >= self.refresh
+            force = (
+                v is not None
+                and p not in stale
+                and self.wall - self.ts.get(p, -inf) >= self.refresh
+            )
             self._set(p, v, force=force)
 
     def apply_inputs(self) -> None:

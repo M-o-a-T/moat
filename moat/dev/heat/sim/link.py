@@ -92,11 +92,12 @@ class SimLink:
     async def publish(self) -> None:
         """Publish the plant's changed sensor readings, and steady ones every `refresh` seconds."""
         now = time()
+        stale = {p for s in self.plant.faults.stale for p in self.sensors.get(s, ())}
         for path, value in sensor_items(self.plant.sensors(), self.sensors, self._errors):
             if value is None:
                 await self.link.d_set(path, retain=True)
                 continue
-            force = now - self._sent.get(path, -inf) >= self.refresh
+            force = path not in stale and now - self._sent.get(path, -inf) >= self.refresh
             if await self.writer.set(path, value, force=force):
                 self._sent[path] = now
 

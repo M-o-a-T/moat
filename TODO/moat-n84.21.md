@@ -106,8 +106,8 @@ assert it explicitly instead.
    `test_passthru`) into `test_closed_loop.py` with the checker (their
    unit-specific helpers move along or into a shared module), add the
    new closed-loop ones.
-3. `test_integration.py`: the Link scenarios above.
-4. `test_restart.py`.
+3. Done: `test_integration.py`, the Link scenarios above.
+4. Done: `test_restart.py`.
 5. HEAT.md §5 (time handling for Link tests, as implemented; scenario
    table), close.
 

@@ -1,79 +1,94 @@
-# moat-nnz: raw-request RPC service for `moat modbus dev poll`
+# moat-nnz: switchable Modbus-TCP bypass for server units
 
-Goal: a client unit of `moat modbus dev poll` can announce a MoaT-Link
-service that executes raw Modbus requests on that unit, sharing the bus
-with the poller's own requests. Needed for heat passthru (moat-n84.26:
-the Solvis shim forwards the original controller's requests verbatim).
+Goal: transparent gatewaying for heat passthru (moat-n84.26). The Solvis
+talks to our shim (`modbus.stiebelfake.yaml`, RTU server unit 101); in
+passthru, every request must reach the real heat pump (polled by
+`modbus.stiebel.yaml`, which also serves that client unit as TCP server
+unit 3 on port 503) and the device's answer must come back unchanged.
+Modbus-TCP is the transport, so no new RPC service is needed.
 
-## Findings
+## Configuration
 
-- Every request of a client unit goes through `HostCommon.execute`
-  (`moat/modbus/client.py`), under the host's `CapacityLimiter`. A serial
-  host has capacity 1, so one request is on the wire at a time; TCP
-  requests are matched by transaction ID. Raw requests that use the same
-  `execute` are therefore serialised with polling for free.
-- `moat.lib.modbus.pdu` has FC 1–6, 15, 16. **FC 23** (read/write
-  multiple registers) is missing.
-- `execute` raises `ModbusError(result)` for exception responses. It
-  wraps a PDU, which the RPC codec can't carry; exceptions only cross
-  MoaT-Link intact when registered with `moat.lib.proxy.as_proxy`.
-- Services: `link.announcing(path, service=MsgHandler, host=...)`;
-  callers use `link.get_service(path)` (see
-  `tests/moat_link/test_service_refresh.py`). The announcement goes away
-  when the context ends.
+A server unit gets an optional section:
+
+```yaml
+bypass:
+  when: !P path.to.bool.value
+  dest:            # optional
+    host: name
+    port: 503      # optional, default 502
+    unit: 3
+```
+
+- `when` is a path, or `[path, attr]`: watch `path`, the flag is
+  `value.get_(attr)`. A missing or non-true value means "off".
+- With `dest` (sender side, e.g. the shim): while the flag is true,
+  every request to this unit is sent to `dest` via Modbus-TCP.
+- Without `dest` (recipient side, e.g. the stiebel poller): only valid on
+  a server unit that is attached to a client unit (`server:` key of a
+  client unit). While the flag is true, every request is executed on the
+  client unit directly: the cached registers are treated as stale.
+
+`bypass` is accepted both in `server[].units.N` and in the config of a
+client unit that has `server:`; both end up on the same unit context.
+It requires a MoaT-Link client.
 
 ## Steps
 
-1. **FC 23 in `moat.lib.modbus`.** `ReadWriteMultipleRegistersRequest`
-   / `…Response`: encode/decode in both roles, registered with the
-   decoders. Tests in `tests/moat_lib_modbus` (round trip, wrong
-   lengths). Server-side handling of FC 23 in `moat.modbus.server` is
-   not part of this issue (the passthru shim's forwarding is).
+1. **`Bypass` object** (`moat/modbus/dev/bypass.py`): parses the config,
+   watches `when` (`link.d_watch`), exposes `active`, and has
+   `forward(request) -> PDU`. Its target is a client `Unit`: for `dest`
+   one obtained from the poller's `ModbusClient`
+   (`host_service(host, port)` / `unit_scope(unit)`), else the attached
+   client unit. Runs as a task in `dev_poll`'s task group.
 
-2. **Raw requests on a client `Unit`.** `Unit.request(fc, addr, *,
-   count=None, values=None, w_addr=None) -> list[int] | list[bool] |
-   None`: builds the PDU for FC 1–6, 15, 16, 23, runs it through
-   `host.execute`, returns the read registers/bits (None for pure
-   writes). FC 23 reads `count` at `addr` and writes `values` at
-   `w_addr`. No range checks beyond what the PDU encoder needs.
+2. **Dispatch.** `BaseModbusServer.process_request` checks
+   `getattr(ctx, "bypass", None)`; if it is active, the request goes to
+   `bypass.forward` instead of the context. This covers plain
+   `UnitContext`s (shim) and `ServerUnitContext`s (attached client
+   units) alike, including writes.
 
-3. **Serialisable Modbus exceptions.** `ModbusError` keeps its
-   behaviour but is constructible from `(function_code,
-   exception_code)` and registered with `as_proxy("_mbErr")`, so an RPC
-   caller gets a `ModbusError` whose `.code` is the device's exception
-   code. Transport errors (timeouts, connection loss) propagate as they
-   are.
+3. **Transparent replies.** Forwarding returns the device's response
+   unchanged. `client.Unit.process_request` currently maps every error
+   to `DEVICE_FAILURE`; change it so that a `ModbusError` returns the
+   device's own exception response, and a timeout or connection loss
+   returns `GATEWAY_TARGET_NO_RESPONSE`. Unit ID and transaction ID are
+   restored by the server as now.
 
-4. **The service.** `moat/modbus/dev/service.py`: `RawService(MsgHandler)`
-   with `cmd_req(fc, addr, count=None, values=None, w_addr=None)` →
-   `Unit.request`. `ClientDevice._ctx` announces it when the unit's
-   config has
+4. **Wiring in `dev_poll`**: create the `Bypass` for server units and
+   for attached client units; reject `bypass` without `dest` on a unit
+   with no client unit, and any `bypass` without a link.
 
-   ```yaml
-   service:
-     path: !P modbus.stiebel   # run.host.<host>.<path>
-     host: heat                # optional; default: this machine's name
-   ```
+5. **Tests** (`tests/moat_modbus/test_bypass.py`, `Scaffold`, all TCP):
+   a fake device server (C); poller B polls C and serves it as unit 3
+   with `bypass: {when: …}`; poller A serves unit 101 from Link data
+   with `bypass: {when: …, dest: B/3}`.
+   - flag off: A answers from Link data, B from its cache (unchanged
+     behaviour);
+   - flag on: reads at A return C's live values, also for registers B
+     doesn't poll; writes at A reach C;
+   - C's exception (illegal address) arrives at A's client with the
+     same code; C unreachable → `GATEWAY_TARGET_NO_RESPONSE`;
+   - toggling the flag takes effect on the next request;
+   - `when` as `[path, attr]`.
 
-   and a MoaT-Link client is available. The announcement lives as long
-   as the device, so it vanishes when the unit (or the poller) stops.
-   Document the key in `docs/moat-modbus` (device config) and add
-   `service` to the config schema, if there is one.
-
-5. **Tests** (`tests/moat_modbus/test_service.py`, fake Modbus server
-   from `test_dev_server.py` plus `Scaffold`):
-   - RPC read/write for each FC (incl. 23 once the fake server handles
-     it, else against a stub unit) equals direct `Unit` access;
-   - polling and a burst of RPC requests on a host with capacity 1: the
-     fake server never sees two requests in flight;
-   - an illegal address raises `ModbusError` with
-     `ILLEGAL_DATA_ADDRESS` at the RPC caller;
-   - the service announcement disappears when the device context ends.
+6. **Docs**: `docs/moat-modbus/dev-poll.md` (the `bypass` section;
+   replaces the "forward: true not fully implemented" note if that's
+   now moot), `moat/dev/heat/HEAT.md` §2.8 (replace the RPC-service
+   description), and the example configs
+   (`modbus.stiebelfake.yaml`, `modbus.stiebel.yaml`) with a commented
+   `bypass` section pointing at `app.heat.passthru.state`.
 
 ## Open questions (for review)
 
-- One generic `req` command (above) vs. one command per function code.
-  Generic keeps the shim's forwarding a 1:1 mapping.
-- Announcement host default: this machine (as above), or required?
-- Add a CLI (`moat modbus dev req PATH FC ADDR …`) for manual testing,
-  or is `moat link` generic RPC enough?
+- **Our own writes on the recipient side.** `modbus.stiebel.yaml`
+  writes `cmd.mode`/`cmd.power` from `src` every 5 s. In bypass those
+  would fight the original controller. HEAT.md §2.8 and moat-n74 want
+  them suppressed. Proposal: while a unit's bypass is active, its
+  client unit's slot writes pause (resume, with current values, when
+  it ends). Part of this issue, or separate?
+- **moat-n74** (forward to an RPC unit) is superseded by this design.
+  Close it, or keep it for the write suppression above?
+- With `when` pointing at `app.heat.passthru.state`, the flag would be
+  `state == "original"`, not a bool. Either the passthru unit also
+  publishes a bool, or `when` gets an optional value to compare with.

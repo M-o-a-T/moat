@@ -79,7 +79,22 @@ assert it explicitly instead.
    `moat.dev.heat` / `moat.link` paths used by the units for other
    direct clock reads while at it.
 
-1. **Spike**: one Link scenario (warm-up to `run`) with MockClock +
+1. **Spike** — done (`test_integration.py::test_warmup`). Outcome:
+   - MockClock + Scaffold works, with two adjustments to the wall clock
+     (`WallClock`): it must strictly advance (MoaT-Link drops an update
+     whose timestamp isn't newer, and with a mock clock two updates can
+     share an instant), and it must start at the real time (the Link
+     server's connection-rate check keeps state across the tests in a
+     process and fails when time goes backwards). Autojump threshold
+     5 ms (50 ms was 4× slower); stable in the parallel suite.
+   - Speed: about 24× real time once running (30 simulated minutes in
+     76 s), plus ~6 s start-up. Logging doesn't matter.
+   - Found: the pump's stale-sensor abort fires after 900 s of a steady
+     `r_flow` — the simulator quantises flow without noise, and values
+     are published on change only, so "unchanged" ≠ "stale" (see
+     questions).
+
+   Original text: one Link scenario (warm-up to `run`) with MockClock +
    Scaffold + all units. If autojump doesn't cooperate with the
    Scaffold (spurious timeouts), fall back to real time with
    `SimLink(scale=…)` and shortened unit timings via config items;
@@ -96,3 +111,21 @@ assert it explicitly instead.
 
 Review: MockClock approved (step 1 confirms it); existing closed-loop
 scenarios move into `test_closed_loop.py`.
+
+## Questions (for review, after the spike)
+
+- **Link scenario length**: at ~24× real time, keep every Link scenario
+  to ≤ 15 simulated minutes (≈ 40 s each; emergency, stale sensor,
+  restart, watchdog, override expiry with short durations, force start
+  all fit), and leave the long ones (handover, day/night, cycling) to
+  the closed loop? Mark the Link scenarios `slow`?
+- **Stale-sensor check**: the pump unit treats a sensor value that hasn't
+  changed for `stale` (900 s) as stale and stops the heat pump. With
+  publish-on-change, a steady reading (flow at a fixed PWM, quantised)
+  looks exactly like a dead sensor. Options: (a) keep it, and give the
+  simulator's flow sensor some noise (assumes the real one fluctuates);
+  (b) like passthru, judge staleness by the pollers' error records
+  (`error.app.modbus…`, `error.run.host…`) instead of value age;
+  (c) both: value age only for sensors that are known to fluctuate
+  (temperatures). Production data (PATHS.md update rates) might tell
+  whether real flow readings ever sit still for 15 min.

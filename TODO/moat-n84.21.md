@@ -70,6 +70,14 @@ assert it explicitly instead.
 
 ## Steps
 
+0. **PID clock** (`moat.lib.pid`, own commit with a test): on CPython it
+   imports `time.monotonic` directly, so tests can't patch it; use
+   `moat.util.time.monotonic` there (MicroPython keeps `ticks_ms`).
+   Also `set_state(state.get("t", t or time()), …)` treats `t == 0` as
+   "no time" — MockClock starts at 0; use `is None`. Check the rest of
+   `moat.dev.heat` / `moat.link` paths used by the units for other
+   direct clock reads while at it.
+
 1. **Spike**: one Link scenario (warm-up to `run`) with MockClock +
    Scaffold + all units. If autojump doesn't cooperate with the
    Scaffold (spurious timeouts), fall back to real time with
@@ -77,16 +85,13 @@ assert it explicitly instead.
    record the outcome here before going on.
 2. Invariant checker + `full_loop()`; move the existing closed-loop
    scenarios (`test_pump_states`, `test_pellet`, `test_frost`,
-   `test_passthru`) into `test_closed_loop.py` with the checker, add the
+   `test_passthru`) into `test_closed_loop.py` with the checker (their
+   unit-specific helpers move along or into a shared module), add the
    new closed-loop ones.
 3. `test_integration.py`: the Link scenarios above.
 4. `test_restart.py`.
 5. HEAT.md §5 (time handling for Link tests, as implemented; scenario
    table), close.
 
-## Questions (for review)
-
-- HEAT.md §5.2 says Scaffold tests use real time; the issue asks for
-  scaled time. OK to go with MockClock (step 1 decides feasibility)?
-- Moving the existing closed-loop scenarios into `test_closed_loop.py`
-  (as HEAT.md §5.4 lists), or leave them where they are and only add?
+Review: MockClock approved (step 1 confirms it); existing closed-loop
+scenarios move into `test_closed_loop.py`.

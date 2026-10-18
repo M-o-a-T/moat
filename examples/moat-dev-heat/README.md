@@ -14,6 +14,7 @@ moat modbus dev poll modbus.heat.yaml
 | `modbus.aux.yaml` | SDM630/SDM720 meters on the other host, Solvis |
 | `modbus.stiebel.yaml` | Stiebel heat pump |
 | `modbus.stiebelfake.yaml` | Stiebel emulation for the Solvis controller |
+| `modbus.wilo.yaml` | Wilo-Para MAXO heating-circuit circulation pump |
 
 ## Changes from the MoaT-KV version
 
@@ -107,3 +108,44 @@ moat link job -g debug at weather.temp.min debug
 For production, put the job into the `default` group with `dst` set to
 `temp.min.forecast`, the key in a non-`test` item, and a start time
 (`-t 0`) so that `moat link job run` starts it.
+
+## Heating-circuit pump
+
+The heating circuit's circulation pump is a Wilo-Para MAXO on Modbus
+(moat-565). Its speed setpoint replaces the legacy GPIO heat pin that
+the `heat_valve` unit used to toggle: the poller
+(`modbus.wilo.yaml`, delivery state: 19200 baud, 8E1, address 101)
+forwards `heat.s.heating.pump.cmd.duty` to the pump, together with the
+heat valve's on/off state, and polls its sensors to
+`heat.s.heating.pump.*`.
+
+Quasi-static settings — the control function (constant differential
+pressure), the fallback presets (30 % duty, on) and the ten-minute
+bus-command timer — are held by the poller as `const:` values and
+rewritten every minute, so a lost frame can't corrupt them. When the
+bus-command timer expires nonetheless, the pump continues at its
+presets instead of stopping.
+
+The `envelope` job limits the pump speed: it tracks the difference
+between the target flow temperature (`app.heat.target.out.flow_temp`)
+and the actual one (`heat.s.heating.temp.out`), and scales the setpoint
+between `min_` and `max_` around `mid`, saturating beyond ±`spread`
+degrees. While the heat valve is off the setpoint is zero. The output
+moves only in `step` increments, matching the pump's duty-point raster.
+
+| File | Contents |
+| --- | --- |
+| `transform.envelope.yaml` | `moat link code transform.envelope get` |
+| `job.heat.pump.envelope.yaml` | `moat link job -g heat at heat.pump.envelope` |
+
+```shell
+moat link code transform.envelope set -a -d transform.envelope.yaml
+moat link job -g heat at heat.pump.envelope set -c transform.envelope \
+    -p actual heat.s.heating.temp.out -p target app.heat.target.out.flow_temp \
+    -p dst heat.s.heating.pump.cmd.duty -p enable app.heat.heat_valve.out.on \
+    -e mid 60 -e min_ 30 -e max_ 100 -e spread 10 -e step 0.5
+moat link job -g heat at heat.pump.envelope debug
+```
+
+Deploy the poller like the others (see “Switching the pollers” above);
+its serial port is a placeholder marked `EDIT`.

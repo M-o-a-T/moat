@@ -1,0 +1,124 @@
+# MoaT-Link version of the Wilo-Para MAXO circulation-pump poller, for
+# `moat modbus dev poll`. See README.md in this directory.
+#
+# The pump is the heating circuit's circulation pump (moat-565): its
+# speed replaces the legacy GPIO heat pin. The register file is
+# heating/WILO.yaml; the envelope job (transform.envelope.yaml) limits
+# the pump speed depending on the difference between the target and
+# the actual flow temperature.
+#
+# Delivery state of the pump: 19200 baud, 8E1, address 101.
+
+inc:
+  wilo:
+    include: heating/WILO.yaml
+
+slots:
+  1sec:
+    read_delay: 1
+    read_align: null
+    write_delay: 1
+  15sec:
+    read_delay: 15
+    read_align: null
+  1min:
+    read_delay: 60
+    read_align: true
+    write_delay: 60
+  write:
+    write_delay: 0.1
+
+ports:
+  /dev/ttyUSB0:  # EDIT: production uses !env DEV_WILO
+    serial:
+      baudrate: 19200
+      parity: "E"
+    101:
+      ref: inc.wilo
+      regs:
+        ctrl:
+          duty_point:
+            # The envelope job's limited speed setpoint, in %.
+            src: !P heat.s.heating.pump.cmd.duty
+            slot: 1sec
+          pump_cmd:
+            # On/off follows the heat valve's demand.
+            src: !P app.heat.heat_valve.out.on
+            slot: 1sec
+          control_function:
+            # Fixed: constant differential pressure.
+            const: 3
+            slot: 1min
+          bus_timer:
+            # Arm the fallback timer; the pump reverts to its presets
+            # when it expires. Rewritten every minute by the poller.
+            const: 6
+            slot: 1min
+          fb:
+            duty_point:
+              # Fallback speed while the bus is dead: 30 %.
+              const: 60
+              slot: 1min
+            pump_cmd:
+              const: 1
+              slot: 1min
+            control_function:
+              const: 3
+              slot: 1min
+          bus_timeout:
+            # Ten minutes before the fallback kicks in.
+            const: 600
+            slot: 1min
+
+        state:
+          flow:
+            dest: !P heat.s.heating.pump.flow
+            slot: 1sec
+          power:
+            dest: !P heat.s.heating.pump.power
+            slot: 1sec
+          energy:
+            dest: !P heat.s.heating.pump.energy
+            slot: 1min
+          op_time:
+            dest: !P heat.s.heating.pump.op_time
+            slot: 1min
+          speed:
+            dest: !P heat.s.heating.pump.speed
+            slot: 1sec
+          status:
+            dest: !P heat.s.heating.pump.status
+            slot: 1sec
+          error:
+            dest: !P heat.s.heating.pump.error
+            slot: 1sec
+          duty_point:
+            dest: !P heat.s.heating.pump.duty
+            slot: 1sec
+          duty_actual:
+            dest: !P heat.s.heating.pump.duty_actual
+            slot: 1sec
+          duty_max:
+            dest: !P heat.s.heating.pump.duty_max
+            slot: 15sec
+          duty_min:
+            dest: !P heat.s.heating.pump.duty_min
+            slot: 15sec
+          duty_100:
+            dest: !P heat.s.heating.pump.duty_100
+            slot: 15sec
+          duty_units:
+            dest: !P heat.s.heating.pump.duty_units
+            slot: 15sec
+          control_function:
+            dest: !P heat.s.heating.pump.control_function
+            slot: 15sec
+          pump_active:
+            dest: !P heat.s.heating.pump.active
+            slot: 1sec
+          timer_left:
+            dest: !P heat.s.heating.pump.timer_left
+            slot: 15sec
+          heartbeat:
+            dest: !P heat.s.heating.pump.heartbeat
+            slot: 15sec

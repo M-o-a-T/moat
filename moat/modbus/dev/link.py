@@ -36,7 +36,11 @@ class Register(BaseRegister):
         self.last_sent_value = None
 
         if self.src is None and self.dest is None:
-            if self.data.get("slot", "write") != "write":
+            if (
+                "const" not in self.data
+                or not isinstance(sl := self.data.get("slot", "write"), str)
+                or sl == "write"
+            ):
                 if getattr(self.data, "_is_orig", False):
                     logger.warning("%s:%s: no source/destination", self.unit, self.path)
             return
@@ -82,6 +86,18 @@ class Register(BaseRegister):
             if isinstance(const_val, Path):
                 mon = self._link.d_watch(const_val, meta=True)
                 await tg.start(self.from_link_const, mon)
+            elif (
+                self.src is None
+                and self.dest is None
+                and not self.is_server
+                and isinstance(sl := self.data.get("slot", None), str)
+                and sl != "write"
+                and self.slot.write_delay is not None
+            ):
+                # A scalar const on a slot with a write delay: keep writing
+                # it to the bus. This is for registers that must be refreshed
+                # regularly, like a watchdog/keepalive counter.
+                tg.start_soon(self._const_writer, self.slot.write_delay)
 
         if self.src is not None:
             slot = self.data.get("slot", None) if self.dest is None else None
@@ -161,6 +177,17 @@ class Register(BaseRegister):
                     continue
                 logger.debug("%s W %r", self.path, val)
                 await self._set(val)
+
+    async def _const_writer(self, delay: float) -> None:
+        """Keep writing this register's scalar ``const`` value to the bus.
+
+        The value is written raw, i.e. without factor/offset scaling, and
+        refreshed every @delay seconds so that a lost frame doesn't stick.
+        """
+        const = self.data["const"]
+        while True:
+            self.reg.set(const)
+            await anyio.sleep(delay)
 
     async def from_link_const(self, mon, *, task_status) -> None:
         """Copy an MQTT value to Modbus for const: !P (sets read value only, no bus update)"""

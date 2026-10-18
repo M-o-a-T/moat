@@ -1,0 +1,12 @@
+code: !P transform.envelope
+data:
+  actual: !P heat.s.heating.temp.out
+  target: !P app.heat.target.out.flow_temp
+  dst: !P heat.s.heating.pump.cmd.duty
+  enable: !P app.heat.heat_valve.out.on
+  mid: 60
+  min_: 30
+  max_: 100
+  spread: 10
+  step: 0.5
+info: 'Heating pump: limit the speed by the target-vs-actual flow temperature'

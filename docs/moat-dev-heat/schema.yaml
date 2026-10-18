@@ -1218,6 +1218,122 @@ title: Heating outflow temperature
 description: The heating circuit's outflow. °C.
 type: number
 ---
+_path: !P heat.s.heating.pump
+title: Heating-circuit pump
+description: >-
+  The Wilo-Para MAXO circulation pump of the heating circuit, polled by
+  the Modbus poller (examples/moat-dev-heat/modbus.wilo.yaml). Its speed
+  setpoint replaces the legacy GPIO heat pin (moat-565).
+---
+_path: !P heat.s.heating.pump.cmd.duty
+title: Pump speed setpoint
+description: >-
+  The speed setpoint computed by the `envelope` job from the
+  target-vs-actual flow-temperature difference; forwarded to the pump. %.
+type: number
+---
+_path: !P heat.s.heating.pump.duty
+title: Duty-point setpoint
+description: The pump's duty-point setpoint, as read back. %.
+type: number
+---
+_path: !P heat.s.heating.pump.duty_actual
+title: Actual duty point
+description: The pump's actual duty point. %.
+type: number
+---
+_path: !P heat.s.heating.pump.duty_max
+title: Maximum duty point
+description: The highest allowed duty point. %.
+type: number
+---
+_path: !P heat.s.heating.pump.duty_min
+title: Minimum duty point
+description: The lowest allowed duty point. %.
+type: number
+---
+_path: !P heat.s.heating.pump.duty_100
+title: Full-scale duty value
+description: >-
+  The physical value corresponding to a 100 % duty point, in the unit
+  given by `duty_units` (e.g. 8 m of head in dp_const mode).
+type: number
+---
+_path: !P heat.s.heating.pump.duty_units
+title: Duty-point unit
+description: >-
+  The unit of `duty_100`: kWh, W, s, rpm or m³/h, as the pump's control
+  function dictates.
+type: integer
+---
+_path: !P heat.s.heating.pump.speed
+title: Pump speed
+description: The pump's impeller speed. rpm.
+type: number
+---
+_path: !P heat.s.heating.pump.flow
+title: Flow rate
+description: >-
+  The calculated flow rate through the heating circuit. m³/h; 65535
+  means no data.
+type: number
+---
+_path: !P heat.s.heating.pump.pressure
+title: Differential pressure
+description: The pump's differential pressure. cmH₂O.
+type: number
+---
+_path: !P heat.s.heating.pump.power
+title: Power draw
+description: The pump's electrical power consumption. W.
+type: number
+---
+_path: !P heat.s.heating.pump.energy
+title: Energy consumption
+description: The pump's cumulative energy consumption. kWh.
+type: number
+---
+_path: !P heat.s.heating.pump.op_time
+title: Operating time
+description: The pump's cumulative operating time. h.
+type: number
+---
+_path: !P heat.s.heating.pump.control_function
+title: Control function
+description: >-
+  The pump's control mode: 1 n_const (constant speed), 3 dp_const
+  (constant differential pressure), 4 dp_var.
+type: integer
+---
+_path: !P heat.s.heating.pump.active
+title: Pump running
+description: The pump is running.
+type: boolean
+---
+_path: !P heat.s.heating.pump.status
+title: Pump status
+description: >-
+  The pump's status bitmap: bit 0 ready for operation, 1 running,
+  3 warning, 4 error (retry pending), 5 final error.
+type: integer
+---
+_path: !P heat.s.heating.pump.error
+title: Pump error
+description: The pump's warning or error code; 0 means none.
+type: integer
+---
+_path: !P heat.s.heating.pump.timer_left
+title: Bus-command timer
+description: >-
+  Time remaining before the pump falls back to its preset values,
+  having heard nothing on the bus. s.
+type: number
+---
+_path: !P heat.s.heating.pump.heartbeat
+title: Heartbeat
+description: The pump's interface heartbeat counter.
+type: integer
+---
 _path: !P heat.s.pellets.state
 title: Pellet-burner state
 description: >-

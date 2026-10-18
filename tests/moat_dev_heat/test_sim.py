@@ -10,6 +10,8 @@ from itertools import pairwise
 
 from moat.dev.heat.sim import SENSORS, Plant, PlantCfg, Stage
 from moat.dev.heat.sim._util import C_WATER
+from moat.dev.heat.sim.circuits import Heating
+from moat.dev.heat.sim.config import HeatingCfg
 
 
 def _codes(p: Plant, duration: float, dt: float = 10) -> list[int]:
@@ -264,6 +266,25 @@ def test_heating_circuit():
     p3.inputs.heat_setpoint = 30
     p3.run(3600)
     assert p3.heating.t_room > p.heating.t_room
+
+
+def test_heating_speed():
+    "A slower circulation pump moves proportionally less water."
+    mk = lambda: Heating(HeatingCfg())  # noqa:E731
+    m1, _ = mk().step(3600, on=True, setpoint=40, t_tap=50, t_air=10)
+    m_half, _ = mk().step(3600, on=True, setpoint=40, t_tap=50, t_air=10, speed=0.5)
+    m_none, _ = mk().step(3600, on=True, setpoint=40, t_tap=50, t_air=10, speed=0)
+    assert m1 > m_half > m_none == 0
+
+    # Through the plant: zero speed draws nothing, like standby.
+    cfg = PlantCfg.from_dict({"weather": {"sigma": 0, "amp": 0}})
+    p = Plant(cfg, seed=1)
+    p.inputs.heat_mode = 3
+    p.inputs.heat_setpoint = 40
+    p.inputs.heat_speed = 0
+    p.run(3600)
+    assert p.ledger.heating == 0
+    assert p.heating.t_room < cfg.heating.t_room
 
 
 def test_dhw_draw():

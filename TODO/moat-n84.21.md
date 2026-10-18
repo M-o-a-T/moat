@@ -70,7 +70,8 @@ assert it explicitly instead.
 
 ## Steps
 
-0. **PID clock** (`moat.lib.pid`, own commit with a test): on CPython it
+0. **PID clock** — done (`moat.lib.pid`; heat units and MoaT-Link
+   metadata already use `moat.util.time`): on CPython it
    imports `time.monotonic` directly, so tests can't patch it; use
    `moat.util.time.monotonic` there (MicroPython keeps `ticks_ms`).
    Also `set_state(state.get("t", t or time()), …)` treats `t == 0` as

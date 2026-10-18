@@ -30,8 +30,8 @@ try:
     MAX_VAL = 2**31 - 1
 
 except ImportError:
-    # Standard Python
-    from time import monotonic as time
+    # Standard Python; this clock can be replaced, e.g. by tests
+    from moat.util.time import monotonic as time
 
     PID_TC = 1
     MAX_VAL = float("inf")
@@ -357,7 +357,9 @@ class CPID(PID):
         if state is None:
             state = attrdict()
         self.state = state
-        self.set_state(state.get("t", t or time()), state.get("e", 0), state.get("i", 0))
+        self.set_state(
+            state.get("t", time() if t is None else t), state.get("e", 0), state.get("i", 0)
+        )
         state.setdefault("setpoint", None)
 
     def cfg_updated(self) -> None:

@@ -40,23 +40,39 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
    - No `out` item: the state item says it all; the reason is logged.
 
 2. **Consumers use the new shape** (`(state or {}).get("bypass")`):
-   - `pump`: stands down while `bypass` (as now for `"original"`), and
-     doesn't *start* while a switch towards bypass is pending (`bypass`
-     false and `switching` set: `enabled` is false, reason `passthru`).
-     A running heat pump finishes normally.
+   - `pump`: see step 3. Also, it doesn't *start* while a switch towards
+     bypass is pending (`bypass` false and `switching` set: `enabled` is
+     false, reason `passthru`). A running heat pump finishes normally.
    - `watchdog`: status `passthru` while `bypass`.
    - Shared helper `link.passthru(value) -> bool` for the test.
 
-3. **Circulation pump during passthru** (the open item): as in the
-   legacy bypass mode, the flow unit follows the Solvis' own pump output
-   `heat.s.pump.rate.cmd` (0…1: the pump is PWM controlled, so it is
-   used as PWM directly, as in the legacy code). New flow inputs `passthru` and `rate_cmd`; while `bypass`:
-   mode `passthru`, PWM = clamped `rate_cmd`; a stale/missing value
-   holds the last PWM for `freeze`, then `safe_pwm` (as for stale
-   sensors). The PWM override still wins. Without this the pump unit's
-   last request (`off`) would keep the water pump off while the Solvis
-   runs the heat pump. The frost unit needs nothing: a PWM from someone
-   else opens the loop valve.
+3. **The pump unit during passthru.** It can't stand down: the Solvis
+   runs the heat pump, but the circulation pump is ours (GPIO PWM via
+   the flow unit), so it must follow the Solvis' own pump output
+   `analog.out:4` (`heat.s.pump.rate.cmd`, 0…1; the pump is PWM
+   controlled, so this is the duty cycle, as in the legacy bypass mode).
+   - The Solvis poller (`modbus.heat.yaml`) polls that register every
+     second (slot `1sec`, as in the example config already); keep it so.
+   - While `bypass`, the pump unit
+     - writes nothing to `cmd.mode`/`cmd.power` (the Solvis does, via
+       the Modbus bypass);
+     - writes the flow request `{mode: fixed, pwm: rate.cmd}` (clamped
+       to 0…1), updated whenever the value changes; while the value is
+       missing, `fixed` at `passthru.pwm` (new config, default 0.5), so
+       the water keeps moving;
+     - publishes `pump.out` with `run: off`, reason `passthru`, and the
+       PWM it passes on;
+     - keeps its state machine at `off`, so it resumes cleanly from
+       `off` when the bypass ends;
+     - skips its abort checks (critical errors, stale sensors, PWM
+       daemon): the heat pump isn't ours.
+   - The flow unit needs no change: it executes the request as usual,
+     and the PWM override still wins. The frost unit needs nothing
+     either: a PWM from someone else opens the loop valve.
+   - No staleness check on `rate.cmd`: the poller publishes on change,
+     so a steady value is old but valid. If the pump unit dies during
+     passthru, the flow unit's existing fallback (no trusted request)
+     keeps the water moving while the loop is warm.
 
 4. **Other units**: `heat_valve`, `pellet`, `selector`, `target`,
    `errors`, `frost` keep running unchanged. While bypassed the pump
@@ -81,15 +97,15 @@ Request: `app.heat.passthru.request` (bool, retained; absent = false).
      deferred while the Solvis runs it; request withdrawn while waiting;
      stale sensors → `switching: sensors`;
    - restart in either state resumes (state store);
-   - pump core: no `cmd.*`, no flow request while bypassed; doesn't
-     start while a switch is pending;
+   - pump core: while bypassed no `cmd.*`, flow request `fixed` at
+     `rate.cmd` (and at `passthru.pwm` while it's missing), `run: off`;
+     doesn't start while a switch is pending; resumes from `off` after;
    - watchdog: `passthru` status while bypassed;
-   - flow: follows `rate_cmd` while bypassed, override wins, stale
-     handling;
    - E2E (Scaffold + simulator): units and plant run; request passthru
      while the heat pump runs → switch only after it has cooled down;
      the "original controller" (test code writing `cmd.mode`/`power`
      and `rate.cmd`) runs the heat pump; our units write nothing to
-     `cmd.*`; switching back waits until it's idle. No Modbus devices:
+     `cmd.*`; the circulation PWM follows `rate.cmd`; switching back
+     waits until it's idle. No Modbus devices:
      the forwarding is covered by moat-nnz's tests, and the whole chain
      gets tested on the real hardware.

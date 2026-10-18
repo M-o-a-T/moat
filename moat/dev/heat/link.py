@@ -75,10 +75,15 @@ class Reader(Generic[T]):
         link: The MoaT-Link client.
         path: The item to watch.
         on_change: Called whenever the value changes.
+        max_age: The value is stale when it is older than this, seconds;
+            see :meth:`age`.
     """
 
     value: T | None
     """The last value, or `None` before the first message."""
+
+    max_age: float | None
+    """The value is stale when it is older than this, seconds; see :meth:`age`."""
 
     ts: float | None
     """Wall-clock timestamp of :attr:`value`, from its metadata."""
@@ -90,15 +95,22 @@ class Reader(Generic[T]):
     """The origin of our own writes (the client's name); set by :meth:`run`."""
 
     def __init__(
-        self, link: LinkSender, path: Path, on_change: Callable[[], None] | None = None
+        self,
+        link: LinkSender,
+        path: Path,
+        on_change: Callable[[], None] | None = None,
+        *,
+        max_age: float | None = None,
     ) -> None:
         self.link = link
         self.path = path
         self.on_change = on_change
+        self.max_age = max_age
         self.value = None
         self.ts = None
         self.origin = None
         self.me = None
+        self._t_first: float | None = None
         # created on demand, so that a reader can be built outside an event
         # loop (the closed-loop test runner feeds readers synchronously)
         self._changed: anyio.Event | None = None
@@ -121,7 +133,30 @@ class Reader(Generic[T]):
         """Store a new raw value and notify listeners."""
         self.value = None if value is NotGiven else value
         self.ts = ts
+        if self._t_first is None and self.value is not None:
+            self._t_first = time()
         self._notify()
+
+    def age(self, now: float) -> float | None:
+        """
+        How old the value is: every update, changed or not, renews it.
+
+        The first value counts as at most 9/10 of :attr:`max_age` old,
+        so that it isn't stale right away; it gets at least a tenth of
+        the timeout to be renewed.
+
+        Args:
+            now: The current wall-clock time.
+
+        Returns:
+            The age in seconds, or `None` if there is no value.
+        """
+        if self.value is None or self.ts is None:
+            return None
+        res = now - self.ts
+        if self.max_age is not None and self._t_first is not None:
+            res = min(res, now - self._t_first + 0.9 * self.max_age)
+        return res
 
     def _notify(self) -> None:
         if self._changed is not None:
@@ -386,6 +421,10 @@ class Inputs:
     def snapshot(self) -> dict[str, Any]:
         """The current value of every input, by name."""
         return {k: r.value for k, r in self.readers.items()}
+
+    def ages(self, now: float) -> dict[str, float | None]:
+        """The age of every input's value (see `Reader.age`), by name."""
+        return {k: r.age(now) for k, r in self.readers.items()}
 
 
 class Writer:

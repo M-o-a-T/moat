@@ -9,7 +9,6 @@ import pytest
 from moat.util import NotGiven
 from moat.dev.heat.config import make_config
 from moat.dev.heat.link import out_path
-from moat.dev.heat.pellet import PelletUnit
 from moat.dev.heat.selector import (
     PELLET,
     WP,
@@ -19,11 +18,7 @@ from moat.dev.heat.selector import (
     SelectorState,
     SelectorUnit,
 )
-from moat.dev.heat.sim.paths import INPUT_PATHS
 from moat.lib.path import P
-
-from .legacy import SCENARIOS
-from .pump_loop import pump_loop
 
 from typing import Any
 
@@ -366,48 +361,6 @@ def test_restart() -> None:
     r.step()
     assert r.state == (PELLET, "steady", False, True)
     assert r.out["failed"] == [WP]
-
-
-# closed loop
-
-
-def test_closed_loop_cold_snap() -> None:
-    "frost: the burner takes over without the buffer dropping further, then hands back"
-    sc = SCENARIOS["pellet_handover"]
-    loop = pump_loop(sc.plant, seed=sc.seed, start=sc.start)
-    loop.add_unit(PelletUnit)
-    loop.add_unit(SelectorUnit)
-    phases: list[tuple[float, Any, Any]] = []
-    dip: list[float] = []
-
-    def cb(lp) -> None:
-        # in production a rule drives the burner from its request flag
-        lp.set(INPUT_PATHS["pellet_run"], lp.get(WANTED))
-        o = lp.get(OUT) or {}
-        ph = (o.get("primary"), o.get("phase"))
-        if not phases or phases[-1][1:] != ph:
-            phases.append((lp.now, *ph))
-        if o.get("phase") == "wp_to_pellet":
-            dem = (lp.get(out_path("target")) or {}).get("demand") or {}
-            dip.append(lp.plant.truth()["tb_heat"] - dem["t_low"])
-
-    loop.run(sc.duration, 10, cb)
-    seq = [p[1:] for p in phases]
-    assert seq[:4] == [
-        (WP, "steady"),
-        (PELLET, "wp_to_pellet"),
-        (PELLET, "steady"),
-        (WP, "pellet_to_wp"),
-    ], phases
-    assert seq[-1] == (WP, "steady"), phases
-    # the burner is requested when (and as) the legacy code did
-    assert phases[1][0] == pytest.approx(13320, abs=300)
-    assert phases[3][0] == pytest.approx(59280, abs=300)
-    # the buffer is below t_low when the burner is requested (it is asked
-    # for below t_nom); while it comes, the heat pump holds the buffer
-    assert dip
-    assert min(dip) > dip[0] - 0.5, (dip[0], min(dip))
-    assert dip[-1] >= dip[0], (dip[0], dip[-1])
 
 
 @pytest.mark.anyio

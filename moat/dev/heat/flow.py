@@ -66,7 +66,7 @@ class FlowRequest(BaseModel):
     preload: bool = False
     """On change, preset the PID(s) so that they start at ``pwm``."""
     seq: int = 0
-    """Incremented by the writer on every change."""
+    """Incremented on every change; a writer continues after the stored request's."""
 
     def to_link(self) -> dict[str, Any]:
         """The request as written to MoaT-Link (plain types only)."""
@@ -98,7 +98,7 @@ class FlowCfg(UnitCfg):
     tick: float = 10
     """Step interval while a PID is active, in seconds."""
     max_age: float = 300
-    """A sensor that has not changed for this long is stale."""
+    """A sensor that has not been updated for this long is stale."""
     freeze: float = 60
     """After a needed sensor goes stale, hold the last PWM for this long, then use ``safe_pwm``."""
     safe_pwm: float = 0.5
@@ -141,10 +141,11 @@ class FlowCore:
     Inputs: ``request``, ``override``, ``r_flow``, ``t_out``, ``t_in``,
     ``frost`` (the frost unit's output: its pulses are used while the PWM
     would otherwise be 0), and ``pump`` (the pump unit's service
-    announcement). A sensor is stale
-    when its value has not changed for ``max_age`` seconds (values are
-    published on change). A PID whose output is not used only follows the
-    time, so it does not integrate over the gap.
+    announcement). A sensor is stale when it has not been updated for
+    ``max_age`` seconds, according to ``_age`` (the pollers re-send steady
+    values); without ``_age``, when its value has not changed for that
+    long. A PID whose output is not used only follows the time, so it
+    does not integrate over the gap.
     """
 
     def __init__(self, cfg: FlowCfg, state: FlowState, now: float) -> None:
@@ -156,6 +157,7 @@ class FlowCore:
         self._changed: dict[str, float] = {}
         self._req_changed = now
         self._drained = False
+        self._ages: dict[str, float | None] = {}
 
     def update_cfg(self, cfg: FlowCfg) -> None:
         """Apply a changed configuration."""
@@ -172,11 +174,17 @@ class FlowCore:
                 if k == "request":
                     self._req_changed = now
 
+    def _updated(self, name: str, now: float) -> float:
+        """When sensor ``name`` was last updated."""
+        if (age := self._ages.get(name)) is not None:
+            return now - age
+        return self._changed[name]
+
     def _stale_since(self, name: str, now: float) -> float | None:
         """When sensor ``name`` went stale, or `None` if it is fresh."""
         if self._last.get(name) is None:
             return self._changed.get(name, now)
-        t = self._changed[name] + self.cfg.max_age
+        t = self._updated(name, now) + self.cfg.max_age
         return t if t <= now else None
 
     @staticmethod
@@ -238,6 +246,7 @@ class FlowCore:
         """Decide the PWM."""
         cfg = self.cfg
         self._track(inputs, now)
+        self._ages = inputs.get("_age") or {}
         wake: float | None = None
         save = False
         stable = False
@@ -283,7 +292,7 @@ class FlowCore:
             else:
                 pwm = self._pid(req, inputs, now)
                 stable = self._stable(req, inputs)
-                deadline = min(self._changed[n] for n in _NEEDS[req.mode]) + cfg.max_age
+                deadline = min(self._updated(n, now) for n in _NEEDS[req.mode]) + cfg.max_age
                 wake = min(wake, max(deadline - now, 0))
                 save = True
             if req.min_pwm is not None:
@@ -335,9 +344,9 @@ class FlowUnit(Unit[FlowCfg, FlowState]):
         return {
             "request": Reader[Any](self.link, cfg.request),
             "override": override_reader(self.link, "pwm", cfg.override),
-            "r_flow": Reader[float](self.link, cfg.r_flow),
-            "t_out": Reader[float](self.link, cfg.t_out),
-            "t_in": Reader[float](self.link, cfg.t_in),
+            "r_flow": Reader[float](self.link, cfg.r_flow, max_age=cfg.max_age),
+            "t_out": Reader[float](self.link, cfg.t_out, max_age=cfg.max_age),
+            "t_in": Reader[float](self.link, cfg.t_in, max_age=cfg.max_age),
             **({} if cfg.frost is None else {"frost": Reader[Any](self.link, cfg.frost)}),
             "pump": ServiceMonitor(self.link, self.service.host, "pump"),
         }

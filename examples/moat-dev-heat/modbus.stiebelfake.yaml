@@ -21,11 +21,11 @@ server:
   units:
     101:
       ref: inc.stiebel
-      # Passthru (moat-n84.26): forward everything to the heat pump,
-      # served by the modbus.stiebel.yaml poller as unit 3.
-      # bypass:
-      #   when: [!P app.heat.passthru.state, !P bypass]
-      #   dest: {host: localhost, port: 503, unit: 3}
+      # Passthru: forward everything to the heat pump, served by the
+      # modbus.stiebel.yaml poller as unit 3.
+      bypass:
+        when: [!P app.heat.passthru.state, !P bypass]
+        dest: {host: localhost, port: 503, unit: 3}
       regs:
         op:
           mode:

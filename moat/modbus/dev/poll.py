@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+from contextlib import nullcontext
 from functools import partial
 
 from moat.util import attrdict, merge, to_attrdict
@@ -25,6 +26,11 @@ if TYPE_CHECKING:
     from moat.modbus.client import HostCommon, Unit
 
 logger = logging.getLogger(__name__)
+
+
+def _host_args(cfg: Mapping) -> dict[str, Any]:
+    "Host settings from a ``hosts`` / ``hostports`` entry (next to its units)."
+    return {k: cfg[k] for k in ("timeout",) if k in cfg}
 
 
 async def _start_bypass(
@@ -70,6 +76,7 @@ async def dev_poll(
     link: Link | None,
     *,
     this_file: FSPath | None = None,
+    announce: bool = False,
     task_status=anyio.TASK_STATUS_IGNORED,
 ) -> None:
     """
@@ -80,7 +87,13 @@ async def dev_poll(
 
     Pass *this_file* (the path the config was loaded from) so that
     ``include:`` directives are resolved relative to the config file too.
+
+    With *announce*, the poller announces itself as a MoaT-Link service
+    (named after its systemd unit, or ``$MT_SERVICE``), which is up once
+    setup is complete.
     """
+    if announce and link is None:
+        raise ValueError("Announcing requires MoaT-Link")
     sl = cfg.setdefault("slots", attrdict())
     sl.setdefault("write", attrdict())
     sl._apply_default = True  # noqa:SLF001
@@ -89,7 +102,11 @@ async def dev_poll(
     s = cfg.setdefault("src", attrdict())
     sl = cfg.slots
 
-    async with ModbusClient(link=link) as cl, anyio.create_task_group() as tg:
+    async with (
+        link.announcing() if announce and link is not None else nullcontext() as ann,
+        ModbusClient(link=link) as cl,
+        anyio.create_task_group() as tg,
+    ):
         nd = 0
         # (server unit context, bypass config, attached client unit)
         bypasses: list[tuple[Any, Mapping, Unit | None]] = []
@@ -234,7 +251,7 @@ async def dev_poll(
 
         # TCP clients
         for h, hv in cfg.get("hosts", {}).items():
-            tcp_host = await cl.host_service(h, None)
+            tcp_host = await cl.host_service(h, None, **_host_args(hv))
             for u, v in hv.items():
                 if not isinstance(u, int):
                     continue
@@ -247,8 +264,10 @@ async def dev_poll(
             for p, pv in hv.items():
                 if not isinstance(p, int):
                     continue
-                tcp_host = await cl.host_service(h, p)
+                tcp_host = await cl.host_service(h, p, **_host_args(pv))
                 for u, v in pv.items():
+                    if not isinstance(u, int):
+                        continue
                     dev = await make_dev(v, Reg, tcp_host, unit=u)
                     tg.start_soon(dev.poll)
                     do_attach(v, dev)
@@ -264,6 +283,8 @@ async def dev_poll(
                 s["port"] = srv.port
 
         task_status.started(cfg)
+        if ann is not None:
+            ann.set()
 
         if nd:
             logger.info("Server running.")

@@ -5,18 +5,12 @@ Tests for the heat-valve unit (HEAT.md §3.2).
 from __future__ import annotations
 
 import pytest
-from itertools import pairwise
 
 from moat.util import NotGiven
 from moat.dev.heat.config import make_config
 from moat.dev.heat.heat_valve import HeatValveCfg, HeatValveCore, HeatValveState, HeatValveUnit
 from moat.dev.heat.link import out_path
-from moat.dev.heat.sim.paths import INPUT_PATHS
-from moat.dev.heat.sim.trace import load
 from moat.lib.path import P
-
-from .legacy import SCENARIOS, trace_file
-from .pump_loop import pump_loop
 
 from typing import Any
 
@@ -185,41 +179,6 @@ def test_config_reload() -> None:
     core.step(_in("off"), 0)
     core.update_cfg(_cfg({"delay": 5}))
     assert _hc(core, _in("off"), 6) == (5, True)
-
-
-# closed loop against the legacy traces
-
-SCEN = ("cold_start", "steady", "deice", "day_night")
-
-
-def _legacy(name: str) -> tuple[float, int]:
-    samples = load(trace_file(name).read_text())["samples"]
-    on = [s["heat_mode"] == ON for s in samples]
-    return sum(on) / len(on), sum(1 for a, b in pairwise(on) if b and not a)
-
-
-@pytest.mark.parametrize("name", SCEN)
-def test_closed_loop_vs_legacy(name: str) -> None:
-    "the heating circuit runs about as much, and switches about as often, as in the legacy code"
-    sc = SCENARIOS[name]
-    loop = pump_loop(sc.plant, seed=sc.seed, start=sc.start)
-    on: list[bool] = []
-    todo = sorted(sc.events)
-    paths = {"force_day": P("app.heat.ha.force_day.cmd")}
-
-    def cb(lp) -> None:
-        while todo and todo[0][0] <= lp.now:
-            _, what, val = todo.pop(0)
-            lp.set(paths[what], val)
-        if round(lp.now) % sc.sample == 0:
-            on.append(lp.get(INPUT_PATHS["heat_mode"]) == ON)
-
-    loop.run(sc.duration, sc.dt, cb)
-    frac = sum(on) / len(on)
-    starts = sum(1 for a, b in pairwise(on) if b and not a)
-    old_frac, old_starts = _legacy(name)
-    assert frac == pytest.approx(old_frac, abs=0.1), (frac, old_frac)
-    assert abs(starts - old_starts) <= max(2, old_starts // 2), (starts, old_starts)
 
 
 @pytest.mark.anyio

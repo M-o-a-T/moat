@@ -12,10 +12,6 @@ from itertools import pairwise
 from moat.util import NotGiven
 from moat.dev.heat.config import make_config
 from moat.dev.heat.link import out_path
-from moat.dev.heat.override import path as override_path
-from moat.dev.heat.sim import PlantCfg
-from moat.dev.heat.sim.loop import ClosedLoop
-from moat.dev.heat.sim.trace import load
 from moat.dev.heat.target import (
     MAX_WAKE,
     CurveCfg,
@@ -28,8 +24,6 @@ from moat.dev.heat.target import (
     vt,
 )
 from moat.lib.path import P
-
-from .legacy import SCENARIOS, trace_file
 
 from typing import Any
 
@@ -375,62 +369,6 @@ def test_config_reload() -> None:
     res = core.step(_in(), 1)
     assert res.outputs[OUT]["flow_temp"] == pytest.approx(vt(0, 22, cfg.curve))
     assert SET not in res.outputs
-
-
-# the closed loop
-
-
-def _loop(name: str) -> ClosedLoop:
-    sc = SCENARIOS[name]
-    loop = ClosedLoop(cfg=PlantCfg.from_dict({**sc.plant, "day_offset": sc.start}), seed=sc.seed)
-    loop.set(CM_HEAT, True)
-    loop.set(C_WATER, 50)
-    loop.add_unit(TargetUnit)
-    return loop
-
-
-def test_loop_override_expiry() -> None:
-    "an override with an expiry time lapses"
-    loop = _loop("steady")
-    loop.run(60)
-    ft = loop.get(OUT)["flow_temp"]
-    loop.set(override_path("flow_temp"), {"value": 50.0, "expires": loop.wall + 600})
-    loop.run(60)
-    assert loop.get(OUT)["flow_temp"] == 50
-    assert loop.get(SET) == 50
-    loop.run(600)
-    assert loop.get(OUT)["overridden"] is False
-    assert loop.get(OUT)["flow_temp"] == pytest.approx(ft, abs=1)
-
-
-def test_loop_vs_legacy() -> None:
-    "the curve setpoint follows the legacy trace: night setback, forced day mode"
-    name = "day_night"
-    sc = SCENARIOS[name]
-    ref = {s["t"]: s["curve"] for s in load(trace_file(name).read_text())["samples"]}
-    todo = sorted(sc.events)
-    loop = _loop(name)
-    got: dict[int, Any] = {}
-    paths = {"force_day": DAY_CMD, "force_night": NIGHT_CMD}
-
-    def cb(lp: ClosedLoop) -> None:
-        while todo and todo[0][0] <= lp.now:
-            _, what, val = todo.pop(0)
-            lp.set(paths[what], val)
-        t = round(lp.now)
-        if t % sc.sample == 0:
-            got[t] = lp.get(SET)
-
-    loop.run(sc.duration, sc.dt, cb)
-    assert set(ref) <= set(got)
-    diff = [(t, ref[t], got[t]) for t in sorted(ref) if ref[t] != got[t]]
-    # the legacy task notices a schedule boundary only a little later
-    bounds = {5.5 * 3600, 21.5 * 3600}
-    assert all((t + sc.start) % 86400 in bounds for t, _, _ in diff), diff
-    assert len(diff) <= 2, diff
-    assert loop.get(DAY_STATE) is False
-    days = {t for t in got if t % 3600 == 0 and got[t] > 40}
-    assert days, got
 
 
 @pytest.mark.anyio

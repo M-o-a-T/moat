@@ -11,6 +11,11 @@ The pump service's liveness is MoaT-Link's: its announcement below
 ``run.host.<host>.heat.pump`` goes away when the unit exits, or when the
 link's service monitor sees the client's WILL or its pings stop.
 
+While passthru is bypassed, the original controller runs the heat pump,
+but our water pump follows it only while the pump unit runs. If the pump
+service disappears then, the watchdog ends the bypass (the heat pump
+gets our commands again) and runs the emergency shutdown.
+
 The watchdog never restarts the pump unit. It fires once per pump run:
 it is re-armed when the pump unit publishes something new.
 """
@@ -29,6 +34,7 @@ from moat.util.time import time
 from .config import EmergencyCfg, UnitCfg, load_config
 from .emergency import emergency_shutdown
 from .link import Override, Reader, ServiceMonitor, is_up, out_path
+from .passthru import passthru
 from .state import State, state_path
 from .unit import Step, Unit
 
@@ -48,6 +54,10 @@ class WatchdogCfg(UnitCfg):
     pump_out: Path = out_path("pump")
     pump_state: Path = state_path("pump")
     passthru: Path = P("app.heat.passthru.state")
+    """While it says ``bypass``, the original controller runs the heat pump.
+    If the pump unit dies meanwhile, the watchdog ends the bypass."""
+    passthru_request: Path | None = P("app.heat.passthru.request")
+    """Reset when the watchdog ends a bypass."""
     disable: Path = P("app.heat.watchdog.disable")
     """``true`` (or ``{value: true, expires, reason}``) disables the watchdog."""
     t_in: Path = P("heat.s.pump.temp.in")
@@ -81,7 +91,9 @@ class WatchdogCore:
     When the pump service is not up, the pump unit's last output says the
     heat pump is active, and its saved state doesn't say otherwise (after
     its own emergency shutdown it is ``off``), the step asks the adapter to
-    shut down (`Step.act`); the adapter reports back with `done`.
+    shut down (`Step.act`); the adapter reports back with `done`. The
+    same happens when the pump service disappears while passthru is
+    bypassed; the step then also ends the bypass.
     """
 
     def __init__(self, cfg: WatchdogCfg, state: WatchdogState, now: float) -> None:  # noqa: ARG002
@@ -113,6 +125,7 @@ class WatchdogCore:
         st_run = st_v.get("run") if isinstance(st_v, dict) else None
 
         wake = None
+        ends: dict[Path, Any] = {}
         up = is_up(inputs.get("pump"))
         if up:
             self._gone_since = None
@@ -123,8 +136,23 @@ class WatchdogCore:
             self.status = "shutdown"
         elif inputs.get("disable"):
             self.status = "disabled"
-        elif inputs.get("passthru") == "original":
-            self.status = "passthru"
+        elif passthru(inputs.get("passthru")):
+            if up:
+                self.status = "passthru"
+            elif now - self._gone_since < cfg.grace:  # ty:ignore[unsupported-operator]
+                self.status = "passthru"
+                wake = self._gone_since + cfg.grace - now  # ty:ignore[unsupported-operator]
+            else:
+                # Nobody makes our water pump follow the Solvis any more:
+                # end the bypass (the heat pump gets our commands again),
+                # then shut it down.
+                self.status = "shutdown"
+                self._busy = True
+                act = "pump service gone while bypassed"
+                ends[cfg.passthru] = {"bypass": False, "switching": None}
+                if cfg.passthru_request is not None:
+                    ends[cfg.passthru_request] = False
+                _logger.error("Watchdog: %s", act)
         elif up:
             self.status = "watching"
         elif not _active(run) or (st_run is not None and not _active(st_run)):
@@ -144,7 +172,11 @@ class WatchdogCore:
         save, self._changed = self._changed, False
         out = {"status": self.status, **(self.state.last or {})}
         return Step(
-            outputs={out_path("watchdog"): out}, act=act, wake_in=wake, save=save, save_now=save
+            outputs={**ends, out_path("watchdog"): out},
+            act=act,
+            wake_in=wake,
+            save=save,
+            save_now=save,
         )
 
 

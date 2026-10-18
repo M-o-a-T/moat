@@ -8,7 +8,8 @@ their Link adapter would give them.
 
 A tick: the plant reads its commands from the bus and advances; its
 sensor readings are published; then every core whose inputs changed, or
-whose wake-up time has come, is stepped, and its outputs are published.
+whose wake-up time has come, is stepped, and its outputs (and its state,
+if the step says it changed) are published.
 Cores are stepped repeatedly within a tick until nothing changes any
 more, so a chain of units settles in one tick.
 """
@@ -22,6 +23,8 @@ from math import inf
 from moat.util import NotGiven
 from moat.dev.heat.config import make_config
 from moat.dev.heat.link import Override, TreeReader
+from moat.dev.heat.pid import T_OFFSET
+from moat.dev.heat.state import state_path
 from moat.lib.path import Path
 from moat.util.time import patch_clock
 
@@ -48,6 +51,9 @@ WALL0 = 1_767_567_600.0  # 2026-01-05 00:00 CET, a Monday
 
 LOCAL0 = datetime(2026, 1, 5)  # noqa: DTZ001
 """Default local midnight of simulated day 0 (the plant's ``day_offset`` counts from here)."""
+
+REFRESH = 120
+"""A steady sensor reading is published again after this many seconds (the poller's ``idem``)."""
 
 MAX_ROUNDS = 20
 """How often cores may be stepped within one tick before we give up settling."""
@@ -109,6 +115,9 @@ class ClosedLoop:
             as in the legacy harness.
     """
 
+    refresh: float
+    """A steady sensor reading is published again after this many seconds."""
+
     def __init__(
         self,
         plant: Plant | None = None,
@@ -119,6 +128,7 @@ class ClosedLoop:
         inputs: Mapping[str, Path] = INPUT_PATHS,
         wall0: float = WALL0,
         local0: datetime = LOCAL0,
+        refresh: float = REFRESH,
     ) -> None:
         self.plant = plant or Plant(cfg, seed=seed)
         self.sensors = sensors
@@ -129,10 +139,13 @@ class ClosedLoop:
         self.ts: dict[Path, float] = {}
         self.origin: dict[Path, str | None] = {}
         self.slots: list[CoreSlot] = []
-        self.writes: list[tuple[float, Path, Any]] = []
+        self.writes: list[tuple[float, Path, Any, str]] = []
+        """The cores' outputs that changed something: time, path, value, core."""
         self.watchers: list[Callable[[float, Path, Any], None]] = []
+        self.refresh = refresh
         self._errors: set[str] = set()
-        self.publish_sensors()
+        with self.clock():
+            self.publish_sensors()
 
     # time
 
@@ -163,10 +176,10 @@ class ClosedLoop:
         with self.clock():
             return self._set(path, value, origin)
 
-    def _set(self, path: Path, value: Any, origin: str | None = None) -> bool:
+    def _set(self, path: Path, value: Any, origin: str | None = None, force: bool = False) -> bool:
         if value is NotGiven:
             value = None
-        if path in self.bus and self.bus[path] == value:
+        if path in self.bus and self.bus[path] == value and not force:
             return False
         if value is None and path not in self.bus:
             return False
@@ -191,9 +204,20 @@ class ClosedLoop:
         return self.bus.get(path, default)
 
     def publish_sensors(self) -> None:
-        """Copy the plant's sensor readings to the bus."""
+        """
+        Copy the plant's sensor readings to the bus.
+
+        A steady reading is sent again after `refresh` seconds, as the
+        Modbus poller does.
+        """
+        stale = {p for s in self.plant.faults.stale for p in self.sensors.get(s, ())}
         for p, v in sensor_items(self.plant.sensors(), self.sensors, self._errors):
-            self.set(p, v)
+            force = (
+                v is not None
+                and p not in stale
+                and self.wall - self.ts.get(p, -inf) >= self.refresh
+            )
+            self._set(p, v, force=force)
 
     def apply_inputs(self) -> None:
         """Copy commands from the bus to the plant."""
@@ -222,8 +246,15 @@ class ClosedLoop:
         slot = CoreSlot(
             name, core, dict(readers), cfg=cfg, state=state, wake_at=self.now, local=local
         )
+        with self.clock():
+            self._feed_new(slot)
+        self.slots.append(slot)
+        return slot
+
+    def _feed_new(self, slot: CoreSlot) -> None:
+        "feed the current bus values to a new core's readers"
         for r in slot.readers.values():
-            r.me = name
+            r.me = slot.name
             if isinstance(r, TreeReader):
                 below = {p: sub for p in self.bus if (sub := _below(p, r.path)) is not None}
                 r.feed(
@@ -234,8 +265,6 @@ class ClosedLoop:
                 r.feed(self.bus[r.path], self.ts[r.path], self.origin.get(r.path))
             else:
                 r.feed(None, None)
-        self.slots.append(slot)
-        return slot
 
     def add_unit(
         self, unit: type[Unit[Any, Any]], cfg: Any = NotGiven, state: State | None = None
@@ -284,16 +313,24 @@ class ClosedLoop:
                     continue
                 slot.dirty = False
                 snap = {k: r.value for k, r in slot.readers.items()}
+                snap["_age"] = {k: r.age(self.wall) for k, r in slot.readers.items()}
                 if slot.local:
                     snap["local"] = self.local
                 res = slot.core.step(snap, self.now)
                 slot.steps += 1
                 if res.save or res.save_now:
                     slot.saves += 1
+                    if slot.state is not None:
+                        # as the StateStore does (immediately, here)
+                        self.set(
+                            state_path(slot.name),
+                            slot.state.model_dump(context={T_OFFSET: self.wall - self.now}),
+                            slot.name,
+                        )
                 slot.wake_at = inf if res.wake_in is None else self.now + res.wake_in
                 for path, value in res.outputs.items():
                     if self.set(path, value, slot.name):
-                        self.writes.append((self.now, path, value))
+                        self.writes.append((self.now, path, value, slot.name))
                         busy = True
             if not busy and not any(s.dirty for s in self.slots):
                 return
@@ -325,5 +362,5 @@ class ClosedLoop:
                     cb(self)
 
     def clock(self) -> AbstractContextManager[None]:
-        """Context: ``moat.util.time.time()`` returns simulated wall-clock time."""
-        return patch_clock(time=lambda: self.wall)
+        """Context: ``moat.util.time`` returns simulated wall-clock and monotonic time."""
+        return patch_clock(time=lambda: self.wall, monotonic=lambda: self.now)

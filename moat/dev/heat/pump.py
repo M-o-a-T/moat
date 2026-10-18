@@ -40,6 +40,7 @@ from .emergency import emergency_shutdown
 from .flow import FlowMode, FlowRequest
 from .link import PWM_UNIT, Reader, ServiceMonitor, is_up, out_path, service_path
 from .override import reader as override_reader
+from .passthru import passthru
 from .pid import APID, MonoTime, PIDCfg, PIDState
 from .state import State
 from .unit import Step, Unit
@@ -241,6 +242,14 @@ class _Stop(BaseModel):
     (``lim.defrost.temp``)"""
     idle: float = 25
     """… but ends once it is warmer than that and cooler than this (``lim.idle``)."""
+    max_in: float | None = 55
+    """
+    Stop the heat pump when its inflow ``t_in`` reaches this, °C, before
+    its own over-temperature cutout trips. `None`: no limit.
+    """
+    max_start: float | None = 50
+    """Don't start the heat pump while the buffer return ``tb_low`` is this warm, °C.
+    `None`: no limit."""
 
 
 class _DeIce(BaseModel):
@@ -286,6 +295,9 @@ class PumpCfg(UnitCfg):
     errors: Path = out_path("errors")
     flow_out: Path = out_path("flow")
     passthru: Path = P("app.heat.passthru.state")
+    """While it says ``bypass``, the original controller runs the heat pump."""
+    rate_cmd: Path = P("heat.s.pump.rate.cmd")
+    """The original controller's circulation-pump PWM (0…1), used while bypassed."""
     override: Path = P("app.heat.override.wp")
     force_start: Path = P("app.heat.force_start")
 
@@ -306,15 +318,19 @@ class PumpCfg(UnitCfg):
     own state (HEAT.md §1), hence off by default."""
 
     stale: float | None = 900
-    """While active, a sensor in `stale_sensors` that has not changed for this
-    long (or has no value) stops the unit with an emergency shutdown;
-    `None`: never."""
+    """While active, a sensor in `stale_sensors` that has not been updated
+    for this long (or has no value) stops the unit with an emergency
+    shutdown; `None`: never. The pollers re-send steady values, so an
+    unchanged value is not stale."""
     stale_sensors: list[str] = ["t_in", "t_out", "r_flow", "m_power"]
     pwm_grace: float | None = 3
     """The PWM daemon (service ``heat.pwm``) drives the water pump. When it
     has been gone for this long, the heat pump is not started; if it is
     active, the unit stops with an emergency shutdown. Seconds; `None`:
     don't care."""
+
+    bypass_pwm: float = 0.5
+    """Circulation-pump PWM while bypassed and `rate_cmd` has no value."""
 
     min_load: float = 0.05
     """A load below this means power 0 and mode off (``lim.power.min``)."""
@@ -410,6 +426,8 @@ class PumpCore:
         self._reason = "init"
         self._t_avg: float | None = None
         self._vals: dict[str, float | None] = {}
+        self._bypassed = False
+        self._pending = False
 
     def update_cfg(self, cfg: PumpCfg) -> None:
         """Apply a changed configuration."""
@@ -427,6 +445,24 @@ class PumpCore:
             self._power, self._mode = 0, self.cfg.mode_off
         else:
             self._power, self._mode = min(p, 1), self.cfg.mode_on
+
+    def _hot_inflow(self, v: dict[str, Any]) -> bool:
+        "whether the heat pump's inflow is too hot to go on; sets the reason"
+        lim = self.cfg.stop.max_in
+        if lim is None or v["t_in"] < lim:
+            return False
+        self._reason = "OFF inflow hot"
+        return True
+
+    def _seen_seq(self, req: Any) -> None:
+        """
+        Continue after the ``seq`` of the stored flow request: after a
+        restart, or an emergency shutdown that wrote its own requests, our
+        next request must still differ from the last one the flow unit
+        applied.
+        """
+        if isinstance(req, dict) and isinstance(seq := req.get("seq"), int):
+            self._seq = max(self._seq, seq)
 
     def _request(self, mode: FlowMode, *, preload: bool = False, **kw: Any) -> None:
         req = FlowRequest(mode=mode, preload=preload, **kw)
@@ -563,15 +599,11 @@ class PumpCore:
         target = inputs.get("target") or {}
         dem = target.get("demand") if isinstance(target, dict) else None
         pellet = inputs.get("pellet") or {}
-        passthru = inputs.get("passthru")
         missing = [k for k in self.SENSORS if v[k] is None]
+        self._seen_seq(inputs.get("flow_request"))
 
-        if passthru == "original":
-            # the original controller is in charge: stand down, write nothing
-            self._orun = None
-            st.run = R.off
-            outputs[out_path("pump")] = self._out(st.run, "passthru", None)
-            return Step(outputs=outputs, save=True)
+        if passthru(inputs.get("passthru")):
+            return self._bypass(inputs)
 
         if missing or not dem:
             # can't decide anything; don't start, and don't touch a running pump
@@ -580,6 +612,8 @@ class PumpCore:
             return Step(outputs=outputs, wake_in=cfg.tick)
 
         t = self._setpoints(v, dem)
+        pt = inputs.get("passthru")
+        self._pending = isinstance(pt, dict) and bool(pt.get("switching"))
         enabled = self._enabled(inputs)
         t_pellet_on = pellet.get("t_pellet_on", False)
         pellet_on = bool(pellet.get("pellet_on"))
@@ -714,7 +748,37 @@ class PumpCore:
                 pid.idle(now)
             outputs.update(pid.logs)
             pid.logs.clear()
-        return Step(outputs=outputs, wake_in=wake, save=True, save_now=save)
+        # after a bypass, the heat pump's commands are the original
+        # controller's: re-send ours
+        force, self._bypassed = self._bypassed, False
+        return Step(outputs=outputs, wake_in=wake, save=True, save_now=save, force=force)
+
+    def _bypass(self, inputs: dict[str, Any]) -> Step:
+        """
+        The original controller runs the heat pump (passthru).
+
+        We don't command the heat pump, but our circulation pump follows
+        the original controller's. Afterwards the state machine restarts,
+        i.e. cools the heat pump down first.
+        """
+        cfg = self.cfg
+        st = self.state
+        self._bypassed = True
+        self._orun = None
+        self._t_change_max = None
+        self._heat_off = False
+        st.run = R.off
+        st.t_change = None
+        st.t_run = None
+        rate = _num(inputs.get("rate_cmd"))
+        pwm = cfg.bypass_pwm if rate is None else min(max(float(rate), 0.0), 1.0)
+        self._request(FlowMode.FIXED, pwm=pwm)
+        assert self._flow is not None
+        out = self._out(st.run, "passthru", None)
+        out["pwm"] = pwm
+        return Step(
+            outputs={cfg.flow_request: self._flow.to_link(), out_path("pump"): out}, save=True
+        )
 
     def _enabled(self, inputs: dict[str, Any]) -> bool:
         ov = inputs.get("override")
@@ -768,6 +832,12 @@ class PumpCore:
             r: str | None
             if self._was_enabled is False:
                 return None  # reason set by the main switch
+            if self._pending:
+                self._reason = "passthru"  # about to hand the heat pump over
+                return None
+            if stp.max_start is not None and v["tb_low"] >= stp.max_start:
+                self._reason = "inflow hot"  # not even when forced
+                return None
             if force:
                 r = None
             elif t_pellet_on is True:
@@ -809,8 +879,12 @@ class PumpCore:
         if run == R.flow:
             return R.wait_power if v["r_flow"] >= s.init.rate * 3 / 4 else None
         if run == R.wait_power:
+            if self._hot_inflow(v):
+                return R.off
             return R.temp if v["m_power"] >= s.min_power else None
         if run == R.temp:
+            if self._hot_inflow(v):
+                return R.off
             st.t_load = now
             return R.run if t_out - t_in > s.delta else None
         if run == R.run:
@@ -852,6 +926,9 @@ class PumpCore:
         st = self.state
         a = cfg.adj
         t_cur, t_adj = t["t_cur"], t["t_adj"]
+
+        if self._hot_inflow(v):
+            return R.off
 
         if pellet_on and v["tb_heat"] > t_cur:
             # (never true while heating: then t_cur is tb_heat; legacy quirk)
@@ -984,8 +1061,6 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
 
     def __init__(self, *a: Any, **kw: Any) -> None:
         super().__init__(*a, **kw)
-        self._seen: dict[str, Any] = {}
-        self._changed: dict[str, float] = {}
         self._pwm_gone: float | None = None
 
     async def run(self, **kw: Any) -> None:
@@ -1001,7 +1076,11 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
     def make_inputs(self, cfg: PumpCfg) -> dict[str, Reader[Any]]:
         """Sensors, peer units, override, force start."""
         rd: dict[str, Reader[Any]] = {
-            k: Reader[Any](self.link, getattr(cfg, k))
+            k: Reader[Any](
+                self.link,
+                getattr(cfg, k),
+                max_age=cfg.stale if k in cfg.stale_sensors else None,
+            )
             for k in (
                 "t_in",
                 "t_out",
@@ -1021,7 +1100,9 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
                 "errors",
                 "flow_out",
                 "passthru",
+                "rate_cmd",
                 "force_start",
+                "flow_request",
             )
         }
         rd["override"] = override_reader(self.link, "wp", cfg.override)
@@ -1059,12 +1140,7 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
         assert isinstance(self.core, PumpCore)
         cfg = self.core.cfg
         recheck = self._check_pwm(inputs, now)
-        for k in cfg.stale_sensors:
-            v = inputs.get(k)
-            if k not in self._seen or self._seen[k] != v:
-                self._seen[k] = v
-                self._changed[k] = now
-        if self.store.state.run in (R.off, R.down) or inputs.get("passthru") == "original":
+        if self.store.state.run in (R.off, R.down) or passthru(inputs.get("passthru")):
             return recheck
         if inputs.get("pwm") is False:
             raise PumpAbort("PWM service gone")
@@ -1072,8 +1148,10 @@ class PumpUnit(Unit[PumpCfg, PumpState]):
         if isinstance(err, dict) and err.get("errors") and err.get("severity") == "critical":
             raise PumpAbort(f"errors: {err['errors']}")
         if cfg.stale is not None:
+            ages = inputs.get("_age") or {}
             for k in cfg.stale_sensors:
-                if inputs.get(k) is None or now - self._changed[k] > cfg.stale:
+                age = ages.get(k)
+                if age is None or age > cfg.stale:
                     raise PumpAbort(f"stale sensor: {k}")
         return recheck
 

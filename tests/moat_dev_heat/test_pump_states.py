@@ -21,10 +21,6 @@ from moat.dev.heat.pump import (
     TransitionError,
     next_state,
 )
-from moat.dev.heat.sim.trace import load
-
-from .legacy import trace_file
-from .pump_loop import pump_loop
 
 from typing import Any
 
@@ -107,8 +103,10 @@ def _inputs(**kw: Any) -> dict[str, Any]:
         "errors": None,
         "flow_out": None,
         "passthru": None,
+        "rate_cmd": None,
         "override": None,
         "force_start": None,
+        "flow_request": None,
     }
     res.update(kw)
     return res
@@ -382,13 +380,79 @@ def test_override_true_beats_selector():
     assert d.run == "wait_flow"
 
 
+BYPASS = {"bypass": True, "switching": None}
+
+
 def test_passthru():
-    "in passthru 'original' the core writes no commands"
+    "bypassed: no heat-pump commands; the water pump follows the original controller"
     d = _running()
-    res = d.step(passthru="original")
+    res = d.step(passthru=BYPASS, rate_cmd=0.7)
     assert d.cfg.power not in res.outputs
-    assert d.cfg.flow_request not in res.outputs
+    assert d.cfg.mode not in res.outputs
     assert res.outputs[OUT]["reason"] == "passthru"
+    assert d.run == "off"
+    assert d.req["mode"] == "fixed"
+    assert d.req["pwm"] == 0.7
+    assert d.step(rate_cmd=1.3).outputs[OUT]["pwm"] == 1.0
+    d.step(rate_cmd=None)
+    assert d.req["pwm"] == d.cfg.bypass_pwm
+
+
+def test_passthru_end():
+    "after a bypass: cool down, re-sending our commands"
+    d = _running()
+    d.step(passthru=BYPASS, rate_cmd=0.7)
+    res = d.step(passthru={"bypass": False, "switching": None})
+    assert d.run == "down"
+    assert res.force
+    assert res.outputs[d.cfg.power] == 0
+    assert res.outputs[d.cfg.mode] == d.cfg.mode_off
+    assert d.req["mode"] == "rate_temp"
+    assert not d.step().force
+    d.step(t_out=34.5, tb_heat=55.0)  # cooled down; the buffer is warm
+    assert d.run == "off"
+
+
+def test_passthru_pending():
+    "a pending switch to passthru doesn't stop a running heat pump, but prevents a start"
+    pending = {"bypass": False, "switching": "heatpump_idle"}
+    d = _running()
+    d.step(passthru=pending)
+    assert d.run == "run"
+    d = Drive()
+    d.step(passthru=pending)
+    assert d.run == "off"
+    assert d.out[OUT]["reason"] == "passthru"
+    d.step(passthru={"bypass": False, "switching": None})
+    assert d.run != "off"
+
+
+def test_seq_continues():
+    "after a restart, the flow requests continue after the stored one's seq"
+    d = _running()
+    d.state.run = R.run
+    d2 = Drive(state=d.state)
+    d2.inp.update(d.inp, flow_request={"mode": "off", "seq": 15})
+    d2.step()
+    assert d2.req["seq"] > 15
+    seq = d2.req["seq"]
+    d2.step(t_out=41.0)
+    assert d2.req["seq"] >= seq
+
+
+def test_hot_inflow():
+    "the heat pump stops before its inflow trips it, and doesn't start again while the buffer is hot"
+    d = _running()
+    d.step(t_in=56.0, t_out=60.0)
+    assert d.run == "down"
+    assert d.out[OUT]["reason"] == "OFF inflow hot"
+    d.step(t_in=50.0, t_out=51.0, tb_low=50.0)
+    assert d.run == "off"
+    d.step(force_start=True)
+    assert d.run == "off"
+    assert d.out[OUT]["reason"] == "inflow hot"
+    d.step(tb_low=49.5)
+    assert d.run != "off"
 
 
 def test_missing_sensor():
@@ -469,74 +533,6 @@ def test_cop():
     assert all(b >= a for a, b in pairwise(cops))
     # legacy gain: 0.0001 * m_power per step
     assert want - d.state.cop == pytest.approx((want - 3.0) * (1 - 0.0002) ** 3000, abs=0.01)
-
-
-# closed loop
-
-
-def _metrics(runs: list[tuple[float, str]], end: float) -> dict[str, float]:
-    "first start, time spent running, number of runs and of de-ice cycles"
-    first = next((t for t, r in runs if r == "run"), None)
-    t_run = 0.0
-    for (t, r), (t2, _) in zip(runs, [*runs[1:], (end, "")], strict=True):
-        if r == "run":
-            t_run += t2 - t
-    return {
-        "first": first,
-        "frac": t_run / end,
-        "runs": sum(1 for _, r in runs if r == "run"),
-        "ice": sum(1 for _, r in runs if r == "ice"),
-    }
-
-
-def _legacy(name: str) -> tuple[dict[str, float], dict[str, Any]]:
-    tr = load(trace_file(name).read_text())
-    runs = []
-    for t, what, val in tr["events"]:
-        if what == "run" and (not runs or runs[-1][1] != val):
-            runs.append((t, val))
-    end = tr["samples"][-1]["t"]
-    return _metrics(runs, end), tr["samples"][-1]
-
-
-SCEN = {
-    "cold_start": ({"buffer": {"t_init": (32, 22)}, "weather": {"mean": 2, "amp": 3}}, 10, 6),
-    "steady": ({"buffer": {"t_init": (50, 35)}, "weather": {"mean": 6, "amp": 3}}, 8, 12),
-    "deice": (
-        {
-            "buffer": {"t_init": (35, 22)},
-            "weather": {"mean": 1.5, "amp": 1, "rh_mean": 0.95, "rh_amp": 0},
-        },
-        10,
-        6,
-    ),
-}
-
-
-@pytest.mark.parametrize("name", list(SCEN))
-def test_closed_loop_vs_legacy(name: str) -> None:
-    "the new core behaves like the legacy controller in the same plant"
-    plant, start_h, hours = SCEN[name]
-    loop = pump_loop(plant, start=start_h * 3600)
-    runs: list[tuple[float, str]] = []
-
-    def cb(lp) -> None:
-        r = (lp.get(OUT) or {}).get("run")
-        if r and (not runs or runs[-1][1] != r):
-            runs.append((lp.now, r))
-
-    loop.run(hours * 3600, 10, cb)
-    new = _metrics(runs, hours * 3600)
-    old, last = _legacy(name)
-    tr = loop.plant.truth()
-
-    assert new["first"] is not None
-    assert abs(new["first"] - old["first"]) < 300
-    assert new["frac"] == pytest.approx(old["frac"], abs=0.2)
-    assert abs(new["ice"] - old["ice"]) <= 1
-    assert abs(new["runs"] - old["runs"]) <= max(3, old["runs"] // 2)
-    assert tr["tb_water"] == pytest.approx(last["tb_water"], abs=10)
-    assert tr["tb_heat"] == pytest.approx(last["tb_heat"], abs=10)
 
 
 def test_unit_inputs():

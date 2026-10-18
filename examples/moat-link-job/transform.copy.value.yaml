@@ -1,16 +1,31 @@
 code: |
+  from moat.lib.path import P
+  from moat.util import to_attrdict
+
+  if isinstance(attr, str):
+      attr = P(attr)
   await _self.watch(src, fetch=True)
 
   async for msg in _info:
       if isinstance(msg, _cls.ChangeMsg):
-          if msg.value is _cls.NotGiven:
+          val = msg.value
+          if val is _cls.NotGiven:
               continue
-          await _link.set(dst, msg.value)
-info: 'Copy value: src to dst'
+          if attr is not None:
+              # copy only this element of a mapping
+              try:
+                  val = to_attrdict(val).get_(attr)
+              except (KeyError, TypeError, AttributeError):
+                  continue
+          await _link.set(dst, val)
+default:
+  attr: null
+info: 'Copy value: src (or its attr element) to dst'
 is_async: true
 vars:
 - dst
 - src
+- attr
 tests:
   copy:
     info: the current value is copied, then every change
@@ -47,3 +62,22 @@ tests:
     - [set, !P in, 3]
     - [wait, 3, "out[-1] == 3"]
     - [check, "out == [1, 3]"]
+  attr:
+    info: with attr, only that element of a mapping is copied
+    timeout: 10
+    data:
+      in:
+        _: {bypass: false, switching: null}
+    args:
+      src: !P in
+      dst: !P out
+      attr: bypass  # a Path would be relocated below the test root
+    steps:
+    - [monitor, out, !P out]
+    - [start]
+    - [wait, 3, "len(out) > 0 and out[-1] is False"]
+    - [set, !P in, {bypass: true, switching: heatpump_idle}]
+    - [wait, 3, "out[-1] is True"]
+    - [set, !P in, 5]
+    - [sleep, 0.5]
+    - [check, "out == [False, True]"]

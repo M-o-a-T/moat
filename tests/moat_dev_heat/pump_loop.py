@@ -8,6 +8,7 @@ from __future__ import annotations
 from moat.dev.heat.flow import FlowUnit
 from moat.dev.heat.frost import FrostUnit
 from moat.dev.heat.heat_valve import HeatValveUnit
+from moat.dev.heat.link import service_path
 from moat.dev.heat.pump import PumpUnit
 from moat.dev.heat.sim import PlantCfg
 from moat.dev.heat.sim.loop import ClosedLoop
@@ -26,6 +27,9 @@ def pump_loop(
     cfg = PlantCfg.from_dict({**plant, "day_offset": start})
     loop = ClosedLoop(cfg=cfg, seed=seed)
     loop.set(CM_HEAT, True)
+    # the pump unit's service is up, as in production: the flow unit
+    # trusts its requests even when they don't change for a while
+    loop.set(service_path("heat", "pump"), {"id": "pump", "up": True})
     loop.add_unit(TargetUnit)
     loop.add_unit(HeatValveUnit)
     loop.add_unit(FlowUnit)

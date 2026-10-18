@@ -221,3 +221,14 @@ async def test_unit(heat):
     with anyio.fail_after(2):
         v = await heat.expect(OUT, lambda v: v is not None)
     assert v == pytest.approx(pwm, abs=0.02)
+
+
+def test_stale_by_age():
+    "with ages (from the adapter), an unchanged value is fresh while it keeps being updated"
+    r = Run(_core(max_age=60, freeze=60, safe_pwm=0.5), r_flow=2.0)
+    _, out = r.step(request=_req(mode="rate", rate=15), _age={"r_flow": 0})
+    for _ in range(20):
+        _, out = r.step(jitter=False, _age={"r_flow": 5})
+        assert out["mode"] == "rate"
+    _, out = r.step(jitter=False, _age={"r_flow": 61})
+    assert out["mode"] == "freeze"

@@ -154,8 +154,23 @@ async def test_warning_is_no_abort(heat):
     await p.stop()
 
 
+async def test_steady_sensor(heat):
+    "a sensor whose value doesn't change, but which keeps being sent, isn't stale"
+    await _setup(heat, stale=1, stale_sensors=["t_in"])
+    p = Pump(heat)
+    await p.start()
+    await heat.expect(OUT, lambda v: v is not None and v["run"] == "run")
+    for _ in range(10):
+        await heat.feed(P("heat.s.pump.temp.in"), SENSORS["heat.s.pump.temp.in"])
+        await anyio.sleep(0.3)
+    assert p.exc is None
+    assert not p.done.is_set()
+    await p.stop()
+    await _shut_down(heat)
+
+
 async def test_stale_sensor(heat):
-    "a sensor that stops changing while running: emergency shutdown"
+    "a sensor that stops being updated while running: emergency shutdown"
     await _setup(heat, stale=1, stale_sensors=["t_in"])
     p = Pump(heat)
     await p.start()

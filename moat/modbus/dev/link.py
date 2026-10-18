@@ -21,6 +21,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+REFRESH = 120
+"""
+Default of a register's ``idem`` option: an unchanged value is sent to
+MoaT-Link again once the stored one is this old (seconds), so that its
+readers can tell a steady value from a dead poller.
+"""
+
 
 class Register(BaseRegister):
     """
@@ -138,24 +145,35 @@ class Register(BaseRegister):
                 self.mqtt_event.set()
 
     async def to_link(self, dest) -> None:
-        """Copy a Modbus value to MoaT-Link when notified by slot."""
+        """
+        Copy a Modbus value to MoaT-Link when notified by slot.
+
+        An unchanged value is sent again when the stored one is older than
+        the register's ``idem`` option (seconds, default `REFRESH`;
+        ``false``: never).
+        """
         # Read current MQTT value on startup
         try:
             self.last_sent_value = await self._link.d_get(dest)
         except KeyError:
             self.last_sent_value = None
+        idem = self.data.get("idem", REFRESH)
+        retain = "idle" not in self.data
 
         while True:
-            # Wait for slot notification
-            await self.mqtt_event.wait()
+            # Wait for slot notification, or for the next refresh check
+            with anyio.move_on_after(idem / 2 if idem else float("inf")):
+                await self.mqtt_event.wait()
             self.mqtt_event = anyio.Event()  # Recreate for next notification
 
             # Get transformed value and send if changed
             val = self.value
             if val != self.last_sent_value:
                 logger.info("%s L %r -> MQTT", self.path, val)
-                await self._link.d_set(dest, val, retain="idle" not in self.data)
+                await self._link.d_set(dest, val, retain=retain)
                 self.last_sent_value = val
+            elif idem and val is not None:
+                await self._link.set(dest, val, idem=idem, retain=retain)
 
     async def from_link(self, mon, *, task_status) -> None:
         """Copy an MQTT value to Modbus (sets write value, triggers bus update)"""

@@ -65,6 +65,34 @@ This configuration:
 - **`hosts`**: TCP client connections without explicit ports (host → unit → config)
 - **`ports`**: Serial client connections (port → unit → config)
 
+### Connections
+
+Next to the units, a `hosts` or `hostports` entry may contain
+`timeout`: how long to wait for a reply, in seconds (default 10). A
+`ports` entry needs a `serial` section (`baudrate`, `parity`, …), which
+also accepts `timeout` (default 0.5).
+
+```yaml
+hostports:
+  solvis.example:
+    502:
+      timeout: 3
+      1:
+        regs:
+          ...
+```
+
+A request that isn't answered in time fails. Failures are reported to
+MoaT-Link's error subsystem, if a link is configured:
+
+- `error.app.modbus.tcp.<host>.<port>`: the TCP connection can't be
+  established;
+- `….<unit>.<slot>` below that (or below
+  `error.app.modbus.serial.<port>`): reading a slot failed, e.g.
+  because the device didn't answer within `timeout`.
+
+The entries are removed when the problem goes away.
+
 ### Slots
 
 Slots group registers that should be read together in a single Modbus transaction.
@@ -190,7 +218,10 @@ The transformations apply:
 #### MQTT Integration (requires MoaT-Link)
 
 - **`dest`**: MQTT topic(s) to send values to (Path or list of Paths)
-  - Written whenever the slot reads new data
+  - Written whenever the slot reads a changed value
+- **`idem`**: An unchanged value is sent again once the stored one is
+  this old, in seconds (default 120; `false`: never), so that its readers
+  can tell a steady value from a dead poller
 - **`src`**: MQTT topic to read values from (Path)
   - Values written to this topic are sent to the Modbus device
 - **`mirror`**: If true, echo writes from MQTT back to MQTT on `dest`
@@ -357,3 +388,10 @@ moat modbus dev poll CONFIG.yaml
 ```
 
 Starts the gateway with the given configuration.
+
+With a MoaT-Link configuration, the gateway announces itself as a
+service at `run.host.<hostname>.<service>`. The service name is that of
+its systemd unit, or the value of `$MT_SERVICE`; without either, there
+is no announcement. It is marked "up" once the servers run, and
+withdrawn when the gateway stops. `moat-link-host`'s service monitor
+reports a missing or not-up service at `error.run.host.…`.

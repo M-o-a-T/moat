@@ -233,3 +233,16 @@ def trace_check(request, tmp_path_factory) -> Callable[..., None]:
             )
 
     return check
+
+
+@pytest.fixture
+def jump(autojump_clock: Any) -> Any:
+    """
+    For end-to-end tests: trio's mock clock, jumping as soon as the test
+    has been idle for 5 ms (50 ms is four times slower).
+
+    It must be returned: pytest-trio only uses a clock that is the value
+    of one of the test's fixtures.
+    """
+    autojump_clock.autojump_threshold = 0.005
+    return autojump_clock

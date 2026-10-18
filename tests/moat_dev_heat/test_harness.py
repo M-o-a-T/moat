@@ -112,7 +112,7 @@ def test_closed_loop():
 
     assert slot.steps > 24 * 60  # timer-driven at least once a minute
     assert slot.saves >= 2
-    switched = [v for t, p, v in loop.writes if p == INPUT_PATHS["hp_mode"]]
+    switched = [v for _, p, v, _ in loop.writes if p == INPUT_PATHS["hp_mode"]]
     assert switched.count(3) >= 2  # it cycled
     late = temps[len(temps) // 4 :]  # after the warm-up
     inside = sum(1 for t in late if 44 <= t <= 55) / len(late)

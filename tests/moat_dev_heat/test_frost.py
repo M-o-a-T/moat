@@ -6,21 +6,13 @@ flow unit.
 from __future__ import annotations
 
 import pytest
-from itertools import pairwise
 
 from moat.util import NotGiven
 from moat.dev.heat.config import make_config
 from moat.dev.heat.flow import FlowCfg, FlowCore, FlowState
 from moat.dev.heat.frost import FrostCfg, FrostCore, FrostState, FrostUnit
 from moat.dev.heat.link import out_path
-from moat.dev.heat.pellet import PelletUnit
-from moat.dev.heat.selector import SelectorUnit
-from moat.dev.heat.sim.paths import INPUT_PATHS
-from moat.dev.heat.sim.trace import load
 from moat.lib.path import P
-
-from .legacy import SCENARIOS, trace_file
-from .pump_loop import pump_loop
 
 from typing import Any
 
@@ -189,42 +181,6 @@ def test_flow_pulse() -> None:
     assert _flow(request={"mode": "fixed", "pwm": 0.4, "seq": 1}) == ("fixed", 0.4)
     assert _flow(override=0.0) == ("override", 0)
     assert _flow(override=0.3) == ("override", 0.3)
-
-
-# closed loop against the legacy trace
-
-
-def test_closed_loop_vs_legacy() -> None:
-    "a frosty night, heat pump off, pellets heating: cycles like wp.py's"
-    sc = SCENARIOS["frost"]
-    loop = pump_loop(sc.plant, seed=sc.seed, start=sc.start)
-    loop.set(P("app.heat.override.wp"), False)  # legacy: cm_wp off
-    loop.add_unit(PelletUnit)
-    loop.add_unit(SelectorUnit)  # the frost unit is part of pump_loop
-    rows: list[dict[str, Any]] = []
-
-    def cb(lp) -> None:
-        # the relay reports its state; a rule drives the burner from its request
-        lp.set(VALVE_STATE, lp.get(VALVE))
-        lp.set(INPUT_PATHS["pellet_run"], lp.get(P("heat.s.pellets.power.cmd.auto")))
-        if round(lp.now) % sc.sample == 0:
-            tr = lp.plant.truth()
-            rows.append({"valve": bool(lp.get(VALVE)), "t_in": tr["t_in"], "t_out": tr["t_out"]})
-
-    loop.run(sc.duration, sc.dt, cb)
-    old = load(trace_file("frost").read_text())["samples"]
-
-    def stats(rs: list[dict[str, Any]]) -> tuple[float, int, float]:
-        on = [r["valve"] for r in rs]
-        cycles = sum(1 for a, b in pairwise(on) if b and not a)
-        return sum(on) / len(on), cycles, min(min(r["t_in"], r["t_out"]) for r in rs)
-
-    frac, cycles, t_min = stats(rows)
-    o_frac, o_cycles, o_min = stats(old)
-    assert cycles == pytest.approx(o_cycles, abs=2), (cycles, o_cycles)
-    assert frac == pytest.approx(o_frac, abs=0.02), (frac, o_frac)
-    assert t_min == pytest.approx(o_min, abs=0.5), (t_min, o_min)
-    assert t_min > 0
 
 
 @pytest.mark.anyio

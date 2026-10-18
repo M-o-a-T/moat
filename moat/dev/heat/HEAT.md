@@ -207,7 +207,14 @@ delay until the next wake-up and handled by the adapter (§5.2).
 
 #### Staleness
 
-Each input has a configurable `max_age`. Default reactions:
+Values are published on change, and the Modbus poller re-sends a steady
+value every 120 s (its registers' `idem`), so every received update,
+changed or not, means the value is current. An input's age is the age
+of its datum's timestamp (`Reader.age`); the first value counts as at
+most 9/10 of the reader's `max_age` old, so it gets at least a tenth of
+the timeout to be renewed. Adapters pass the ages to their cores as
+`inputs["_age"]`. Each input has a configurable `max_age`. Default
+reactions:
 
 - `pump`: a stale critical sensor (`t_in`, `t_out`, `r_flow`,
   `m_power`, buffer temperatures) while active → emergency shutdown
@@ -364,6 +371,12 @@ sensor_in:      !P heat.s.pump.temp.in
 sensor_out:     !P heat.s.pump.temp.out
 ```
 
+Residual risk: the procedure relies on the flow unit to execute its
+drain and stop requests. Without a flow unit, the water pump keeps the
+last PWM it was given: that protects the heat pump from overheating, but
+nobody stops the water pump afterwards
+(`test_integration.py::test_flow_dead_during_emergency`).
+
 ### 2.7 Operator overrides
 
 Overrides replace the old bypass mode and the per-unit override of
@@ -415,7 +428,7 @@ For manufacturer maintenance, the original heat-pump controller (the
 Solvis controller, talking to our Modbus shim, currently
 `modbus.stiebelfake.yaml`) must control the heat pump (the bus polled
 via `modbus.stiebel.yaml`) directly. Our pump controller is then
-disabled and replaced by a data bridge. The legacy code did this with
+replaced by a data bridge. The legacy code did this with
 MoaT-KV data; the new design uses MoaT-Link and the switchable `bypass`
 of `moat.modbus` server units (moat-nnz, see
 `docs/moat-modbus/dev-poll.md`):
@@ -432,23 +445,47 @@ Real passthru needs forwarding because the original controller's reads
 must see live data, not stored values. The two Modbus processes stay
 separate.
 
-The `passthru` unit coordinates the switch:
+The `passthru` unit (`passthru.py`) coordinates the switch:
 
-- Input `app.heat.passthru.request` (bool). Output
-  `app.heat.passthru.state` = `{bypass: bool, switching: str|None}`:
-  whether the original controller is in charge, and what a pending
-  switch waits for (typically `heatpump_idle`), `None` when settled.
-- The switch happens **only while the heat pump is idle**: towards
-  the original controller when `pump.out.run == off` and the heat pump
-  reports no power/compressor activity; back when the original
-  controller has the heat pump idle. Otherwise the request waits.
-- While bypassed: the pump unit stands down without writing `cmd.*`,
-  the watchdog is inactive, the shim forwards everything, and sensor
-  data keeps flowing to MoaT-Link.
-
-Open items, to settle when implementing: who drives the circulation
-pump during passthru; the shim's `de_ice.fake` register; what `pellet`
-and `heat_valve` do meanwhile.
+- Input `app.heat.passthru.request` (bool; HA switch
+  `switch.heizung.passthru`). Output `app.heat.passthru.state` =
+  `{bypass: bool, switching: str|None}`: whether the original controller
+  is in charge, and what a pending switch waits for (`heatpump_idle`,
+  `sensors`, `solvis`), `None` when settled. This is the unit's
+  persistent state, saved at once, so a restart resumes.
+- The switch happens **only while the heat pump is idle**: power below
+  `p_idle` and compressor speed 0; towards the original controller also
+  `pump.out.run == off`. Otherwise the request waits. While a switch to
+  the original controller is pending, the pump unit doesn't start the
+  heat pump (a running one finishes normally).
+- While bypassed:
+  - the pump unit sends no commands to the heat pump, but runs the
+    circulation pump as the Solvis says: its flow request is `fixed` at
+    the Solvis' pump output `heat.s.pump.rate.cmd` (`analog.out:4`, a
+    PWM duty cycle, polled every second), or at `bypass_pwm` while that
+    has no value. `pump.out` shows `run: off`, reason `passthru`;
+  - the shim forwards everything, and sensor data keeps flowing to
+    MoaT-Link;
+  - if the pump unit dies, nothing makes our water pump follow the
+    Solvis any more: the watchdog ends the bypass and runs the emergency
+    shutdown (§3.8). The passthru unit goes along when somebody else
+    ends the bypass in its state item;
+  - the other units carry on: they see an idle heat pump;
+  - the shim's `de_ice.fake` doesn't matter: the Solvis reads the real
+    register through the bypass.
+- When the bypass ends, the pump unit restarts its state machine, which
+  begins with `down`: heat pump off, circulation pump on until
+  `t_out - t_in` is small. That step re-sends all of its outputs, as the
+  heat pump's commands are the Solvis' at that point.
+- **Emergency end**: if the Solvis can't be polled, `rate.cmd` freezes,
+  so our circulation pump no longer follows it while it may raise the
+  heat pump's power. The passthru unit watches the error records listed
+  in its `errors` setting (below `error`: the Solvis host's poll errors,
+  `app.modbus.tcp.<host>.<port>…`, and the Solvis poller's service,
+  `run.host.…`, which `moat-link-host` reports when the poller is gone).
+  Any record ends the bypass at once and resets the request; the pump
+  unit then cools the heat pump down as above. A record also blocks
+  entering the bypass (`switching: solvis`).
 
 ## 3. Unit specifications
 
@@ -580,10 +617,9 @@ Request (`app.heat.flow.request`, written by the pump unit and by
 | `drain` | emergency | `pid.flow` at `rate`, ≥ `safe_pwm` |
 
 The request is written with plain types (`FlowRequest.to_link()`). A
-sensor counts as stale when its value has not changed for `max_age`
-seconds, because values are published on change; `max_age` must
-therefore be longer than a sensor's longest steady spell. A PID whose
-output is not used follows the time without integrating.
+sensor counts as stale when it has not been updated for `max_age`
+seconds (300; the poller re-sends steady values every 120 s). A PID
+whose output is not used follows the time without integrating.
 
 The pellet unit never requests flow. `flow.out.pwm` replaces the old
 `state.last_pwm` for its consumers (`pump`, `heat_valve`).
@@ -625,6 +661,12 @@ Core structure:
   the 30 s no-power rule.
 - `pid.load` gains (Kd/Tf) follow `pellet.out.mode` (formerly changed
   by the pellet code).
+- Inflow limit (new; the legacy code relied on the heat pump's own
+  over-temperature cutout): in `wait_power`, `temp` and `run`, the heat
+  pump is stopped once `t_in` reaches `stop.max_in` (default 55 °C;
+  reason `OFF inflow hot`), and `off` doesn't start it, not even when
+  forced, while the buffer return `tb_low` is at least `stop.max_start`
+  (default 50 °C).
 - `t_change_max` exceeded → abnormal exit → emergency shutdown.
 - `avg_heat`/`avg_heat_t` (used for the pellet-assisted start
   decision) belong to pump state only.
@@ -657,7 +699,7 @@ As implemented (`PumpUnit`):
   emergency shutdown shielded, with `from_pump=True`, then re-raise:
   `errors.out` with severity `critical` while active (a warning only
   stops the heat pump the normal way), a stale sensor while active
-  (`stale`, default 900 s without a change, for `stale_sensors`, default
+  (`stale`, default 900 s without an update, for `stale_sensors`, default
   `t_in`, `t_out`, `r_flow`, `m_power`), a core timeout, any other
   exception, and cancellation. Afterwards the saved state is `off`
   without `load_last`, so a restart doesn't resume the run.
@@ -815,8 +857,12 @@ Handles the case where the pump unit cannot run its own shutdown
   `app.heat.watchdog.disable` (`bool`).
 - **Acts**: when the pump service is gone and the last `pump.out.run`
   is active (anything but `off`/`down`), runs
-  `emergency_shutdown(from_pump=False)`. Inactive while disabled or
-  in passthru `original`.
+  `emergency_shutdown(from_pump=False)`. Inactive while disabled.
+  While passthru is bypassed, the heat pump's state doesn't matter (the
+  original controller runs it): when the pump service is gone, the
+  watchdog first ends the bypass (writes `{bypass: false}` to
+  `app.heat.passthru.state` and resets the request), so that nothing
+  runs the heat pump with our water pump unattended, then shuts down.
 - **Publishes**: `app.heat.watchdog.out` = `{triggered_at, reason,
   duration, exit_delta}` for auditing.
 - Never restarts the pump unit; that is up to systemd or the operator.
@@ -987,8 +1033,16 @@ persisted PID timestamps, override expiry and comparison with MoaT-Link
 message timestamps, comes from `moat.util.time.time()`; tests patch it to
 advance together with the mock clock. Closed-loop tests of the cores need
 neither: they call `core.step()` and `sim.step()` in a plain loop.
-Scaffold tests use real time (MoaT-Link message timestamps are
-wall-clock).
+
+Most Scaffold tests use real time with short timeouts. The end-to-end
+scenarios (`test_integration.py`, `test_restart.py`) run all units, the
+simulator and a Scaffold under trio's `MockClock` with autojump (5 ms
+threshold), at about 24× real time. Their wall clock (`WallClock`)
+follows the mock clock and never goes backwards, not even from one test
+to the next (the Link server's connection-rate check keeps state across
+the tests in a process), and it advances between any two readings
+(MoaT-Link keeps an update only if its timestamp is newer). They are marked `slow` and not run by default
+(`pytest -m slow`).
 
 ### 5.3 Plant simulator
 
@@ -1052,15 +1106,30 @@ scenario:
 - the heat pump never has load while flow is zero,
 - `t_out` stays below the trip temperature,
 - PWM is > 0 whenever `t_out - t_in > stop_delta`,
-- no output is written by the pump unit while passthru is `original`.
+- the pump unit sends no commands to the heat pump while passthru is
+  bypassed.
 
-Scenarios: cold start / warm-up, steady state, de-ice, WP → pellet and
-pellet → WP handover (no buffer dip below `t_low`), pellet ignition
-failure → fallback, day/night switch, error mid-run → emergency
-shutdown, stale sensor, flow unit dead during emergency (documented
-residual risk), pump restart mid-run with and without watchdog, each
-override with expiry, passthru requested while the heat pump runs
-(deferred until idle), force start.
+The closed-loop checks are `Invariants` in `test_closed_loop.py`; the
+end-to-end ones are `CheckedSim` in `test_integration.py`.
+
+Scenarios:
+
+| Scenario | Closed loop (`test_closed_loop.py`) | MoaT-Link (`test_integration.py`, `test_restart.py`) |
+| --- | --- | --- |
+| cold start, steady cycling, de-ice | vs. legacy | warm-up to `run`; 16 min steady run |
+| heating circuit, day/night | vs. legacy | |
+| WP → pellet → WP handover | vs. legacy; no buffer dip | |
+| pellet ignition failure | fallback to the heat pump | |
+| error mid-run | stop, burner takes over | emergency shutdown |
+| no power | vs. legacy, start-up timeout | |
+| stale sensor | | emergency shutdown |
+| flow unit dead during emergency | | residual risk (§2.6) |
+| pump unit killed | | restart resumes; watchdog shutdown; while bypassed: bypass ended, shutdown |
+| overrides with expiry | flow temperature | heat pump, burner |
+| passthru | deferred switch, Solvis runs, emergency end | |
+| force start | | warm buffer, started once |
+
+The Link scenarios are kept to at most about 15 simulated minutes.
 
 Reference traces are refreshed only via an explicit pytest option
 (`--heat-refresh`); a missing reference fails;

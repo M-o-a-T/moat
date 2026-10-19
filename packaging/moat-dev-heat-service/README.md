@@ -26,4 +26,9 @@ All units read `/etc/moat/moat.yaml`, plus `/etc/moat/heat.env` for
 environment settings, and run as user `MoaT-Heat` (group `MoaT`), except
 the PWM daemon, which runs as root for GPIO access.
 
+All units wait for `time-sync.target`; hosts without a battery-backed
+RTC need a time-sync provider that delays it, e.g.
+`systemd-time-wait-sync.service`. See
+[Time synchronization](../common/index.md#time-synchronization).
+
 % end main

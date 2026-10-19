@@ -60,6 +60,28 @@ See [CBOR](cbor.md) for MoaT's conventions and additions.
 
 
 
+### Time synchronization
+
+MoaT-Link data carries wall-clock timestamps, and consumers judge
+staleness by them. A service that starts before NTP has set the clock
+(a Raspberry Pi without a battery-backed RTC, say) publishes or judges
+data with a wrong time.
+
+Therefore all MoaT systemd units pull in `time-sync.target`
+(`After=` and `Wants=`). That target is inert unless a time-sync
+provider delays it until the clock is actually synchronized, so hosts
+without an RTC must enable one:
+
+```sh
+systemctl enable --now systemd-time-wait-sync.service
+# or, with chrony:
+systemctl enable --now chrony-wait.service
+```
+
+Emergency units that must run regardless (e.g. `moat-kv-recover`)
+do not wait for time sync.
+
+
 ### Discoverability
 
 There is one command. It's called `moat`. Everything else is done with

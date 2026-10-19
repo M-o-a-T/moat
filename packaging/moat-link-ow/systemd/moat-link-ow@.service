@@ -1,6 +1,8 @@
 [Unit]
 Description=MoaT-Link 1-Wire connector (%I)
 After=moat-link-server.service
+After=time-sync.target
+Wants=time-sync.target
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

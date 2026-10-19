@@ -2,6 +2,8 @@
 Description=MoaT-KV log rotate
 Requires=moat-kv.service
 After=moat-kv.service
+After=time-sync.target
+Wants=time-sync.target
 Conflicts=distkv-rotate.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml

@@ -2,6 +2,8 @@
 Description=MoaT heating unit %i
 After=moat-link-server.service
 After=flashmq.service
+After=time-sync.target
+Wants=time-sync.target
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

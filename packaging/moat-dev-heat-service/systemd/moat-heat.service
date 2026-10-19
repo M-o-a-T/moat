@@ -2,6 +2,8 @@
 Description=MoaT heating units (all but the watchdog)
 After=moat-link-server.service
 After=flashmq.service
+After=time-sync.target
+Wants=time-sync.target
 Conflicts=moat-heat@target.service moat-heat@heat_valve.service moat-heat@flow.service
 Conflicts=moat-heat@pump.service moat-heat@pellet.service moat-heat@selector.service
 Conflicts=moat-heat@errors.service moat-heat@frost.service

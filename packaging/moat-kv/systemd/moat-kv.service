@@ -1,6 +1,8 @@
 [Unit]
 Description=MoaT-KV main server
 After=mosquitto.service
+After=time-sync.target
+Wants=time-sync.target
 Wants=mosquitto.service
 Conflicts=moat-kv-recover.service
 OnFailure=moat-kv-recover.service

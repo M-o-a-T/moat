@@ -1,6 +1,8 @@
 [Unit]
 Description=MoaT-MQTT broker
 After=moat-kv.service
+After=time-sync.target
+Wants=time-sync.target
 Wants=moat-kv.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml

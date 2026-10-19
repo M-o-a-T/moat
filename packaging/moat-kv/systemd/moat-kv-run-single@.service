@@ -1,6 +1,8 @@
 [Unit]
 Description=MoaT-KV single-node runner for %i
 After=moat-kv.service
+After=time-sync.target
+Wants=time-sync.target
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

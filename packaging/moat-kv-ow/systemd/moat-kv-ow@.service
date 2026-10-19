@@ -1,6 +1,8 @@
 [Unit]
 Description=Moat-KV OWFS server
 After=moat-kv.service
+After=time-sync.target
+Wants=time-sync.target
 # Requires=moat-kv.service
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml

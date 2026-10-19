@@ -1,6 +1,8 @@
 [Unit]
 Description=MoaT irrigation monitor for %i
 After=moat-link.service
+After=time-sync.target
+Wants=time-sync.target
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 
 [Install]

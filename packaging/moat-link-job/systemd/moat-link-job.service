@@ -1,5 +1,7 @@
 [Unit]
 Description=MoaT-Link Background Job Runner
+After=time-sync.target
+Wants=time-sync.target
 
 ConditionFileNotEmpty=/etc/moat/moat.yaml
 

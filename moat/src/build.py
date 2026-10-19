@@ -24,6 +24,11 @@ from ._toml import get_array, get_table, tomlkit
 from ._util import dash
 from .submodule import _EXT, check_ext_clean, collect_ext_revs
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
+
 logger = logging.getLogger(__name__)
 
 PACK = Path("packaging")
@@ -677,6 +682,7 @@ it is dropped when you use '--dput'.
 )
 @click.option("-E", "--no-ext", is_flag=True, help="don't record external repository HEAD commits")
 @click.option("-q", "--quiet", is_flag=True, help="don't report progress")
+@click.option("-L", "--legacy", is_flag=True, help="include legacy packages")
 @click.argument("parts", nargs=-1)
 @click.pass_obj
 async def cli(
@@ -703,12 +709,16 @@ async def cli(
     twine_repo: str,
     no_ext: bool,
     quiet: bool,
+    legacy: bool,
 ) -> None:
     """
     Rebuild all modified packages.
 
     On a terminal, reports what it's doing, and the Debian packages it
     has built, unless '--quiet' (or the global '-Q') is used.
+
+    Packages flagged ``legacy: true`` in versions.yaml are skipped
+    unless named on the command line or selected with '--legacy'.
     """
     # With -vv, the commands' output is echoed and would mess this up.
     st = Status(not quiet and 0 < obj.debug < 2)
@@ -737,9 +747,32 @@ async def cli(
             autotag,
             twine_repo,
             no_ext,
+            legacy,
         )
     finally:
         st.clear()
+
+
+async def select_parts(
+    repo: Repo, parts: Collection[str], skip: set[str], legacy: bool
+) -> list[Package]:
+    """Choose the packages to build.
+
+    Explicitly-named parts are always built. Otherwise every visible,
+    non-skipped package qualifies -- except legacy ones, which need
+    ``legacy=True`` (the ``--legacy`` flag).
+    """
+    if parts:
+        return [repo.part(x) for x in parts]
+
+    sel: list[Package] = []
+    for x in repo.parts:
+        if x.hidden or x.dash in skip or await (PACK / x.dash / "SKIP").exists():
+            continue
+        if x.legacy and not legacy:
+            continue
+        sel.append(x)
+    return sel
 
 
 async def _build(
@@ -766,6 +799,7 @@ async def _build(
     autotag: bool,
     twine_repo: str,
     no_ext: bool,
+    legacy: bool,
 ) -> None:
     cfg = obj.cfg
     g_done: Path | None = cfg.get("src", {}).get("done")
@@ -804,15 +838,7 @@ async def _build(
     if forcetag is None:
         forcetag = repo.next_tag(major, minor)
 
-    if parts_:
-        repos = [repo.part(x) for x in parts_]
-    else:
-        if not skip:
-            pass
-        repos = []
-        for x in repo.parts:
-            if not x.hidden and x.dash not in skip and not await (PACK / x.dash / "SKIP").exists():
-                repos.append(x)
+    repos = await select_parts(repo, parts_, skip, legacy)
 
     if await DIST_DEBIAN.exists():
         async for name in DIST_DEBIAN.iterdir():

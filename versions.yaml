@@ -191,6 +191,7 @@ moat-kv-gpio:
   tag: 0.12.11
 moat-kv-ha:
   deb: 0.5.14-1
+  legacy: true
   new: 0.5.14
   pkg: 1
   pypi: 0.5.14

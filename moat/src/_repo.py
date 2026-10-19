@@ -243,6 +243,14 @@ class Package(_Common):
         return bool(self.vers.get("empty", False))
 
     @property
+    def legacy(self) -> bool:
+        """Whether this package is legacy: superseded, but kept buildable.
+
+        Skipped by ``moat src build`` unless explicitly requested.
+        """
+        return bool(self.vers.get("legacy", False))
+
+    @property
     def last_commit(self) -> str:
         return self.vers.get("rev", "0" * 40)
 
